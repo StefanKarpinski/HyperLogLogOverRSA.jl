@@ -46,8 +46,15 @@ function jacobi(x::Integer, N::Integer)::Int
 end
 
 ## Small inline helpers with BigInt-specialized fast paths
-@inline mod8(x::BigInt)  = Int(Base.GMP.MPZ.tdiv_ui(x, 8))
-@inline mod8(x::Integer) = Int(mod(x, 8))
+@inline mod4(x::Integer) = Int(x & (4-1))
+@inline mod8(x::Integer) = Int(x & (8-1))
 
-@inline mod4(x::BigInt)  = Int(Base.GMP.MPZ.tdiv_ui(x, 4))
-@inline mod4(x::Integer) = Int(mod(x, 4))
+@inline mod4(x::BigInt) = Int(
+    Base.GMP.MPZ.tstbit(x, 0) +
+    Base.GMP.MPZ.tstbit(x, 1) << 1
+)
+@inline mod8(x::BigInt) = Int(
+    Base.GMP.MPZ.tstbit(x, 0) +
+    Base.GMP.MPZ.tstbit(x, 1) << 1 +
+    Base.GMP.MPZ.tstbit(x, 2) << 2
+)
