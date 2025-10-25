@@ -34,4 +34,12 @@ end
         @test isprime(ring.p)
         @test isprime(ring.q)
     end
+    ring = Ring(2^12+1, 16, 64)
+    @test ring isa Ring{UInt64}
+    ring = Ring(2^12+1, 16, 65)
+    @test ring isa Ring{UInt128}
+    ring = Ring(2^12+1, 16, 128)
+    @test ring isa Ring{UInt128}
+    ring = Ring(2^12+1, 16, 129)
+    @test ring isa Ring{BigInt}
 end

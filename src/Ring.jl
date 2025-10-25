@@ -40,6 +40,22 @@ function Ring{T}(
     Ring{T}(B, m, p, q)
 end
 
+ring_type(L::Integer) =
+    L ≤ 8   ? UInt8   :
+    L ≤ 16  ? UInt16  :
+    L ≤ 32  ? UInt32  :
+    L ≤ 64  ? UInt64  :
+    L ≤ 128 ? UInt128 : BigInt
+
+function Ring(
+    B :: Integer, # bucket factor — must be odd
+    m :: Integer, # max geometric sample size
+    L :: Integer; # bit length of modulus
+    rng :: AbstractRNG = Random.GLOBAL_RNG,
+)
+    Ring{ring_type(L)}(B, m, L; rng)
+end
+
 function factors(ring::Ring{T}) where {T<:Integer}
     P = 2T(ring.B) * ring.p + true
     Q = (one(T) << ring.m) * ring.q + true
