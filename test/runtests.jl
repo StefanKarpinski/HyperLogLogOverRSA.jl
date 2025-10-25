@@ -1,11 +1,11 @@
-using AnonymousUserEstimation
-using Primes
 using Test
+using Primes
+using AnonymousUserEstimation
+using AnonymousUserEstimation: gen_prime_pair, modulus, factors
 
 const 𝟚 = BigInt(2)
 
 @testset "Prime pair generation" begin
-    gen_prime_pair = AnonymousUserEstimation.gen_prime_pair
     @testset "correct usage" begin
         for (lo, hi, s) in Any[
                 (10, 100, 6)
@@ -26,6 +26,12 @@ const 𝟚 = BigInt(2)
     end
 end
 
-# @testset "Ring" begin
-#     ring = Ring{UInt64}()
-# end
+@testset "Ring" begin
+    for bits in [55, 63, 64]
+        ring = Ring{UInt64}(2^5+1, 8, bits)
+        @test leading_zeros(modulus(ring)) == 64-bits
+        @test all(isprime, factors(ring))
+        @test isprime(ring.p)
+        @test isprime(ring.q)
+    end
+end

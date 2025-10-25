@@ -5,9 +5,8 @@ using Primes
 
 struct Ring{T<:Integer}
     # general shape
+    B :: Int # bucket factor (odd)
     m :: Int # max geometric sample size
-    W :: Int # work factor (prime)
-    B :: Int # bucket factor (prime)
 
     # specific values
     p :: T # 1st inner prime
@@ -15,34 +14,35 @@ struct Ring{T<:Integer}
 end
 
 function Ring{T}(
+    B :: Integer, # bucket factor — must be odd
     m :: Integer, # max geometric sample size
-    W :: Integer, # work factor — use next prime
-    B :: Integer, # bucket factor — use next prime
     L :: Integer; # bit length of modulus
     rng :: AbstractRNG = Random.GLOBAL_RNG,
 ) where {T<:Integer}
     m ≥ 1 || throw(ArgumentError("m must be ≥ 1"))
-    W = nextprime(W)
-    B = nextprime(B)
-    𝟚 = T(2)
-    N_min = 𝟚^(L-1)+1
-    N_max = 𝟚^L-1
+    isodd(B) || throw(ArgumentError("B must be odd"))
+    N_min = (one(T) << (L-1)) + 1
+    N_max = (one(T) << L) - 1
+    C, D = 2T(B), one(T) << m
     swap = rand(rng, Bool) # generate left or right first?
-    C, D = swap ? (B, W) : (W, B)
-    P_min = 𝟚^(L÷2-1)+1
-    P_max = 𝟚^(L÷2)-1
-    P, p = gen_prime_pair(P_min, P_max, T(C) << m; rng)
+    if swap
+        C, D = D, C
+    end
+    P_min = (one(T) << (L÷2-1)) + 1
+    P_max = (one(T) << (L÷2)) - 1
+    P, p = gen_prime_pair(P_min, P_max, C; rng)
     Q_min = cld(N_min, P)
     Q_max = fld(N_max, P)
-    Q, q = gen_prime_pair(Q_min, Q_max, T(D) << m; rng)
-    swap && ((p, q) = (q, p))
-    Ring{T}(m, W, B, p, q)
+    Q, q = gen_prime_pair(Q_min, Q_max, D; rng)
+    if swap
+        p, q = q, p
+    end
+    Ring{T}(B, m, p, q)
 end
 
 function factors(ring::Ring{T}) where {T<:Integer}
-    M = T(2)^ring.m
-    P = T(M*ring.W)*ring.p + true
-    Q = T(M*ring.B)*ring.q + true
+    P = 2T(ring.B) * ring.p + true
+    Q = (one(T) << ring.m) * ring.q + true
     P, Q
 end
 
@@ -53,7 +53,7 @@ function Base.show(io::IO, ring::Ring)
     show(io, typeof(ring))
     print(io, "(")
     N = modulus(ring)
-    show(io, "m=$(ring.m), W=$(ring.W), B=$(ring.B), N=$N")
+    show(io, "B=$(ring.B), m=$(ring.m), N=$N")
     print(io, ")")
 end
 
