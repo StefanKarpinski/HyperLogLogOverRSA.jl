@@ -57,12 +57,15 @@ function Ring(
 end
 
 function factors(ring::Ring{T}) where {T<:Integer}
-    P = 2T(ring.B) * ring.p + true
-    Q = (one(T) << ring.m) * ring.q + true
+    P = 2ring.p * ring.B + true
+    Q = ring.q << ring.m + true
     P, Q
 end
 
 modulus(ring::Ring) = prod(factors(ring))
+
+lambda(ring::Ring{T}) where {T<:Integer} =
+    (one(T) << ring.m)*ring.B*ring.p*ring.q
 
 # don't print prime factors to avoid accidentally leaking them
 function Base.show(io::IO, ring::Ring)
@@ -77,17 +80,29 @@ function find_g(ring::Ring{T}) where {T<:Integer}
     P, Q = factors(ring)
     N = P*Q
     λ_P = 2*ring.B*ring.p
-    λ_Q = (one(T) << ring.m)*ring.q
+    range = 0:N-1
     while true
-        g = rand(0:N-1)
+        g = rand(range)
         g_P = mod(g, P)
-        powermod(g_P, 2, P) == 1 && continue
-        powermod(g_P, ring.p, P) == 1 && continue
-        any(powermod(g_P, r, P) == 1 for (r, _) in factor(ring.B)) && continue
+        iszero(g_P) && continue
         g_Q = mod(g, Q)
+        iszero(g_Q) && continue
+        powermod(g_P, ring.B*ring.p, P) == 1 && continue
+        powermod(g_P, 2*ring.B, P) == 1 && continue
+        any(powermod(g_P, λ_P ÷ r, P) == 1
+            for (r, _) in factor(ring.B)) && continue
+        powermod(g_Q, ring.q << (ring.m-1), Q) == 1 && continue
         powermod(g_Q, one(T) << ring.m, Q) == 1 && continue
-        powermod(g_Q, ring.q, Q) == 1 && continue
         return g
+    end
+end
+
+function find_x(ring::Ring{T}) where {T<:Integer}
+    N = modulus(ring)
+    range = 0:N-1
+    while true
+        x = rand(range)
+        jacobi(x, N) == -1 && return x
     end
 end
 

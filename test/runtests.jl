@@ -1,7 +1,8 @@
 using Test
 using Primes
 using AnonymousUserEstimation
-using AnonymousUserEstimation: gen_prime_pair, jacobi, modulus, factors
+using AnonymousUserEstimation:
+    gen_prime_pair, jacobi, modulus, factors, lambda, find_g, find_x
 
 const 𝟚 = BigInt(2)
 
@@ -58,19 +59,41 @@ end
 end
 
 @testset "Ring" begin
-    for bits in [55, 63, 64]
-        ring = Ring{UInt64}(2^5+1, 8, bits)
-        @test leading_zeros(modulus(ring)) == 64-bits
-        @test all(isprime, factors(ring))
-        @test isprime(ring.p)
-        @test isprime(ring.q)
+    @testset "basics" begin
+        for bits in [55, 63, 64]
+            ring = Ring{UInt64}(2^5+1, 8, bits)
+            @test leading_zeros(modulus(ring)) == 64-bits
+            @test all(isprime, factors(ring))
+            @test isprime(ring.p)
+            @test isprime(ring.q)
+        end
+        ring = Ring(2^12+1, 16, 64)
+        @test ring isa Ring{UInt64}
+        ring = Ring(2^12+1, 16, 65)
+        @test ring isa Ring{UInt128}
+        ring = Ring(2^12+1, 16, 128)
+        @test ring isa Ring{UInt128}
+        ring = Ring(2^12+1, 16, 129)
+        @test ring isa Ring{BigInt}
     end
-    ring = Ring(2^12+1, 16, 64)
-    @test ring isa Ring{UInt64}
-    ring = Ring(2^12+1, 16, 65)
-    @test ring isa Ring{UInt128}
-    ring = Ring(2^12+1, 16, 128)
-    @test ring isa Ring{UInt128}
-    ring = Ring(2^12+1, 16, 129)
-    @test ring isa Ring{BigInt}
+    @testset "structure" for _ = 1:10
+        ring = Ring(2^4+1, 4, 20)
+        N = modulus(ring)
+        λ = lambda(ring)
+        J⁰ = [x for x in 0:N-1 if gcd(x, N) ≠ 1]
+        g = find_g(ring)
+        @test jacobi(g, N) == +1
+        J⁺ = sort!([powermod(g, k, N) for k in 0:λ-1])
+        @test allunique(J⁺)
+        x = find_x(ring)
+        @test jacobi(x, N) == -1
+        J⁻ = sort!(mod.(x .* J⁺, N))
+        @test allunique(J⁻)
+        # test disjointness
+        @test isempty(J⁰ ∩ J⁺)
+        @test isempty(J⁰ ∩ J⁻)
+        @test isempty(J⁺ ∩ J⁻)
+        # test full coverage
+        @test isempty(symdiff(J⁰ ∪ J⁻ ∪ J⁺, 0:N-1))
+    end
 end
