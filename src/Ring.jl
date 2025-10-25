@@ -100,23 +100,33 @@ end
 
 function find_g(ring::Ring{T}) where {T<:Integer}
     P, Q = factors(ring)
-    N = P*Q
+    # find generator for ℤ_P*
+    local g_P
+    range_P = 1:P-1
     λ_P = 2*ring.B*ring.p
-    range = 0:N-1
     while true
-        g = rand(range)
-        g_P = mod(g, P)
-        iszero(g_P) && continue
-        g_Q = mod(g, Q)
-        iszero(g_Q) && continue
-        powermod(g_P, ring.B*ring.p, P) == 1 && continue
-        powermod(g_P, 2*ring.B, P) == 1 && continue
-        any(powermod(g_P, λ_P ÷ r, P) == 1
-            for (r, _) in factor(ring.B)) && continue
-        powermod(g_Q, ring.q << (ring.m-1), Q) == 1 && continue
-        powermod(g_Q, one(T) << ring.m, Q) == 1 && continue
-        return g
+        g_P = rand(range_P)
+        powermod(g_P, ring.B*ring.p, P) ≠ 1 &&
+        powermod(g_P, 2*ring.B, P) ≠ 1 &&
+        all(powermod(g_P, λ_P ÷ r, P) ≠ 1
+            for (r, _) in factor(ring.B)) && break
     end
+    # find generator for ℤ_Q*
+    local g_Q
+    range_Q = 1:Q-1
+    while true
+        g_Q = rand(range_Q)
+        powermod(g_Q, ring.q << (ring.m-1), Q) ≠ 1 &&
+        powermod(g_Q, one(T) << ring.m, Q) ≠ 1 && break
+    end
+    # combine into g ∈ ℤ_N*
+    _, u, v = gcdx(P, Q)
+    # u == invmod(Q, P)
+    # v == invmod(P, Q)
+    g = mod(g_P*v*Q + g_Q*u*P, P*Q)
+    @assert mod(g, P) == g_P
+    @assert mod(g, Q) == g_Q
+    return g
 end
 
 function find_x(ring::Ring{T}) where {T<:Integer}
