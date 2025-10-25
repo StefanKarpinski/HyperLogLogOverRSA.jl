@@ -19,24 +19,46 @@ function Ring{T}(
     L :: Integer; # bit length of modulus
     rng :: AbstractRNG = Random.GLOBAL_RNG,
 ) where {T<:Integer}
-    m ≥ 1 || throw(ArgumentError("m must be ≥ 1"))
+    # argument checks
     isodd(B) || throw(ArgumentError("B must be odd"))
-    N_min = (one(T) << (L-1)) + 1
-    N_max = (one(T) << L) - 1
+    m > 0 || throw(ArgumentError("m must be positive"))
+    L > 0 || throw(ArgumentError("L must be positive"))
+
+    # range of N values
+    N_max = one(T) << L - 1
+    N_min = one(T) << (L-1) + 1
+
+    # coefficients
     C, D = 2T(B), one(T) << m
     swap = rand(rng, Bool) # generate left or right first?
     if swap
         C, D = D, C
     end
-    P_min = (one(T) << (L÷2-1)) + 1
-    P_max = (one(T) << (L÷2)) - 1
-    P, p = gen_prime_pair(P_min, P_max, C; rng)
+
+    # generate (P, p) pair
+    P_max = one(T) << cld(L,2) - 1
+    P_min = one(T) << fld(L-1,2) + 1
+    local P, p
+    while true
+        P, p = gen_prime_pair(P_min, P_max, C; rng)
+        B ∉ (P, p) && break
+    end
+
+    # generate (Q, q) pair
     Q_min = cld(N_min, P)
     Q_max = fld(N_max, P)
-    Q, q = gen_prime_pair(Q_min, Q_max, D; rng)
+    local Q, q
+    while true
+        Q, q = gen_prime_pair(Q_min, Q_max, D; rng)
+        Q ∉ (B, P, p) && q ∉ (B, P, p) && break
+    end
+
+    # swap primes if coefficients were swapped
     if swap
         p, q = q, p
     end
+
+    # construct Ring object
     Ring{T}(B, m, p, q)
 end
 
@@ -65,7 +87,7 @@ end
 modulus(ring::Ring) = prod(factors(ring))
 
 lambda(ring::Ring{T}) where {T<:Integer} =
-    (one(T) << ring.m)*ring.B*ring.p*ring.q
+    ring.B*ring.p*(ring.q << ring.m)
 
 # don't print prime factors to avoid accidentally leaking them
 function Base.show(io::IO, ring::Ring)
