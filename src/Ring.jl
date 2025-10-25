@@ -73,6 +73,24 @@ function Base.show(io::IO, ring::Ring)
     print(io, ")")
 end
 
+function find_g(ring::Ring{T}) where {T<:Integer}
+    P, Q = factors(ring)
+    N = P*Q
+    λ_P = 2*ring.B*ring.p
+    λ_Q = (one(T) << ring.m)*ring.q
+    while true
+        g = rand(0:N-1)
+        g_P = mod(g, P)
+        powermod(g_P, 2, P) == 1 && continue
+        powermod(g_P, ring.p, P) == 1 && continue
+        any(powermod(g_P, r, P) == 1 for (r, _) in factor(ring.B)) && continue
+        g_Q = mod(g, Q)
+        powermod(g_Q, one(T) << ring.m, Q) == 1 && continue
+        powermod(g_Q, ring.q, Q) == 1 && continue
+        return g
+    end
+end
+
 ## Generating prime factors for Ring
 
 """

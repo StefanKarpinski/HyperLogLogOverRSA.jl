@@ -1,7 +1,7 @@
 using Test
 using Primes
 using AnonymousUserEstimation
-using AnonymousUserEstimation: gen_prime_pair, modulus, factors
+using AnonymousUserEstimation: gen_prime_pair, jacobi, modulus, factors
 
 const 𝟚 = BigInt(2)
 
@@ -23,6 +23,37 @@ const 𝟚 = BigInt(2)
         @test_throws ArgumentError gen_prime_pair(10, 100, 7)
         @test_throws ArgumentError gen_prime_pair(100, 10, 6)
         @test_throws ArgumentError gen_prime_pair(8, 10, 12)
+    end
+end
+
+@testset "Jacobi symbol" begin
+    J = Dict{Tuple{Int,Int},Int}()
+    primes = [3, 5, 17, 19]
+    for P in primes
+        squares = sort!(unique(mod(x^2, P) for x in 1:P-1))
+        for x in 0:P-1
+            j = x == 0 ? 0 : x in squares ? 1 : -1
+            @test j == jacobi(x,P)
+            J[P,x] = j
+        end
+    end
+    for P in primes, Q in primes
+        P == Q && continue
+        N = P*Q
+        for x in 1:N-1
+            j = J[P,mod(x,P)]*J[Q,mod(x,Q)]
+            @test j == jacobi(x,N)
+        end
+    end
+    for P in primes, Q in primes, R in primes
+        P == Q && continue
+        P == R && continue
+        Q == R && continue
+        N = P*Q*R
+        for x in 1:N-1
+            j = J[P,mod(x,P)]*J[Q,mod(x,Q)]*J[R,mod(x,R)]
+            @test j == jacobi(x,N)
+        end
     end
 end
 
