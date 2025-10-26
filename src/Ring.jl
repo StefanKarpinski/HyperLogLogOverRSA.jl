@@ -139,24 +139,16 @@ function find_x(ring::Ring)
     end
 end
 
-bucket_element(ring::Ring{T}, y::T) where {T<:Integer} =
+bucket_element(ring::Ring, y::Integer) =
     powermod(y, 2ring.p, ring.P) # y^(2p) mod P
 
-function bucket_map(ring::Ring{T}, g::T) where {T<:Integer}
-    bmap = Dict{T,Int}()
-    for b = 0:ring.B-1
-        y = powermod(g, b, ring.N)  # y = g^b
-        z = bucket_element(ring, y) # z = y^(2p) mod P
-        bmap[z] = b
-    end
-    return bmap
-end
+bucket_map(ring::Ring{T}) where {T<:Integer} =
+    Dict(bucket_element(ring, one(T) << b) => b for b = 0:ring.B.-1)
 
 function decode_bucket(
     ring :: Ring{T},
-    g    :: T,
-    y    :: T;
-    bmap :: Dict{T,Int} = bucket_map(ring, g),
+    y    :: Integer;
+    bmap :: Dict{T,Int} = bucket_map(ring),
 ) where {T<:Integer}
     bmap[bucket_element(ring, y)]
 end
