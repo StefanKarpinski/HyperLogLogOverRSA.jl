@@ -39,7 +39,7 @@ end
         end
     end
     for P in primes, Q in primes
-        P == Q && continue
+        P < Q || continue
         N = P*Q
         for x in 1:N-1
             j = J[P,mod(x,P)]*J[Q,mod(x,Q)]
@@ -47,9 +47,7 @@ end
         end
     end
     for P in primes, Q in primes, R in primes
-        P == Q && continue
-        P == R && continue
-        Q == R && continue
+        P < Q < R || continue
         N = P*Q*R
         for x in 1:N-1
             j = J[P,mod(x,P)]*J[Q,mod(x,Q)]*J[R,mod(x,R)]
@@ -78,8 +76,7 @@ end
     end
     @testset "structure" for _ = 1:10
         ring = Ring(2^4+1, 4, 20)
-        N = modulus(ring)
-        λ = lambda(ring)
+        N, λ = ring.N, ring.λ
         J⁰ = [x for x in 0:N-1 if gcd(x, N) ≠ 1]
         g = find_g(ring)
         @test jacobi(g, N) == +1
