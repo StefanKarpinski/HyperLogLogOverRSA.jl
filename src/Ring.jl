@@ -150,11 +150,9 @@ function decode_bucket(
     bmap[powermod(y, 2ring.p, ring.P)]
 end
 
-function decode_sample(
-    ring :: Ring{T},
-    y    :: T,
-) where {T<:Integer}
+function decode_sample(ring::Ring, y::Integer)
     z = powermod(y, ring.q, ring.Q) # z = y^q mod Q
+    iszero(z) && throw(ArgumentError("invalid y ∉ ℤ_N^*"))
     k = ring.m
     while !isone(z)
         z = powermod(z, 2, ring.Q) # z <- z^2 mod Q
