@@ -3,6 +3,16 @@ using Primes
 
 ## Representing & generating RSA Ring instances
 
+"""
+Ring structure:
+
+    N = P Q = (2 B p + 1)(2^m q + 1)
+
+    ℤ_N ≅ ℤ_P × ℤ_Q
+    ℤ_P* ≅ C_2 × C_B × C_p
+    ℤ_Q* ≅ C_(2^m) × C_q
+
+"""
 struct Ring{T<:Integer}
     # general shape
     B :: Int # bucket factor (odd)
@@ -78,27 +88,22 @@ function Ring(
     Ring{ring_type(L)}(B, m, L; rng)
 end
 
-function factors(ring::Ring{T}) where {T<:Integer}
-    P = 2ring.p * ring.B + true
-    Q = ring.q << ring.m + true
-    P, Q
-end
+Base.getproperty(ring::Ring, name::Symbol) =
+    name === :N ? ring.P*ring.Q :
+    name === :P ? 2*ring.p*ring.B + true :
+    name === :Q ? ring.q << ring.m + true :
+    name === :λ ? ring.B*ring.p*(ring.q << ring.m) :
+        getfield(ring, name)
 
-modulus(ring::Ring) = prod(factors(ring))
-
-lambda(ring::Ring{T}) where {T<:Integer} =
-    ring.B*ring.p*(ring.q << ring.m)
+modulus(ring::Ring) = ring.N
+factors(ring::Ring) = (ring.P, ring.Q)
+lambda(ring::Ring) = ring.λ
 
 # don't print prime factors to avoid accidentally leaking them
-function Base.show(io::IO, ring::Ring)
-    show(io, typeof(ring))
-    print(io, "(")
-    N = modulus(ring)
-    show(io, "B=$(ring.B), m=$(ring.m), N=$N")
-    print(io, ")")
-end
+Base.show(io::IO, ring::Ring) =
+    print(io, "Ring(B=$(ring.B), m=$(ring.m), N=$(ring.N))")
 
-function find_g(ring::Ring{T}) where {T<:Integer}
+function find_g(ring::Ring)
     P, Q = factors(ring)
     # find generator for ℤ_P*
     local g_P
@@ -117,20 +122,16 @@ function find_g(ring::Ring{T}) where {T<:Integer}
     while true
         g_Q = rand(range_Q)
         powermod(g_Q, ring.q << (ring.m-1), Q) ≠ 1 &&
-        powermod(g_Q, one(T) << ring.m, Q) ≠ 1 && break
+        powermod(g_Q, one(Q) << ring.m, Q) ≠ 1 && break
     end
     # combine into g ∈ ℤ_N*
     _, u, v = gcdx(P, Q)
-    # u == invmod(Q, P)
-    # v == invmod(P, Q)
     g = mod(g_P*v*Q + g_Q*u*P, P*Q)
-    @assert mod(g, P) == g_P
-    @assert mod(g, Q) == g_Q
     return g
 end
 
-function find_x(ring::Ring{T}) where {T<:Integer}
-    N = modulus(ring)
+function find_x(ring::Ring)
+    N = ring.N
     range = 0:N-1
     while true
         x = rand(range)
@@ -138,7 +139,42 @@ function find_x(ring::Ring{T}) where {T<:Integer}
     end
 end
 
-## Generating prime factors for Ring
+bucket_element(ring::Ring{T}, y::T) where {T<:Integer} =
+    powermod(y, 2ring.p, ring.P) # y^(2p) mod P
+
+function bucket_map(ring::Ring{T}, g::T) where {T<:Integer}
+    bmap = Dict{T,Int}()
+    for b = 0:ring.B-1
+        y = powermod(g, b, ring.N)  # y = g^b
+        z = bucket_element(ring, y) # z = y^(2p) mod P
+        bmap[z] = b
+    end
+    return bmap
+end
+
+function decode_bucket(
+    ring :: Ring{T},
+    g    :: T,
+    y    :: T;
+    bmap :: Dict{T,Int} = bucket_map(ring, g),
+) where {T<:Integer}
+    bmap[bucket_element(ring, y)]
+end
+
+function decode_sample(
+    ring :: Ring{T},
+    y    :: T,
+) where {T<:Integer}
+    z = powermod(y, ring.q, ring.Q) # z = y^q mod Q
+    k = ring.m
+    while !isone(z)
+        z = powermod(z, 2, ring.Q) # z <- z^2 mod Q
+        k -= 1
+    end
+    return k
+end
+
+## Generating prime pairs
 
 """
     gen_prime_pair(
