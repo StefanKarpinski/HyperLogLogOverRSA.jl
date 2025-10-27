@@ -1,7 +1,7 @@
 using Test
 using Primes
-using AnonymousUserEstimation
-using AnonymousUserEstimation:
+using HyperLogLogOverRSA
+using HyperLogLogOverRSA:
     gen_prime_pair, jacobi, modulus, factors, lambda, find_g, find_x
 
 const 𝟚 = BigInt(2)

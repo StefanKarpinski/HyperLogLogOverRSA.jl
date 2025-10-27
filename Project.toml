@@ -1,4 +1,4 @@
-name = "AnonymousUserEstimation"
+name = "HyperLogLogOverRSA"
 uuid = "6e327227-db5c-4d0d-873e-dfb5ee94069e"
 authors = ["Stefan Karpinski <stefan@karpinski.org>"]
 version = "0.1.0"
