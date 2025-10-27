@@ -38,29 +38,64 @@ function Ring{T}(
     N_max = one(T) << L - 1
     N_min = one(T) << (L-1) + 1
 
-    # coefficients
-    C, D = 2T(B), one(T) << m
+    # ranges of prime factors
+    P_scale, Q_scale = T(2B), one(T) << m
+    P_min = Q_min = one(T) << fld(L-1,2) + 1
+    P_max = Q_max = fld(N_max, P_min)
+    while true
+        done = true
+        P_min, P_max = narrow_prime_range(P_scale, P_min, P_max)
+        P_min ≤ P_max || throw(ArgumentError("infeasible ring spec"))
+        Q_min′ = cld(N_min, P_max)
+        Q_max′ = fld(N_max, P_min)
+        if Q_min′ > Q_min; Q_min = Q_min′; done = false; end
+        if Q_max′ < Q_max; Q_max = Q_max′; done = false; end
+        Q_min, Q_max = narrow_prime_range(Q_scale, Q_min, Q_max)
+        Q_min ≤ Q_max || throw(ArgumentError("infeasible ring spec"))
+        P_min′ = cld(N_min, Q_max)
+        P_max′ = fld(N_max, Q_min)
+        if P_min′ > P_min; P_min = P_min′; done = false; end
+        if P_max′ < P_max; P_max = P_max′; done = false; end
+        done && break
+    end
+    # feasible solutions exist:
+    @assert N_min ≤ P_min*Q_max ≤ N_max
+    @assert N_min ≤ P_max*Q_min ≤ N_max
+
+    # check that one of these is usable (unique primes)
+    B_factors = sort!(collect(keys(factor(B))))
+    p_min = div(P_min - 1, P_scale)
+    p_max = div(P_max - 1, P_scale)
+    q_min = div(Q_min - 1, P_scale)
+    q_max = div(Q_max - 1, P_scale)
+    allunique([B_factors; P_min; Q_max; p_min; q_max]) ||
+    allunique([B_factors; P_max; Q_min; p_max; q_min]) ||
+        throw(ArgumentError("infeasible ring spec"))
+    # giving up here is overly conservative, but we want to be sure
+    # that some usable solution exists before we start sampling
+    # otherwise we could end up looping forever
+
     swap = rand(rng, Bool) # generate left or right first?
     if swap
-        C, D = D, C
+        P_scale, Q_scale = Q_scale, P_scale
+        P_min, Q_min = Q_min, P_min
+        P_max, Q_max = Q_max, P_max
     end
 
-    # generate (P, p) pair
-    P_max = one(T) << cld(L,2) - 1
-    P_min = one(T) << fld(L-1,2) + 1
-    local P, p
+    local P, Q, p, q
     while true
-        P, p = gen_prime_pair(P_min, P_max, C; rng)
-        B ∉ (P, p) && break
-    end
-
-    # generate (Q, q) pair
-    Q_min = cld(N_min, P)
-    Q_max = fld(N_max, P)
-    local Q, q
-    while true
-        Q, q = gen_prime_pair(Q_min, Q_max, D; rng)
-        Q ∉ (B, P, p) && q ∉ (B, P, p) && break
+        # generate (P, p) pair
+        while true
+            P, p = gen_prime_pair(P_scale, P_min, P_max; rng)
+            allunique([B_factors; P; p]) && break
+        end
+        # range of second prime factor
+        Q_min′ = max(Q_min, cld(N_min, P))
+        Q_max′ = fld(N_max, P) # previous bound doesn't matter for max
+        Q_min′, Q_max′ = narrow_prime_range(Q_scale, Q_min′, Q_max′)
+        # generate (Q, q) pair
+        Q, q = gen_prime_pair(Q_scale, Q_min′, Q_max′; rng)
+        allunique([B_factors; P; p; Q; q]) && break
     end
 
     # swap primes if coefficients were swapped
@@ -68,16 +103,11 @@ function Ring{T}(
         p, q = q, p
     end
 
-    # construct Ring object
+    # construct the Ring object
     Ring{T}(B, m, p, q)
 end
 
-ring_type(L::Integer) =
-    L ≤ 8   ? UInt8   :
-    L ≤ 16  ? UInt16  :
-    L ≤ 32  ? UInt32  :
-    L ≤ 64  ? UInt64  :
-    L ≤ 128 ? UInt128 : BigInt
+ring_type(L::Integer) = L < 64 ? Int64 : L < 128 ? Int128 : BigInt
 
 function Ring(
     B :: Integer, # bucket factor — must be odd
@@ -90,8 +120,8 @@ end
 
 Base.getproperty(ring::Ring, name::Symbol) =
     name === :N ? ring.P*ring.Q :
-    name === :P ? 2*ring.p*ring.B + true :
-    name === :Q ? ring.q << ring.m + true :
+    name === :P ? 2*ring.p*ring.B + 1 :
+    name === :Q ? ring.q << ring.m + 1 :
     name === :λ ? ring.B*ring.p*(ring.q << ring.m) :
         getfield(ring, name)
 
@@ -140,14 +170,14 @@ function find_x(ring::Ring)
 end
 
 bucket_map(ring::Ring{T}) where {T<:Integer} =
-    Dict(powermod(one(T) << b, 2ring.p, ring.P) => b for b = 0:ring.B.-1)
+    Dict(powermod(one(T) << b, T(2ring.p), ring.P) => b for b = 0:ring.B.-1)
 
 function decode_bucket(
     ring :: Ring{T},
     y    :: Integer;
     bmap :: Dict{T,Int} = bucket_map(ring),
 ) where {T<:Integer}
-    bmap[powermod(y, 2ring.p, ring.P)]
+    bmap[powermod(y, T(2ring.p), ring.P)]
 end
 
 function decode_sample(ring::Ring, y::Integer)
@@ -162,6 +192,41 @@ function decode_sample(ring::Ring, y::Integer)
 end
 
 ## Generating prime pairs
+
+# P == scale*p + 1 <=> p == (P - 1)/scale
+
+function next_paired_prime(scale::Integer, P::Integer, P_max::Integer)
+    while P ≤ P_max
+        P = scale*nextprime(cld(P - 1, scale)) + 1
+        isprime(P) && break
+        P = nextprime(P)
+    end
+    if P ≤ P_max
+        @assert isprime(P)
+        @assert isprime((P-1) ÷ scale)
+    end
+    return P
+end
+
+function prev_paired_prime(scale::Integer, P_min::Integer, P::Integer)
+    while P_min ≤ P
+        P = scale*prevprime(fld(P - 1, scale)) + 1
+        isprime(P) && break
+        P = prevprime(P)
+    end
+    if P_min ≤ P
+        @assert isprime(P)
+        @assert isprime((P-1) ÷ scale)
+    end
+    return P
+end
+
+function narrow_prime_range(scale::Integer, P_min::Integer, P_max::Integer)
+    iseven(scale) || throw(ArgumentError("scale factor must be even"))
+    P_max = prev_paired_prime(scale, P_min, P_max)
+    P_min = next_paired_prime(scale, P_min, P_max)
+    return P_min, P_max
+end
 
 """
     gen_prime_pair(
@@ -179,32 +244,25 @@ Return a pair of primes, `(P, p)`, such that:
 Requires that `scale` is even.
 """
 function gen_prime_pair(
+    scale :: Integer,
     P_min :: Integer,
-    P_max :: Integer,
-    scale :: Integer;
+    P_max :: Integer;
     rng :: AbstractRNG = Random.GLOBAL_RNG,
 )
     iseven(scale) || throw(ArgumentError("scale factor must be even"))
 
-    # range of p values
-    P_min = nextprime(P_min)
-    P_max = prevprime(P_max)
-    # P == s*p + 1 <=> p == (P - 1)/s
-    p_min = cld(P_min - true, scale)
-    p_max = fld(P_max - true, scale)
-    # adjust to actual primes
-    p_min = nextprime(p_min)
-    p_max = prevprime(p_max)
+    p_min = cld(P_min - 1, scale)
+    p_max = fld(P_max - 1, scale)
+    p_min += iseven(p_min)
+    p_max -= iseven(p_max)
     p_range = p_min:p_max
-
-    isempty(p_range) && throw(ArgumentError("infeasible range"))
 
     while true
         # sample an odd value
-        p = rand(rng, p_range) | true
+        p = rand(rng, p_range) | 1
         # check if it's good
         isprime(p) || continue
-        P = scale*p + true
+        P = scale*p + 1
         isprime(P) || continue
         return P, p
     end

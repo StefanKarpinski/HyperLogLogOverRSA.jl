@@ -13,7 +13,7 @@ const 𝟚 = BigInt(2)
                 (0xf, 0xffff, 22)
                 (𝟚^(256-1), 𝟚^256-1, 2^32*nextprime(2^12))
             ]
-            P, p = gen_prime_pair(lo, hi, s)
+            P, p = gen_prime_pair(s, lo, hi)
             @test lo ≤ P ≤ hi
             @test isprime(P)
             @test isprime(p)
@@ -21,9 +21,9 @@ const 𝟚 = BigInt(2)
         end
     end
     @testset "error handling" begin
-        @test_throws ArgumentError gen_prime_pair(10, 100, 7)
-        @test_throws ArgumentError gen_prime_pair(100, 10, 6)
-        @test_throws ArgumentError gen_prime_pair(8, 10, 12)
+        @test_throws ArgumentError gen_prime_pair(7, 10, 100)
+        @test_throws ArgumentError gen_prime_pair(6, 100, 10)
+        @test_throws ArgumentError gen_prime_pair(12, 8, 10)
     end
 end
 
@@ -65,32 +65,40 @@ end
             @test isprime(ring.p)
             @test isprime(ring.q)
         end
+        ring = Ring(2^12+1, 16, 63)
+        @test ring isa Ring{Int64}
         ring = Ring(2^12+1, 16, 64)
-        @test ring isa Ring{UInt64}
-        ring = Ring(2^12+1, 16, 65)
-        @test ring isa Ring{UInt128}
+        @test ring isa Ring{Int128}
+        ring = Ring(2^12+1, 16, 127)
+        @test ring isa Ring{Int128}
         ring = Ring(2^12+1, 16, 128)
-        @test ring isa Ring{UInt128}
-        ring = Ring(2^12+1, 16, 129)
         @test ring isa Ring{BigInt}
     end
-    @testset "structure" for _ = 1:10
-        ring = Ring(2^4+1, 4, 20)
+    rings = Ring{Int}[]
+    for log_B = 2:5, m = 2:5
+        B = 2^log_B + 1
+        ring = Ring(B, m, 20)
+        ring in rings || push!(rings, ring)
+    end
+    @testset "structure" for ring in rings
         N, λ = ring.N, ring.λ
-        J⁰ = [x for x in 0:N-1 if gcd(x, N) ≠ 1]
         g = find_g(ring)
-        @test jacobi(g, N) == +1
-        J⁺ = sort!([powermod(g, k, N) for k in 0:λ-1])
-        @test allunique(J⁺)
         x = find_x(ring)
+        @test jacobi(g, N) == +1
         @test jacobi(x, N) == -1
-        J⁻ = sort!(mod.(x .* J⁺, N))
-        @test allunique(J⁻)
-        # test disjointness
-        @test isempty(J⁰ ∩ J⁺)
-        @test isempty(J⁰ ∩ J⁻)
-        @test isempty(J⁺ ∩ J⁻)
-        # test full coverage
-        @test isempty(symdiff(J⁰ ∪ J⁻ ∪ J⁺, 0:N-1))
+        # classification of elements by Jacobi symbol:
+        #   jacobi(y) ==  0 <=> not invertible
+        #   jacobi(y) == +1 <=> g^k for some k
+        #   jacobi(y) == -1 <=> xg^k for some k
+        J₀ = [x for x in 0:N-1 if gcd(x, N) ≠ 1]
+        J₊ = sort!([powermod(g, k, N) for k in 0:λ-1])
+        J₋ = sort!(mod.(x .* J₊, N))
+        # test full disjoint coverage
+        J = [J₀; J₊; J₋]
+        @test allunique(J)
+        @test length(J) == N
+        @test all(0 ≤ y < N for y in J)
+        # HyperLogLog statistics
+
     end
 end
