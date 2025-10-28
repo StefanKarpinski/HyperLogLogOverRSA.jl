@@ -169,15 +169,23 @@ function find_x(ring::Ring)
     end
 end
 
-bucket_map(ring::Ring{T}) where {T<:Integer} =
-    Dict(powermod(one(T) << b, T(2ring.p), ring.P) => b for b = 0:ring.B.-1)
+function bucket_map(ring::Ring{T}) where {T<:Integer}
+    P = ring.P
+    B = ring.B
+    g = 2
+    while g < P
+        all(powermod(g, (P-1) ÷ p, P) ≠ 1 for p in keys(factor(B))) && break
+        g += 1
+    end
+    Dict(powermod(g, 2ring.p*b, ring.P) => b for b = 0:ring.B-1)
+end
 
 function decode_bucket(
     ring :: Ring{T},
     y    :: Integer;
     bmap :: Dict{T,Int} = bucket_map(ring),
 ) where {T<:Integer}
-    bmap[powermod(y, T(2ring.p), ring.P)]
+    bmap[powermod(y, 2ring.p, ring.P)]
 end
 
 function decode_sample(ring::Ring, y::Integer)
