@@ -42,16 +42,24 @@ function Ring{T}(
     P_scale, Q_scale = T(2B), one(T) << m
     P_min = Q_min = one(T) << fld(L-1,2) + 1
     P_max = Q_max = fld(N_max, P_min)
+    # for small log₂(N) we need to check for feasibility, which
+    # also speeds up the search when there are few solutions
+    # for large log₂(N) it's unnecessary (there are many solutions)
+    # and inefficient since narrowing the prime range is very slow
     while true
         done = true
-        P_min, P_max = narrow_prime_range(P_scale, P_min, P_max)
-        P_min ≤ P_max || throw(ArgumentError("infeasible ring spec"))
+        if L < 128
+            P_min, P_max = narrow_prime_range(P_scale, P_min, P_max)
+            P_min ≤ P_max || throw(ArgumentError("infeasible ring spec"))
+        end
         Q_min′ = cld(N_min, P_max)
         Q_max′ = fld(N_max, P_min)
         if Q_min′ > Q_min; Q_min = Q_min′; done = false; end
         if Q_max′ < Q_max; Q_max = Q_max′; done = false; end
-        Q_min, Q_max = narrow_prime_range(Q_scale, Q_min, Q_max)
-        Q_min ≤ Q_max || throw(ArgumentError("infeasible ring spec"))
+        if L < 128
+            Q_min, Q_max = narrow_prime_range(Q_scale, Q_min, Q_max)
+            Q_min ≤ Q_max || throw(ArgumentError("infeasible ring spec"))
+        end
         P_min′ = cld(N_min, Q_max)
         P_max′ = fld(N_max, Q_min)
         if P_min′ > P_min; P_min = P_min′; done = false; end
@@ -62,18 +70,20 @@ function Ring{T}(
     @assert N_min ≤ P_min*Q_max ≤ N_max
     @assert N_min ≤ P_max*Q_min ≤ N_max
 
-    # check that one of these is usable (unique primes)
     B_factors = sort!(collect(keys(factor(B))))
-    p_min = div(P_min - 1, P_scale)
-    p_max = div(P_max - 1, P_scale)
-    q_min = div(Q_min - 1, P_scale)
-    q_max = div(Q_max - 1, P_scale)
-    allunique([B_factors; P_min; Q_max; p_min; q_max]) ||
-    allunique([B_factors; P_max; Q_min; p_max; q_min]) ||
-        throw(ArgumentError("infeasible ring spec"))
-    # giving up here is overly conservative, but we want to be sure
-    # that some usable solution exists before we start sampling
-    # otherwise we could end up looping forever
+    if L < 128
+        # check that one of these is usable (unique primes)
+        p_min = div(P_min - 1, P_scale)
+        p_max = div(P_max - 1, P_scale)
+        q_min = div(Q_min - 1, P_scale)
+        q_max = div(Q_max - 1, P_scale)
+        allunique([B_factors; P_min; Q_max; p_min; q_max]) ||
+        allunique([B_factors; P_max; Q_min; p_max; q_min]) ||
+            throw(ArgumentError("infeasible ring spec"))
+        # giving up here is overly conservative, but we want to be sure
+        # that some usable solution exists before we start sampling
+        # otherwise we could end up looping forever
+    end
 
     swap = rand(rng, Bool) # generate left or right first?
     if swap
