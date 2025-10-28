@@ -9,8 +9,8 @@ Ring structure:
     N = P Q = (2 B p + 1)(2^m q + 1)
 
     ℤ_N ≅ ℤ_P × ℤ_Q
-    ℤ_P* ≅ C_2 × C_B × C_p
-    ℤ_Q* ≅ C_(2^m) × C_q
+    ℤ_P^* ≅ C_2 × C_B × C_p
+    ℤ_Q^* ≅ C_(2^m) × C_q
 
 """
 struct Ring{T<:Integer}
@@ -143,9 +143,9 @@ lambda(ring::Ring) = ring.λ
 Base.show(io::IO, ring::Ring) =
     print(io, "Ring(B=$(ring.B), m=$(ring.m), N=$(ring.N))")
 
-function rand_g(ring::Ring)
+function rand_semigenerator(ring::Ring)
     P, Q = factors(ring)
-    # find generator for ℤ_P*
+    # find generator for ℤ_P^*
     range_P = 1:P-1
     Bp = ring.B*ring.p
     𝟚B = 2*ring.B
@@ -158,7 +158,7 @@ function rand_g(ring::Ring)
         powermod(g_P, 𝟚B, P) ≠ 1 &&
         all(powermod(g_P, λ_P_r, P) ≠ 1 for λ_P_r in λ_P_rs) && break
     end
-    # find generator for ℤ_Q*
+    # find generator for ℤ_Q^*
     range_Q = 1:Q-1
     q𝟚ᵐ⁻¹ = ring.q << (ring.m-1)
     𝟚ᵐ = one(Q) << ring.m
@@ -168,34 +168,37 @@ function rand_g(ring::Ring)
         powermod(g_Q, q𝟚ᵐ⁻¹, Q) ≠ 1 &&
         powermod(g_Q, 𝟚ᵐ, Q) ≠ 1 && break
     end
-    # combine into g ∈ ℤ_N*
+    # combine into g ∈ ℤ_N^*
     _, u, v = gcdx(P, Q)
     g = mod(g_P*v*Q + g_Q*u*P, P*Q)
     return g
 end
 
-function rand_x(ring::Ring)
+function rand_jacobi_twist(ring::Ring)
     N = ring.N
     range = 0:N-1
     while true
-        x = rand(range)
-        jacobi(x, N) == -1 && return x
+        τ = rand(range)
+        jacobi(τ, N) == -1 && return τ
     end
 end
+
+rand_elt(ring::Ring) = rand(1:ring.N-1)
 
 function bucket_map(ring::Ring{T}) where {T<:Integer}
+    # find first g_B that generates the C_B part of ℤ_P^*
     P = ring.P; Pm1 = P - 1
     B = ring.B
-    g = 2
-    while g < P
-        all(powermod(g, Pm1 ÷ p, P) ≠ 1 for p in keys(factor(B))) && break
-        g += 1
+    g_B = 2
+    while g_B < P
+        all(powermod(g_B, Pm1 ÷ p, P) ≠ 1 for p in keys(factor(B))) && break
+        g_B += 1
     end
     𝟚p = 2ring.p
-    Dict(powermod(g, 𝟚p*b, P) => b for b = 0:B-1)
+    Dict(powermod(g_B, 𝟚p*b, P) => b for b = 0:B-1)
 end
 
-function decode_bucket(
+function hll_bucket(
     ring :: Ring{T},
     y    :: Integer;
     bmap :: Dict{T,Int} = bucket_map(ring),
@@ -203,7 +206,7 @@ function decode_bucket(
     bmap[powermod(y, 2ring.p, ring.P)]
 end
 
-function decode_sample(ring::Ring, y::Integer)
+function hll_geometric(ring::Ring, y::Integer)
     z = powermod(y, ring.q, ring.Q) # z = y^q mod Q
     iszero(z) && throw(ArgumentError("invalid y ∉ ℤ_N^*"))
     k = ring.m
@@ -212,6 +215,16 @@ function decode_sample(ring::Ring, y::Integer)
         k -= 1
     end
     return k
+end
+
+function hll_value(
+    ring :: Ring{T},
+    y    :: Integer;
+    bmap :: Dict{T,Int} = bucket_map(ring),
+) where {T<:Integer}
+    b = hll_bucket(ring, y; bmap)
+    k = hll_geometric(ring, y)
+    return b, k
 end
 
 ## Generating prime pairs

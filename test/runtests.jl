@@ -2,8 +2,9 @@ using Test
 using Primes
 using HyperLogLogOverRSA
 using HyperLogLogOverRSA:
-    gen_prime_pair, jacobi, modulus, factors, lambda, rand_g, rand_x,
-    bucket_map, decode_bucket, decode_sample
+    gen_prime_pair, jacobi, modulus, factors, lambda,
+    rand_semigenerator, rand_jacobi_twist,
+    bucket_map, hll_value
 
 @testset "Prime pair generation" begin
     @testset "correct usage" begin
@@ -85,8 +86,8 @@ end
         # jacobi(y) == +1 <=> g^k for some k
         # jacobi(y) == -1 <=> xg^k for some k
         N, λ = ring.N, ring.λ
-        g = rand_g(ring)
-        x = rand_x(ring)
+        g = rand_semigenerator(ring)
+        x = rand_jacobi_twist(ring)
         @test jacobi(g, N) == +1
         @test jacobi(x, N) == -1
         J₀ = [y for y in 0:N-1 if gcd(y, N) ≠ 1]
@@ -107,8 +108,7 @@ end
         bmap = bucket_map(ring)
         for y in 0:N-1
             jacobi(y, N) == -1 || continue
-            b = decode_bucket(ring, y; bmap)
-            k = decode_sample(ring, y)
+            b, k = hll_value(ring, y; bmap)
             counts[b+1,k+1] += 1
         end
         @test counts == [
