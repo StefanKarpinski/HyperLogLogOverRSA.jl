@@ -133,7 +133,7 @@ lambda(ring::Ring) = ring.λ
 Base.show(io::IO, ring::Ring) =
     print(io, "Ring(B=$(ring.B), m=$(ring.m), N=$(ring.N))")
 
-function find_g(ring::Ring)
+function rand_g(ring::Ring)
     P, Q = factors(ring)
     # find generator for ℤ_P*
     local g_P
@@ -160,7 +160,7 @@ function find_g(ring::Ring)
     return g
 end
 
-function find_x(ring::Ring)
+function rand_x(ring::Ring)
     N = ring.N
     range = 0:N-1
     while true

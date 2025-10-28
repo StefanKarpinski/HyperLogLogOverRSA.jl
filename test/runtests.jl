@@ -2,7 +2,7 @@ using Test
 using Primes
 using HyperLogLogOverRSA
 using HyperLogLogOverRSA:
-    gen_prime_pair, jacobi, modulus, factors, lambda, find_g, find_x,
+    gen_prime_pair, jacobi, modulus, factors, lambda, rand_g, rand_x,
     bucket_map, decode_bucket, decode_sample
 
 @testset "Prime pair generation" begin
@@ -85,8 +85,8 @@ end
         # jacobi(y) == +1 <=> g^k for some k
         # jacobi(y) == -1 <=> xg^k for some k
         N, λ = ring.N, ring.λ
-        g = find_g(ring)
-        x = find_x(ring)
+        g = rand_g(ring)
+        x = rand_x(ring)
         @test jacobi(g, N) == +1
         @test jacobi(x, N) == -1
         J₀ = [y for y in 0:N-1 if gcd(y, N) ≠ 1]
