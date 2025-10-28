@@ -146,23 +146,27 @@ Base.show(io::IO, ring::Ring) =
 function rand_g(ring::Ring)
     P, Q = factors(ring)
     # find generator for ℤ_P*
-    local g_P
     range_P = 1:P-1
+    Bp = ring.B*ring.p
+    𝟚B = 2*ring.B
     λ_P = 2*ring.B*ring.p
+    λ_P_rs = [λ_P ÷ r for r in keys(factor(ring.B))]
+    local g_P
     while true
         g_P = rand(range_P)
-        powermod(g_P, ring.B*ring.p, P) ≠ 1 &&
-        powermod(g_P, 2*ring.B, P) ≠ 1 &&
-        all(powermod(g_P, λ_P ÷ r, P) ≠ 1
-            for (r, _) in factor(ring.B)) && break
+        powermod(g_P, Bp, P) ≠ 1 &&
+        powermod(g_P, 𝟚B, P) ≠ 1 &&
+        all(powermod(g_P, λ_P_r, P) ≠ 1 for λ_P_r in λ_P_rs) && break
     end
     # find generator for ℤ_Q*
-    local g_Q
     range_Q = 1:Q-1
+    q𝟚ᵐ⁻¹ = ring.q << (ring.m-1)
+    𝟚ᵐ = one(Q) << ring.m
+    local g_Q
     while true
         g_Q = rand(range_Q)
-        powermod(g_Q, ring.q << (ring.m-1), Q) ≠ 1 &&
-        powermod(g_Q, one(Q) << ring.m, Q) ≠ 1 && break
+        powermod(g_Q, q𝟚ᵐ⁻¹, Q) ≠ 1 &&
+        powermod(g_Q, 𝟚ᵐ, Q) ≠ 1 && break
     end
     # combine into g ∈ ℤ_N*
     _, u, v = gcdx(P, Q)
@@ -180,14 +184,15 @@ function rand_x(ring::Ring)
 end
 
 function bucket_map(ring::Ring{T}) where {T<:Integer}
-    P = ring.P
+    P = ring.P; Pm1 = P - 1
     B = ring.B
     g = 2
     while g < P
-        all(powermod(g, (P-1) ÷ p, P) ≠ 1 for p in keys(factor(B))) && break
+        all(powermod(g, Pm1 ÷ p, P) ≠ 1 for p in keys(factor(B))) && break
         g += 1
     end
-    Dict(powermod(g, 2ring.p*b, ring.P) => b for b = 0:ring.B-1)
+    𝟚p = 2ring.p
+    Dict(powermod(g, 𝟚p*b, P) => b for b = 0:B-1)
 end
 
 function decode_bucket(
