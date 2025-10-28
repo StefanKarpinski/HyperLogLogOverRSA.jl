@@ -2,9 +2,8 @@ using Test
 using Primes
 using HyperLogLogOverRSA
 using HyperLogLogOverRSA:
-    gen_prime_pair, jacobi, modulus, factors, lambda, find_g, find_x
-
-const 𝟚 = BigInt(2)
+    gen_prime_pair, jacobi, modulus, factors, lambda, find_g, find_x,
+    bucket_map, decode_bucket, decode_sample
 
 @testset "Prime pair generation" begin
     @testset "correct usage" begin
@@ -100,7 +99,21 @@ end
         @test allunique(J)
         @test length(J) == N
         @test all(0 ≤ y < N for y in J)
-        # HyperLogLog statistics
-
+    end
+    @testset "HyperLogLog frequencies" for ring in rings
+        B, m, N, = ring.B, ring.m, ring.N
+        pq = ring.p * ring.q
+        counts = fill(0, B, m+1)
+        bmap = bucket_map(ring)
+        for y in 0:N-1
+            jacobi(y, N) == -1 || continue
+            b = decode_bucket(ring, y; bmap)
+            k = decode_sample(ring, y)
+            counts[b+1,k+1] += 1
+        end
+        @test counts == [
+            pq << max(0, m-k-1)
+            for b = 0:B-1, k = 0:m
+        ]
     end
 end
