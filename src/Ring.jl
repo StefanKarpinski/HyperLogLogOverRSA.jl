@@ -200,18 +200,18 @@ end
 
 function hll_bucket(
     ring :: Ring{T},
-    y    :: Integer;
+    x    :: Integer;
     bmap :: Dict{T,Int} = bucket_map(ring),
 ) where {T<:Integer}
-    bmap[powermod(y, 2ring.p, ring.P)]
+    bmap[powermod(x, 2ring.p, ring.P)]
 end
 
-function hll_geometric(ring::Ring, y::Integer)
-    z = powermod(y, ring.q, ring.Q) # z = y^q mod Q
-    iszero(z) && throw(ArgumentError("invalid y ∉ ℤ_N^*"))
+function hll_geometric(ring::Ring, x::Integer)
+    y = powermod(x, ring.q, ring.Q) # y = x^q mod Q
+    iszero(y) && throw(ArgumentError("invalid x ∉ ℤ_N^*"))
     k = ring.m
-    while !isone(z)
-        z = powermod(z, 2, ring.Q) # z <- z^2 mod Q
+    while !isone(y)
+        y = powermod(y, 2, ring.Q) # y <- y^2 mod Q
         k -= 1
     end
     return k
@@ -219,11 +219,11 @@ end
 
 function hll_value(
     ring :: Ring{T},
-    y    :: Integer;
+    x    :: Integer;
     bmap :: Dict{T,Int} = bucket_map(ring),
 ) where {T<:Integer}
-    b = hll_bucket(ring, y; bmap)
-    k = hll_geometric(ring, y)
+    b = hll_bucket(ring, x; bmap)
+    k = hll_geometric(ring, x)
     return b, k
 end
 

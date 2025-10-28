@@ -82,33 +82,33 @@ end
         ring in rings || push!(rings, ring)
     end
     @testset "Jacobi classification" for ring in rings
-        # jacobi(y) ==  0 <=> not invertible
-        # jacobi(y) == +1 <=> g^k for some k
-        # jacobi(y) == -1 <=> xg^k for some k
+        # jacobi(x) ==  0 <=> not invertible
+        # jacobi(x) == +1 <=> g^k for some k
+        # jacobi(x) == -1 <=> τ*g^k for some k
         N, λ = ring.N, ring.λ
         g = rand_semigenerator(ring)
         τ = rand_jacobi_twist(ring)
         @test jacobi(g, N) == +1
         @test jacobi(τ, N) == -1
-        J₀ = [y for y in 0:N-1 if gcd(y, N) ≠ 1]
+        J₀ = [x for x in 0:N-1 if gcd(x, N) ≠ 1]
         J₊ = sort!([powermod(g, k, N) for k in 0:λ-1])
         J₋ = sort!(mod.(τ .* J₊, N))
-        @test all(jacobi(y, N) ==  0 for y in J₀)
-        @test all(jacobi(y, N) == +1 for y in J₊)
-        @test all(jacobi(y, N) == -1 for y in J₋)
+        @test all(jacobi(x, N) ==  0 for x in J₀)
+        @test all(jacobi(x, N) == +1 for x in J₊)
+        @test all(jacobi(x, N) == -1 for x in J₋)
         J = [J₀; J₊; J₋]
         @test allunique(J)
         @test length(J) == N
-        @test all(0 ≤ y < N for y in J)
+        @test all(0 ≤ x < N for x in J)
     end
     @testset "HyperLogLog frequencies" for ring in rings
         B, m, N, = ring.B, ring.m, ring.N
         pq = ring.p * ring.q
         counts = fill(0, B, m+1)
         bmap = bucket_map(ring)
-        for y in 0:N-1
-            jacobi(y, N) == -1 || continue
-            b, k = hll_value(ring, y; bmap)
+        for x in 0:N-1
+            jacobi(x, N) == -1 || continue
+            b, k = hll_value(ring, x; bmap)
             counts[b+1,k+1] += 1
         end
         @test counts == [
