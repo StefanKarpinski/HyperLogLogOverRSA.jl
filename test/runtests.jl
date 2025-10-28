@@ -87,12 +87,12 @@ end
         # jacobi(y) == -1 <=> xg^k for some k
         N, λ = ring.N, ring.λ
         g = rand_semigenerator(ring)
-        x = rand_jacobi_twist(ring)
+        τ = rand_jacobi_twist(ring)
         @test jacobi(g, N) == +1
-        @test jacobi(x, N) == -1
+        @test jacobi(τ, N) == -1
         J₀ = [y for y in 0:N-1 if gcd(y, N) ≠ 1]
         J₊ = sort!([powermod(g, k, N) for k in 0:λ-1])
-        J₋ = sort!(mod.(x .* J₊, N))
+        J₋ = sort!(mod.(τ .* J₊, N))
         @test all(jacobi(y, N) ==  0 for y in J₀)
         @test all(jacobi(y, N) == +1 for y in J₊)
         @test all(jacobi(y, N) == -1 for y in J₋)
