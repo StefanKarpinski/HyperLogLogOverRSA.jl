@@ -185,6 +185,9 @@ end
 
 rand_elt(ring::Ring) = rand(1:ring.N-1)
 
+rand_power(B::Integer, N::Integer) = 2B*rand(0:(N-1)÷B-1) + 1
+rand_power(ring::Ring) = rand_power(ring.B, ring.N)
+
 function bucket_map(ring::Ring{T}) where {T<:Integer}
     # find first g_B that generates the C_B part of ℤ_P^*
     P = ring.P; Pm1 = P - 1
