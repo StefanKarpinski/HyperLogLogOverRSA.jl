@@ -1,4 +1,3 @@
-using Random
 using Primes
 
 ## Representing & generating RSA Ring instances
@@ -24,10 +23,9 @@ struct Ring{T<:Integer}
 end
 
 function Ring{T}(
-    B :: Integer, # bucket factor — must be odd
+    B :: Integer, # bucket factor — must be odd
     m :: Integer, # max geometric sample size
-    L :: Integer; # bit length of modulus
-    rng :: AbstractRNG = Random.GLOBAL_RNG,
+    L :: Integer, # bit length of modulus
 ) where {T<:Integer}
     # argument checks
     isodd(B) || throw(ArgumentError("B must be odd"))
@@ -96,7 +94,7 @@ function Ring{T}(
     while true
         # generate (P, p) pair
         while true
-            P, p = gen_prime_pair(P_scale, P_min, P_max; rng)
+            P, p = gen_prime_pair(P_scale, P_min, P_max)
             allunique([B_factors; P; p]) && break
         end
         # range of second prime factor
@@ -104,7 +102,7 @@ function Ring{T}(
         Q_max′ = fld(N_max, P) # previous bound doesn't matter for max
         Q_min′, Q_max′ = narrow_prime_range(Q_scale, Q_min′, Q_max′)
         # generate (Q, q) pair
-        Q, q = gen_prime_pair(Q_scale, Q_min′, Q_max′; rng)
+        Q, q = gen_prime_pair(Q_scale, Q_min′, Q_max′)
         allunique([B_factors; P; p; Q; q]) && break
     end
 
@@ -120,12 +118,11 @@ end
 ring_type(L::Integer) = L < 64 ? Int64 : L < 128 ? Int128 : BigInt
 
 function Ring(
-    B :: Integer, # bucket factor — must be odd
+    B :: Integer, # bucket factor — must be odd
     m :: Integer, # max geometric sample size
-    L :: Integer; # bit length of modulus
-    rng :: AbstractRNG = Random.GLOBAL_RNG,
+    L :: Integer, # bit length of modulus
 )
-    Ring{ring_type(L)}(B, m, L; rng)
+    Ring{ring_type(L)}(B, m, L)
 end
 
 Base.getproperty(ring::Ring, name::Symbol) =
@@ -153,7 +150,7 @@ function rand_semigenerator(ring::Ring)
     λ_P_rs = [λ_P ÷ r for r in keys(factor(ring.B))]
     local g_P
     while true
-        g_P = rand(range_P)
+        g_P = rand(rng, range_P)
         powermod(g_P, Bp, P) ≠ 1 &&
         powermod(g_P, 𝟚B, P) ≠ 1 &&
         all(powermod(g_P, λ_P_r, P) ≠ 1 for λ_P_r in λ_P_rs) && break
@@ -164,7 +161,7 @@ function rand_semigenerator(ring::Ring)
     𝟚ᵐ = one(Q) << ring.m
     local g_Q
     while true
-        g_Q = rand(range_Q)
+        g_Q = rand(rng, range_Q)
         powermod(g_Q, q𝟚ᵐ⁻¹, Q) ≠ 1 &&
         powermod(g_Q, 𝟚ᵐ, Q) ≠ 1 && break
     end
@@ -173,20 +170,6 @@ function rand_semigenerator(ring::Ring)
     g = mod(g_P*v*Q + g_Q*u*P, P*Q)
     return g
 end
-
-function rand_jacobi_twist(ring::Ring)
-    N = ring.N
-    range = 0:N-1
-    while true
-        τ = rand(range)
-        jacobi(τ, N) == -1 && return τ
-    end
-end
-
-rand_elt(ring::Ring) = rand(1:ring.N-1)
-
-rand_power(B::Integer, N::Integer) = 2B*rand(0:(N-1)÷B-1) + 1
-rand_power(ring::Ring) = rand_power(ring.B, ring.N)
 
 function bucket_map(ring::Ring{T}) where {T<:Integer}
     # find first g_B that generates the C_B part of ℤ_P^*
@@ -220,7 +203,7 @@ function hll_geometric(ring::Ring, x::Integer)
     return k
 end
 
-function hll_value(
+function hll_decode(
     ring :: Ring{T},
     x    :: Integer;
     bmap :: Dict{T,Int} = bucket_map(ring),
@@ -271,8 +254,7 @@ end
     gen_prime_pair(
         P_min :: Integer,
         P_max :: Integer,
-        scale :: Integer;
-        rng :: AbstractRNG = Random.GLOBAL_RNG,
+        scale :: Integer,
     ) -> P, p
 
 Return a pair of primes, `(P, p)`, such that:
@@ -285,8 +267,7 @@ Requires that `scale` is even.
 function gen_prime_pair(
     scale :: Integer,
     P_min :: Integer,
-    P_max :: Integer;
-    rng :: AbstractRNG = Random.GLOBAL_RNG,
+    P_max :: Integer,
 )
     iseven(scale) || throw(ArgumentError("scale factor must be even"))
 

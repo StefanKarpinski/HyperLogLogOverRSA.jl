@@ -1,26 +1,18 @@
 module HyperLogLogOverRSA
 
+using Random
+const rng = RandomDevice()
+
 include("Jacobi.jl")
 include("Ring.jl")
-
-using SHA
-
-function hash_resource_class(str::AbstractString)
-    bytes = sha224(str)
-    h = zero(UInt64)
-    for i = 1:8
-        h <<= 8
-        h |= bytes[i]
-    end
-    return h
-end
+include("Client.jl")
 
 export
     Ring,
-    rand_elt,
-    rand_power,
+    Client,
     rand_semigenerator,
-    rand_jacobi_twist,
-    hash_resource_class
+    bucket_map,
+    hll_generate,
+    hll_decode
 
 end # module HyperLogLogOverRSA

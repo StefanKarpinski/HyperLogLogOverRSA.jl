@@ -3,10 +3,9 @@ using Primes
 using HyperLogLogOverRSA
 using HyperLogLogOverRSA:
     gen_prime_pair, jacobi, modulus, factors, lambda,
-    rand_semigenerator, rand_jacobi_twist,
-    bucket_map, hll_value
+    rand_semigenerator, rand_jacobi_twist, bucket_map
 
-@testset "Prime pair generation" begin
+@testset "Prime pairs" begin
     @testset "correct usage" begin
         for (lo, hi, s) in Any[
                 (10, 100, 6)
@@ -87,7 +86,7 @@ end
         # jacobi(x) == -1 <=> τ*g^k for some k
         N, λ = ring.N, ring.λ
         g = rand_semigenerator(ring)
-        τ = rand_jacobi_twist(ring)
+        τ = rand_jacobi_twist(N)
         @test jacobi(g, N) == +1
         @test jacobi(τ, N) == -1
         J₀ = [x for x in 0:N-1 if gcd(x, N) ≠ 1]
@@ -108,12 +107,26 @@ end
         bmap = bucket_map(ring)
         for x in 0:N-1
             jacobi(x, N) == -1 || continue
-            b, k = hll_value(ring, x; bmap)
+            b, k = hll_decode(ring, x; bmap)
             counts[b+1,k+1] += 1
         end
         @test counts == [
             pq << max(0, m-k-1)
             for b = 0:B-1, k = 0:m
         ]
+    end
+end
+
+@testset "HLL gen & decode" begin
+    ring = Ring(2^12+1, 32, 1024)
+    bmap = bucket_map(ring)
+    @test ring isa Ring{BigInt}
+    client = Client(ring)
+    @test client isa Client{BigInt}
+    for uuid = 1:100
+        Y = [hll_generate(client, "/package/$uuid") for _ = 1:100]
+        H = [hll_decode(ring, y; bmap) for y in Y]
+        @test allunique(Y)
+        @test allequal(H)
     end
 end

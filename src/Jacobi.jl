@@ -1,4 +1,5 @@
 ## binary/reciprocity-based Jacobi
+
 """
     jacobi(x::Integer, N::Integer) -> Int
 
@@ -45,7 +46,23 @@ function jacobi(x::Integer, N::Integer)::Int
     return N == 1 ? s : 0
 end
 
+## Generate a random Jacobi "twist" element
+
+"""
+    rand_jacobi_twist(N::Integer)
+
+Generate random τ ∈ ℤ_N with jacobi(τ) == -1.
+"""
+function rand_jacobi_twist(N::Integer)
+    range = 0:N-1
+    while true
+        τ = rand(rng, range)
+        jacobi(τ, N) == -1 && return τ
+    end
+end
+
 ## Small inline helpers with BigInt-specialized fast paths
+
 @inline mod4(x::Integer) = Int(x & (4-1))
 @inline mod8(x::Integer) = Int(x & (8-1))
 
