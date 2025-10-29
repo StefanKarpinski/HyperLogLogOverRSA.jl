@@ -82,16 +82,16 @@ end
     end
     @testset "Jacobi classification" for ring in rings
         # jacobi(x) ==  0 <=> not invertible
-        # jacobi(x) == +1 <=> g^k for some k
-        # jacobi(x) == -1 <=> τ*g^k for some k
+        # jacobi(x) == +1 <=> x = g^k for some k
+        # jacobi(x) == -1 <=> x = x₀*g^k for some k
         N, λ = ring.N, ring.λ
         g = rand_semigenerator(ring)
-        τ = rand_jacobi_twist(N)
+        x₀ = rand_jacobi_twist(N)
         @test jacobi(g, N) == +1
-        @test jacobi(τ, N) == -1
+        @test jacobi(x₀, N) == -1
         J₀ = [x for x in 0:N-1 if gcd(x, N) ≠ 1]
         J₊ = sort!([powermod(g, k, N) for k in 0:λ-1])
-        J₋ = sort!(mod.(τ .* J₊, N))
+        J₋ = sort!(mod.(x₀ .* J₊, N))
         @test all(jacobi(x, N) ==  0 for x in J₀)
         @test all(jacobi(x, N) == +1 for x in J₊)
         @test all(jacobi(x, N) == -1 for x in J₋)

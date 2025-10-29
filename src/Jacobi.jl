@@ -51,13 +51,13 @@ end
 """
     rand_jacobi_twist(N::Integer)
 
-Generate random τ ∈ ℤ_N with jacobi(τ) == -1.
+Generate random x ∈ ℤ_N with jacobi(x) == -1.
 """
 function rand_jacobi_twist(N::Integer)
     range = 0:N-1
     while true
-        τ = rand(rng, range)
-        jacobi(τ, N) == -1 && return τ
+        x = rand(rng, range)
+        jacobi(x, N) == -1 && return x
     end
 end
 
