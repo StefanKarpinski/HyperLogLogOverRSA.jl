@@ -3,6 +3,8 @@ using Distributions
 const ε = exp2(-30)
 const SQRT_SAMPLES = ceil(Int, -21.96*log2(ε))
 const SQRT_MINIMUM = quantile(Binomial(SQRT_SAMPLES, 0.5), ε)
+const TRIAL_DIV_MAX = 2^10
+const NTH_ROOT_SAMPLES = ceil(Int, -log2(ε)/log2(TRIAL_DIV_MAX))
 
 struct RingCert{T<:Integer}
     # general shape
@@ -15,6 +17,9 @@ struct RingCert{T<:Integer}
 
     # square roots of hash-generated elements
     sqrts :: Vector{Pair{Int,T}}
+
+    # Σ-protocol for Nth roots of hashed elements
+    sigmas :: Vector{Tuple{T,T}}
 end
 
 function RingCert(ring::Ring{T}) where {T<:Integer}
@@ -34,15 +39,15 @@ function RingCert(ring::Ring{T}) where {T<:Integer}
 
     # Bézout & CRT coefficients
     _, u, v = gcdx(P, Q)
-    uP = mod(u*P, N)
-    vQ = mod(v*Q, N)
+    uP = widen(mod(u*P, N))
+    vQ = widen(mod(v*Q, N))
 
     # compute sqrts that exist
     sqrts = Vector{Pair{Int,T}}()
     i = j = 0
     while j < SQRT_SAMPLES
         i += 1
-        x = ring_hash(N, i)
+        x = ring_hash(N, :sqrt, i)
         jacobi(x, N) == 1 || continue
         j += 1
         r_P = modsqrt(x, P)
@@ -53,10 +58,28 @@ function RingCert(ring::Ring{T}) where {T<:Integer}
         @assert powermod(r, 2, N) == x
         push!(sqrts, i => r)
     end
+    # this has ε probability of happening for a valid ring
     length(sqrts) ≥ SQRT_MINIMUM ||
         throw(ArgumentError("ring: fails semiprimality test (N=$N)"))
 
-    return RingCert(ring.B, ring.m, N, g, sqrts)
+    # generate Σ-protocol values for Nth roots of random elements
+    sigmas = Vector{Tuple{T,T}}()
+    D = invmod(N, lambda(ring)) # ∀ x: (x^N)^D == x mod N
+    for i = 1:NTH_ROOT_SAMPLES
+        local w
+        while true
+            w = widen(rand(rng, 2:N-1))
+            gcd(w, N) == 1 && break
+        end
+        x = ring_hash(N, :Nth_root, i)
+        y = powermod(x, D, N) # Nth root
+        a = powermod(w, N, N) # commitment
+        c = proof_hash(N, x, a) # challenge
+        b = mod(w*powermod(y, c, N), N) # response
+        push!(sigmas, (a, b))
+    end
+
+    return RingCert(ring.B, ring.m, N, g, sqrts, sigmas)
 end
 
 Base.show(io::IO, cert::RingCert) =

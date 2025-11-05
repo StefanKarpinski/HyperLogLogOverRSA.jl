@@ -1,14 +1,12 @@
 module HyperLogLogOverRSA
 
-using SHA
-using Base: SHA1
 using Random
 const rng = RandomDevice()
 
 include("PrimePairs.jl")
 include("Jacobi.jl")
+include("Hashing.jl")
 include("Ring.jl")
-include("RingHash.jl")
 include("RingCert.jl")
 include("Client.jl")
 

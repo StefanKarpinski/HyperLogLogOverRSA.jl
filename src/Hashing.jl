@@ -1,4 +1,6 @@
-import Base.GMP.MPZ: mul_2exp!, add_ui!
+using SHA
+using Base: SHA1
+using Base.GMP.MPZ: mul_2exp!, add_ui!
 
 function shift_add_byte!(x::Integer, b::UInt8)
     x <<= 8
@@ -27,4 +29,27 @@ function ring_hash(N::Integer, keys::Union{Integer,AbstractString,Symbol}...)
         end
     end
     return mod(x, N)
+end
+
+function proof_hash(keys::T...) where {T<:Integer}
+    str = sprint() do io
+        for key in keys
+            print(io, key, '\0')
+        end
+    end
+    h = zero(T)
+    for b in sha256(str)
+        h = shift_add_byte!(h, b)
+    end
+    return h
+end
+
+function hash_resource_class(salt::SHA1, class::AbstractString)
+    bytes = sha1("$salt\0$class\0")
+    h = zero(UInt64)
+    for i = 1:8
+        h <<= 8
+        h |= bytes[i]
+    end
+    return h
 end
