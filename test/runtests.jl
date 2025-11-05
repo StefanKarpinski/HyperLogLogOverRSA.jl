@@ -2,7 +2,7 @@ using Test
 using Primes
 using HyperLogLogOverRSA
 using HyperLogLogOverRSA:
-    gen_prime_pair, jacobi, modulus, factors, lambda,
+    gen_prime_pair, jacobi, modulus, factors, lambda, modsqrt,
     rand_semigenerator, rand_jacobi_twist, bucket_map
 
 @testset "Prime pairs" begin
@@ -55,6 +55,20 @@ end
     end
 end
 
+@testset "modsqrt" begin
+    for p in primes(1000), x = 0:p-1
+        R = [r for r = 0:p-1 if mod(r^2, p) == x]
+        r = modsqrt(x, p)
+        if isempty(R)
+            @test r === nothing
+        else
+            @test r == minimum(R)
+            @test mod(r^2, p) == x
+        end
+    end
+end
+
+# false &&
 @testset "Ring sructure" begin
     @testset "basics" begin
         for bits in [55, 63, 64]
@@ -64,20 +78,20 @@ end
             @test isprime(ring.p)
             @test isprime(ring.q)
         end
-        ring = Ring(2^12+1, 16, 63)
+        ring = Ring(2^5+1, 8, 63)
         @test ring isa Ring{Int64}
-        ring = Ring(2^12+1, 16, 64)
+        ring = Ring(2^5+1, 8, 64)
         @test ring isa Ring{Int128}
-        ring = Ring(2^12+1, 16, 127)
+        ring = Ring(2^5+1, 8, 127)
         @test ring isa Ring{Int128}
-        ring = Ring(2^12+1, 16, 128)
+        ring = Ring(2^5+1, 8, 128)
         @test ring isa Ring{BigInt}
     end
     # generate some small rings for comprehensive testing
     rings = Ring{Int}[]
     for log_B = 2:5, m = 2:5
         B = 2^log_B + 1
-        ring = Ring(B, m, 20)
+        ring = Ring(B, m, 20, certifiable=false)
         ring in rings || push!(rings, ring)
     end
     @testset "Jacobi classification" for ring in rings
@@ -117,11 +131,14 @@ end
     end
 end
 
+# false &&
 @testset "HLL gen & decode" begin
-    ring = Ring(2^12+1, 32, 1024)
+    ring = Ring(2^12-1, 32, 512)
     bmap = bucket_map(ring)
     @test ring isa Ring{BigInt}
-    client = Client(ring)
+    cert = RingCert(ring)
+    @test cert isa RingCert{BigInt}
+    client = Client(cert)
     @test client isa Client{BigInt}
     for uuid = 1:100
         Y = [hll_generate(client, "/package/$uuid") for _ = 1:100]

@@ -1,8 +1,6 @@
-using SHA
-using Base: SHA1
-
 struct Client{T<:Integer}
     B :: Int # bucket factor (odd)
+    m :: Int # max geometric sample size
     N :: T   # ring modulus
     g :: T   # common published ring semigenerator
     x₀ :: T  # client-specific random Jacobi twist element
@@ -11,15 +9,44 @@ end
 
 function Client(
     B :: Int,
+    m :: Int,
     N :: T,
     g :: T,
 ) where {T<:Integer}
     x₀ = rand_jacobi_twist(N)
     salt = SHA1(sha1(string(x₀, base=62)))
-    Client(B, N, g, x₀, salt)
+    Client(B, m, N, g, x₀, salt)
 end
 
-Client(ring::Ring) = Client(ring.B, ring.N, rand_semigenerator(ring))
+function Client(cert::RingCert)
+    N = cert.N
+
+    (N & 3) == 3 ||
+        throw(ArgumentError("modulus: N ≠ 3 mod 4 (N=$N)"))
+    isprime(N >> 1) ||
+        throw(ArgumentError("modulus: (N-1)/2 not prime (N=$N)"))
+    powermod(2, N >> 1, N) ∉ (1, N-1) ||
+        throw(ArgumentError("modulus: 2 fails to witness compositeness (N=$N)"))
+
+    # check that N has ≤ two distinct prime factors (p ≥ 1 - ε)
+    sqrts = Dict(cert.sqrts)
+    i = j = k = 0
+    while j < SQRT_SAMPLES
+        i += 1
+        x = ring_hash(N, i)
+        jacobi(x, N) == 1 || continue
+        j += 1
+        r = get(sqrts, i, nothing)
+        r === nothing && continue
+        mod(r^2, N) == x ||
+            throw(ArgumentError("semiprimality: invalid sqrt (N=$N)"))
+        k += 1
+    end
+    k ≥ SQRT_MINIMUM ||
+        throw(ArgumentError("semiprimality: too few sqrts (N=$N)"))
+
+    Client(cert.B, cert.m, cert.N, cert.g)
+end
 
 Base.show(io::IO, c::Client) =
     print(io, "Client(B=$(c.B), N=$(c.N)), x₀=$(c.x₀))")

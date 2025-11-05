@@ -25,7 +25,8 @@ end
 function Ring{T}(
     B :: Integer, # bucket factor — must be odd
     m :: Integer, # max geometric sample size
-    L :: Integer, # bit length of modulus
+    L :: Integer; # bit length of modulus
+    certifiable :: Bool = true,
 ) where {T<:Integer}
     # argument checks
     isodd(B) || throw(ArgumentError("B must be odd"))
@@ -85,13 +86,17 @@ function Ring{T}(
 
     swap = rand(rng, Bool) # generate left or right first?
     if swap
-        P_scale, Q_scale = Q_scale, P_scale
-        P_min, Q_min = Q_min, P_min
-        P_max, Q_max = Q_max, P_max
     end
 
+    swap = false
     local P, Q, p, q
     while true
+        if rand(Bool)
+            swap = !swap
+            P_scale, Q_scale = Q_scale, P_scale
+            P_min, Q_min = Q_min, P_min
+            P_max, Q_max = Q_max, P_max
+        end
         # generate (P, p) pair
         while true
             P, p = gen_prime_pair(P_scale, P_min, P_max)
@@ -103,10 +108,18 @@ function Ring{T}(
         Q_min′, Q_max′ = narrow_prime_range(Q_scale, Q_min′, Q_max′)
         # generate (Q, q) pair
         Q, q = gen_prime_pair(Q_scale, Q_min′, Q_max′)
-        allunique([B_factors; P; p; Q; q]) && break
+        allunique([B_factors; P; p; Q; q]) || continue
+        if certifiable
+            # check that (N-1)/2 is prime
+            N = P*Q
+            isprime(N >> 1) || continue
+            # test that 2 is a Rabin-Miller witness
+            powermod(2, N >> 1, N) ∉ (1, N-1) || continue
+            # structure of N guarantees this with near certainty
+        end
+        break # we found a good modulus!
     end
-
-    # swap primes if coefficients were swapped
+    # unswap if needed
     if swap
         p, q = q, p
     end
@@ -120,9 +133,10 @@ ring_type(L::Integer) = L < 64 ? Int64 : L < 128 ? Int128 : BigInt
 function Ring(
     B :: Integer, # bucket factor — must be odd
     m :: Integer, # max geometric sample size
-    L :: Integer, # bit length of modulus
+    L :: Integer; # bit length of modulus
+    certifiable :: Bool = true,
 )
-    Ring{ring_type(L)}(B, m, L)
+    Ring{ring_type(L)}(B, m, L; certifiable)
 end
 
 Base.getproperty(ring::Ring, name::Symbol) =
@@ -139,6 +153,22 @@ lambda(ring::Ring) = ring.λ
 # don't print prime factors to avoid accidentally leaking them
 Base.show(io::IO, ring::Ring) =
     print(io, "Ring(B=$(ring.B), m=$(ring.m), N=$(ring.N))")
+
+import Base.GMP.MPZ: mul_2exp!, add_ui!
+
+function ring_hash(N::Integer, key::Union{Integer,AbstractString,Symbol})
+    T = key isa Integer ? "int" : key isa AbstractString ? "str" : "sym"
+    prefix = "$N\0$T\0$key"
+    L = Base.top_set_bit(N) + 1
+    x = zero(N)
+    for i = 1:cld(L, 512)
+        for b in sha512("$prefix\0$i\0")
+            mul_2exp!(x, 8)
+            add_ui!(x, b)
+        end
+    end
+    return mod(x, N)
+end
 
 function rand_semigenerator(ring::Ring)
     P, Q = factors(ring)
