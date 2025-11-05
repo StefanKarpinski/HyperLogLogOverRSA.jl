@@ -38,7 +38,7 @@ function Client(cert::RingCert)
         j += 1
         r = get(sqrts, i, nothing)
         r === nothing && continue
-        mod(r^2, N) == x ||
+        powermod(r, 2, N) == x ||
             throw(ArgumentError("semiprimality: invalid sqrt (N=$N)"))
         k += 1
     end

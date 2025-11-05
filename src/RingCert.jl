@@ -50,7 +50,7 @@ function RingCert(ring::Ring{T}) where {T<:Integer}
         r_Q = modsqrt(x, Q)
         r_Q === nothing && continue
         r = mod(r_P*vQ + r_Q*uP, N)
-        @assert mod(r^2, N) == x
+        @assert powermod(r, 2, N) == x
         push!(sqrts, i => r)
     end
     length(sqrts) ≥ SQRT_MINIMUM ||
@@ -77,7 +77,10 @@ Otherwise uses Tonelli–Shanks (always works for odd primes).
 
 The returned root is canonical: r ≤ p - r.
 """
-function modsqrt(x::Integer, p::Integer)
+modsqrt(x::Integer, p::Integer) =
+    _modsqrt(promote(x, widen(p))...)
+
+function _modsqrt(x::Integer, p::Integer)
     p ≥ 2 && isprime(p) ||
         throw(ArgumentError("Modulus must be prime"))
 
@@ -100,7 +103,7 @@ function modsqrt(x::Integer, p::Integer)
     if (p & 7) == 5
         r = powermod(x, (p + 3) >> 3, p)
         # if wrong square, multiply by 2^((p-1)/4)
-        if r^2 % p ≠ x
+        if mod(r^2, p) ≠ x
             r = mod(r*powermod(2, (p - 1) >> 2, p), p)
         end
         return min(r, p - r)
@@ -115,7 +118,7 @@ function modsqrt(x::Integer, p::Integer)
     # find a quadratic non-residue z (Legendre = -1)
     z = 2
     while powermod(z, (p - 1) >> 1, p) == 1
-        z = (z + 1) % p
+        z = mod(z + 1, p)
     end
 
     c = powermod(z, q, p)
@@ -126,10 +129,10 @@ function modsqrt(x::Integer, p::Integer)
     while t ≠ 1
         # find minimal i in [1, m-1] with t^(2^i) == 1
         i = 1
-        t′ = t^2 % p
+        t′ = mod(t^2, p)
         while t′ ≠ 1
             i += 1
-            t′ = t′^2 % p
+            t′ = mod(t′^2, p)
             i ≥ m && break
         end
 

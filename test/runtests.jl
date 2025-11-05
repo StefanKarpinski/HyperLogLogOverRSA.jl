@@ -133,17 +133,23 @@ end
 
 # false &&
 @testset "HLL gen & decode" begin
-    ring = Ring(2^12-1, 32, 512)
-    bmap = bucket_map(ring)
-    @test ring isa Ring{BigInt}
-    cert = RingCert(ring)
-    @test cert isa RingCert{BigInt}
-    client = Client(cert)
-    @test client isa Client{BigInt}
-    for uuid = 1:100
-        Y = [hll_generate(client, "/package/$uuid") for _ = 1:100]
-        H = [hll_decode(ring, y; bmap) for y in Y]
-        @test allunique(Y)
-        @test allequal(H)
+    rings = [
+        Int64  => Ring(2^5+1, 8, 63)
+        Int128 => Ring(2^9+1, 16, 127)
+        BigInt => Ring(2^12-1, 32, 512)
+    ]
+    for (T, ring) in rings
+        @test ring isa Ring{T}
+        cert = RingCert(ring)
+        @test cert isa RingCert{T}
+        client = Client(cert)
+        @test client isa Client{T}
+        bmap = bucket_map(ring)
+        for uuid = 1:100
+            Y = [hll_generate(client, "/package/$uuid") for _ = 1:100]
+            H = [hll_decode(ring, y; bmap) for y in Y]
+            @test allunique(Y)
+            @test allequal(H)
+        end
     end
 end
