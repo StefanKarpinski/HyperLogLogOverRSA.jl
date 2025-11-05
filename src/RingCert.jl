@@ -29,7 +29,10 @@ function RingCert(ring::Ring{T}) where {T<:Integer}
     powermod(2, N >> 1, N) ∉ (1, N-1) ||
         throw(ArgumentError("modulus: 2 fails to witness compositeness (N=$N)"))
 
-    # Bézout coefficients, CRT multipliers
+    # generate a semigenerator element
+    g = rand_semigenerator(ring)
+
+    # Bézout & CRT coefficients
     _, u, v = gcdx(P, Q)
     uP = mod(u*P, N)
     vQ = mod(v*Q, N)
@@ -52,9 +55,6 @@ function RingCert(ring::Ring{T}) where {T<:Integer}
     end
     length(sqrts) ≥ SQRT_MINIMUM ||
         throw(ArgumentError("ring: fails semiprimality test (N=$N)"))
-
-    # generate a semigenerator element
-    g = rand_semigenerator(ring)
 
     return RingCert(ring.B, ring.m, N, g, sqrts)
 end

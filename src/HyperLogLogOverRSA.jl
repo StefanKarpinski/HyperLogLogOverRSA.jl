@@ -5,9 +5,11 @@ using Base: SHA1
 using Random
 const rng = RandomDevice()
 
+include("PrimePairs.jl")
 include("Jacobi.jl")
 include("Ring.jl")
-include("Certificate.jl")
+include("RingHash.jl")
+include("RingCert.jl")
 include("Client.jl")
 
 export
