@@ -35,21 +35,29 @@ function Client(cert::RingCert)
         throw(ArgumentError("semiprimality: divisible by $p (N=$N)"))
     end
 
+    # find a deterministic twist element
+    τ = zero(N)
+    for i = 1:N
+        τ = ring_hash(N, :twist, i)
+        jacobi(τ, N) == -1 && break
+    end
+
     # check that N has ≤ two distinct prime factors (p ≥ 1 - ε)
     sqrts = Dict(cert.sqrts)
-    i = j = k = 0
-    while j < SQRT_SAMPLES
+    i = j = 0
+    while i < SQRT_SAMPLES
         i += 1
         x = ring_hash(N, :sqrt, i)
-        jacobi(x, N) == 1 || continue
-        j += 1
+        if jacobi(x, N) == -1
+            x = mod(widemul(τ, x), N)
+        end
         r = get(sqrts, i, nothing)
         r === nothing && continue
         powermod(r, 2, N) == x ||
             throw(ArgumentError("semiprimality: invalid sqrt (N=$N)"))
-        k += 1
+        j += 1
     end
-    k ≥ SQRT_MINIMUM ||
+    j ≥ SQRT_MINIMUM ||
         throw(ArgumentError("semiprimality: too few sqrts (N=$N)"))
 
     # check Σ-protocol proofs of Nth roots

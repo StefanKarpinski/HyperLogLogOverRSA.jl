@@ -42,14 +42,22 @@ function RingCert(ring::Ring{T}) where {T<:Integer}
     uP = widen(mod(u*P, N))
     vQ = widen(mod(v*Q, N))
 
-    # compute sqrts that exist
+    # find a deterministic twist element
+    τ = zero(N)
+    for i = 1:N
+        τ = ring_hash(N, :twist, i)
+        jacobi(τ, N) == -1 && break
+    end
+
+    # compute sqrts of hashed elements
     sqrts = Vector{Pair{Int,T}}()
-    i = j = 0
-    while j < SQRT_SAMPLES
+    i = 0
+    while i < SQRT_SAMPLES
         i += 1
         x = ring_hash(N, :sqrt, i)
-        jacobi(x, N) == 1 || continue
-        j += 1
+        if jacobi(x, N) == -1
+            x = mod(widemul(τ, x), N)
+        end
         r_P = modsqrt(x, P)
         r_P === nothing && continue
         r_Q = modsqrt(x, Q)
