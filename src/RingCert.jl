@@ -1,6 +1,6 @@
 using Distributions
 
-const ε = exp2(-30)
+const ε = exp2(-40)
 const SQRT_SAMPLES = ceil(Int, -21.96*log2(ε))
 const SQRT_MINIMUM = quantile(Binomial(SQRT_SAMPLES, 0.5), ε)
 const TRIAL_DIV_MAX = 2^10
