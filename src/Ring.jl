@@ -45,9 +45,10 @@ function Ring{T}(
     # also speeds up the search when there are few solutions
     # for large log₂(N) it's unnecessary (there are many solutions)
     # and inefficient since narrowing the prime range is very slow
+    narrow_if_L_less = 128
     while true
         done = true
-        if L < 128
+        if L < narrow_if_L_less
             P_min, P_max = narrow_prime_range(P_scale, P_min, P_max)
             P_min ≤ P_max || throw(ArgumentError("infeasible ring spec"))
         end
@@ -55,7 +56,7 @@ function Ring{T}(
         Q_max′ = fld(N_max, P_min)
         if Q_min′ > Q_min; Q_min = Q_min′; done = false; end
         if Q_max′ < Q_max; Q_max = Q_max′; done = false; end
-        if L < 128
+        if L < narrow_if_L_less
             Q_min, Q_max = narrow_prime_range(Q_scale, Q_min, Q_max)
             Q_min ≤ Q_max || throw(ArgumentError("infeasible ring spec"))
         end
@@ -70,7 +71,7 @@ function Ring{T}(
     @assert N_min ≤ P_max*Q_min ≤ N_max
 
     B_factors = sort!(collect(keys(factor(B))))
-    if L < 128
+    if L < narrow_if_L_less
         # check that one of these is usable (unique primes)
         p_min = div(P_min - 1, P_scale)
         p_max = div(P_max - 1, P_scale)
@@ -105,7 +106,9 @@ function Ring{T}(
         # range of second prime factor
         Q_min′ = max(Q_min, cld(N_min, P))
         Q_max′ = fld(N_max, P) # previous bound doesn't matter for max
-        Q_min′, Q_max′ = narrow_prime_range(Q_scale, Q_min′, Q_max′)
+        if L < narrow_if_L_less
+            Q_min′, Q_max′ = narrow_prime_range(Q_scale, Q_min′, Q_max′)
+        end
         # generate (Q, q) pair
         Q, q = gen_prime_pair(Q_scale, Q_min′, Q_max′)
         allunique([B_factors; P; p; Q; q]) || continue
