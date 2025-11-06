@@ -190,11 +190,12 @@ end
 
 function bucket_map(ring::Ring{T}) where {T<:Integer}
     # find first g_B that generates the C_B part of ℤ_P^*
-    P = ring.P; Pm1 = P - 1
+    P = ring.P
     B = ring.B
+    P_1 = P-1
     g_B = 2
     while g_B < P
-        all(powermod(g_B, Pm1 ÷ p, P) ≠ 1 for p in keys(factor(B))) && break
+        all(powermod(g_B, P_1 ÷ p, P) ≠ 1 for p in keys(factor(B))) && break
         g_B += 1
     end
     𝟚p = 2ring.p
