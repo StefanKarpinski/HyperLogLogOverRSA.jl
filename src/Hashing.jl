@@ -12,7 +12,11 @@ function shift_add_byte!(x::BigInt, b::UInt8)
     add_ui!(x, b)
 end
 
-function ring_hash(N::Integer, keys::Union{Integer,AbstractString,Symbol}...)
+function ring_hash(
+    N :: Integer,
+    keys :: Union{Integer,AbstractString,Symbol}...;
+    untwist :: Integer = zero(N),
+)
     prefix = sprint() do io
         print(io, N)
         for key in keys
@@ -28,20 +32,11 @@ function ring_hash(N::Integer, keys::Union{Integer,AbstractString,Symbol}...)
             x = shift_add_byte!(x, b)
         end
     end
-    return mod(x, N)
-end
-
-function proof_hash(keys::T...) where {T<:Integer}
-    str = sprint() do io
-        for key in keys
-            print(io, key, '\0')
-        end
+    x = mod(x, N)
+    if !iszero(untwist) && jacobi(x, N) == -1
+        x = mod(widemul(untwist, x), N)
     end
-    h = zero(T)
-    for b in sha256(str)
-        h = shift_add_byte!(h, b)
-    end
-    return h
+    return x
 end
 
 function hash_resource_class(salt::SHA1, class::AbstractString)

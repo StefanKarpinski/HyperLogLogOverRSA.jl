@@ -1,10 +1,10 @@
 using Distributions
 
 const ε = exp2(-40)
+const TRIALDIV_MAX = 2^10
+const ROOT_SAMPLES = ceil(Int, -log2(ε)/log2(TRIALDIV_MAX))
 const SQRT_SAMPLES = ceil(Int, -21.96*log2(ε))
 const SQRT_MINIMUM = quantile(Binomial(SQRT_SAMPLES, 0.5), ε)
-const TRIAL_DIV_MAX = 2^10
-const NTH_ROOT_SAMPLES = ceil(Int, -log2(ε)/log2(TRIAL_DIV_MAX))
 
 struct RingCert{T<:Integer}
     # general shape
@@ -15,11 +15,9 @@ struct RingCert{T<:Integer}
     N :: T # modulus
     g :: T # semigenerator
 
-    # Nth roots of hash-generated elements
-    roots :: Vector{T}
-
-    # square roots of hash-generated elements
-    sqrts :: Vector{Pair{Int,T}}
+    # roots of hash-generated elements
+    roots :: Vector{T} # Nth roots
+    sqrts :: Vector{T} # square roots
 end
 
 function RingCert(ring::Ring{T}) where {T<:Integer}
@@ -37,46 +35,34 @@ function RingCert(ring::Ring{T}) where {T<:Integer}
     # generate a semigenerator element
     g = rand_semigenerator(ring)
 
+    # compute Nth roots of hashed elements
+    roots = T[]
+    D = invmod(N, lambda(ring)) # ∀ x: (x^N)^D == x mod N
+    for i = 1:ROOT_SAMPLES
+        x = ring_hash(N, :Nth_root, i)
+        r = powermod(x, D, N) # Nth root of x
+        @assert powermod(r, N, N) == x
+        push!(roots, r)
+    end
+
     # Bézout & CRT coefficients
     _, u, v = gcdx(P, Q)
     uP = widen(mod(u*P, N))
     vQ = widen(mod(v*Q, N))
 
-    # compute Nth roots of hashed elements
-    roots = Vector{T}()
-    D = invmod(N, lambda(ring)) # ∀ x: (x^N)^D == x mod N
-    for i = 1:NTH_ROOT_SAMPLES
-        x = ring_hash(N, :Nth_root, i)
-        r = powermod(x, D, N) # Nth root
-        @assert powermod(r, N, N) == x
-        push!(roots, r)
-    end
-
-    # find a deterministic twist element
-    τ = zero(N)
-    for i = 1:N
-        τ = ring_hash(N, :twist, i)
-        jacobi(τ, N) == -1 && break
-    end
-
     # compute sqrts of hashed elements
-    sqrts = Vector{Pair{Int,T}}()
-    i = 0
-    while i < SQRT_SAMPLES
-        i += 1
-        x = ring_hash(N, :sqrt, i)
-        if jacobi(x, N) == -1
-            x = mod(widemul(τ, x), N)
-        end
-        r_P = modsqrt(x, P)
-        r_P === nothing && continue
-        r_Q = modsqrt(x, Q)
-        r_Q === nothing && continue
-        r = mod(r_P*vQ + r_Q*uP, N)
+    sqrts = T[]
+    τ = hash_twist(N)
+    for i = 1:SQRT_SAMPLES
+        length(sqrts) ≥ SQRT_MINIMUM && break
+        x = ring_hash(N, :sqrt, i; untwist=τ)
+        r_P = modsqrt(x, P); r_P === nothing && continue
+        r_Q = modsqrt(x, Q); r_Q === nothing && continue
+        r = mod(r_P*vQ + r_Q*uP, N) # sqrt of x
         @assert powermod(r, 2, N) == x
-        push!(sqrts, i => r)
+        push!(sqrts, r)
     end
-    # this has probability ε of happening for a valid ring
+    # probability ε of failure for a valid ring
     length(sqrts) ≥ SQRT_MINIMUM ||
         throw(ArgumentError("ring: fails semiprimality test (N=$N)"))
 
@@ -85,6 +71,14 @@ end
 
 Base.show(io::IO, cert::RingCert) =
     print(io, "RingCert(B=$(cert.B), m=$(cert.m), N=$(cert.N))")
+
+function hash_twist(N::Integer)
+    i = 0
+    while true
+        τ = ring_hash(N, :twist, i += 1)
+        jacobi(τ, N) == -1 && return τ
+    end
+end
 
 """
     modsqrt(x::Integer, p::Integer) -> Union{Integer,Nothing}
