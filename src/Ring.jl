@@ -172,6 +172,7 @@ function rand_semigenerator(ring::Ring)
         powermod(g_P, 𝟚B, P) ≠ 1 &&
         all(powermod(g_P, λ_P_r, P) ≠ 1 for λ_P_r in λ_P_rs) && break
     end
+    @assert jacobi(g_P, P) == -1
     # find generator for ℤ_Q^*
     range_Q = 1:Q-1
     q𝟚ᵐ⁻¹ = ring.q << (ring.m-1)
@@ -182,9 +183,16 @@ function rand_semigenerator(ring::Ring)
         powermod(g_Q, q𝟚ᵐ⁻¹, Q) ≠ 1 &&
         powermod(g_Q, 𝟚ᵐ, Q) ≠ 1 && break
     end
+    @assert jacobi(g_Q, Q) == -1
     # combine into g ∈ ℤ_N^*
+    N = P*Q
     _, u, v = gcdx(P, Q)
-    g = mod(g_P*v*Q + g_Q*u*P, P*Q)
+    uP = mod(widemul(u, P), N)
+    vQ = mod(widemul(v, Q), N)
+    g = oftype(N, mod(g_P*vQ + g_Q*uP, N))
+    @assert mod(g, P) == g_P
+    @assert mod(g, Q) == g_Q
+    @assert jacobi(g, N) == 1
     return g
 end
 

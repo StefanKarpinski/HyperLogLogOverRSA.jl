@@ -35,6 +35,10 @@ function Client(cert::RingCert)
     powermod(2, N >> 1, N) ∉ (1, N-1) ||
         throw(ArgumentError("cert: 2 fails to witness compositeness (N=$N)"))
 
+    # check semigenerator Jacobi symbol
+    jacobi(cert.g, N) == 1 ||
+        throw(ArgumentError("cert: invalid semigenerator g=$(cert.g) (N=$N)"))
+
     # check that cert contains enough roots
     length(cert.roots) ≥ ROOT_SAMPLES ||
         throw(ArgumentError("cert: too few Nth roots (N=$N)"))
