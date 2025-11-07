@@ -1,9 +1,4 @@
-using Test
-using Primes
-using HyperLogLogOverRSA
-using HyperLogLogOverRSA:
-    gen_prime_pair, jacobi, modulus, factors, lambda, modsqrt,
-    rand_semigenerator, rand_jacobi_twist, bucket_map
+include("setup.jl")
 
 @testset "Prime pairs" begin
     @testset "correct usage" begin
@@ -73,26 +68,29 @@ end
     @testset "basics" begin
         for bits in [55, 63, 64]
             ring = Ring{UInt64}(2^5+1, 8, bits)
+            check_ring(ring)
             @test leading_zeros(modulus(ring)) == 64-bits
-            @test all(isprime, factors(ring))
-            @test isprime(ring.p)
-            @test isprime(ring.q)
         end
         ring = Ring(2^5+1, 8, 63)
         @test ring isa Ring{Int64}
+        check_ring(ring)
         ring = Ring(2^5+1, 8, 64)
         @test ring isa Ring{Int128}
+        check_ring(ring)
         ring = Ring(2^5+1, 8, 127)
         @test ring isa Ring{Int128}
+        check_ring(ring)
         ring = Ring(2^5+1, 8, 128)
         @test ring isa Ring{BigInt}
+        check_ring(ring)
     end
     # generate some small rings for comprehensive testing
     rings = Ring{Int}[]
     for log_B = 2:5, m = 2:5
         B = 2^log_B + 1
         ring = Ring(B, m, 20, certifiable=false)
-        ring in rings || push!(rings, ring)
+        check_ring(ring)
+        push!(rings, ring)
     end
     @testset "Jacobi classification" for ring in rings
         # jacobi(x) ==  0 <=> not invertible
@@ -139,6 +137,7 @@ end
         BigInt => Ring(2^12-1, 32, 512)
     ]
     for (T, ring) in rings
+        check_ring(ring)
         @test ring isa Ring{T}
         cert = RingCert(ring)
         @test cert isa RingCert{T}
