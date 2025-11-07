@@ -2,7 +2,7 @@ struct Client{T<:Integer}
     B :: Int # bucket factor (odd)
     m :: Int # max geometric sample size
     N :: T   # ring modulus
-    g :: T   # common published ring semigenerator
+    g :: T   # server-provided, common ring semigenerator
     x₀ :: T  # client-specific random Jacobi twist element
     salt :: SHA1 # pre-computed hash of x₀
 end
@@ -21,7 +21,13 @@ end
 function Client(cert::RingCert)
     N = cert.N
 
-    # check basic properties
+    # check shape parameters
+    isodd(cert.B) ||
+        throw(ArgumentError("cert: B even: $(cert.B))"))
+    cert.m > 1 ||
+        throw(ArgumentError("cert: m ≤ 1: $(cert.m)"))
+
+    # check basic modulus properties
     (N & 3) == 3 ||
         throw(ArgumentError("cert: N ≠ 3 mod 4 (N=$N)"))
     isprime(N >> 1) ||
@@ -65,7 +71,7 @@ function Client(cert::RingCert)
 end
 
 Base.show(io::IO, c::Client) =
-    print(io, "Client(B=$(c.B), N=$(c.N)), x₀=$(c.x₀))")
+    print(io, "Client(B=$(c.B), m=$(c.m), N=$(c.N), x₀=$(c.x₀))")
 
 function hll_generate(client::Client, class::AbstractString)
     N, B, g, x₀ = client.N, client.B, client.g, client.x₀
