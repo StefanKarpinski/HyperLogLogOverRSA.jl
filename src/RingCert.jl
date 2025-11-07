@@ -15,11 +15,11 @@ struct RingCert{T<:Integer}
     N :: T # modulus
     g :: T # semigenerator
 
+    # Nth roots of hash-generated elements
+    roots :: Vector{T}
+
     # square roots of hash-generated elements
     sqrts :: Vector{Pair{Int,T}}
-
-    # Σ-protocol for Nth roots of hashed elements
-    sigmas :: Vector{Tuple{T,T}}
 end
 
 function RingCert(ring::Ring{T}) where {T<:Integer}
@@ -41,6 +41,16 @@ function RingCert(ring::Ring{T}) where {T<:Integer}
     _, u, v = gcdx(P, Q)
     uP = widen(mod(u*P, N))
     vQ = widen(mod(v*Q, N))
+
+    # compute Nth roots of hashed elements
+    roots = Vector{T}()
+    D = invmod(N, lambda(ring)) # ∀ x: (x^N)^D == x mod N
+    for i = 1:NTH_ROOT_SAMPLES
+        x = ring_hash(N, :Nth_root, i)
+        r = powermod(x, D, N) # Nth root
+        @assert powermod(r, N, N) == x
+        push!(roots, r)
+    end
 
     # find a deterministic twist element
     τ = zero(N)
@@ -66,28 +76,11 @@ function RingCert(ring::Ring{T}) where {T<:Integer}
         @assert powermod(r, 2, N) == x
         push!(sqrts, i => r)
     end
-    # this has ε probability of happening for a valid ring
+    # this has probability ε of happening for a valid ring
     length(sqrts) ≥ SQRT_MINIMUM ||
         throw(ArgumentError("ring: fails semiprimality test (N=$N)"))
 
-    # generate Σ-protocol values for Nth roots of random elements
-    sigmas = Vector{Tuple{T,T}}()
-    D = invmod(N, lambda(ring)) # ∀ x: (x^N)^D == x mod N
-    for i = 1:NTH_ROOT_SAMPLES
-        local w
-        while true
-            w = widen(rand(rng, 2:N-1))
-            gcd(w, N) == 1 && break
-        end
-        x = ring_hash(N, :Nth_root, i)
-        y = powermod(x, D, N) # Nth root
-        a = powermod(w, N, N) # commitment
-        c = proof_hash(N, x, a) # challenge
-        b = mod(w*powermod(y, c, N), N) # response
-        push!(sigmas, (a, b))
-    end
-
-    return RingCert(ring.B, ring.m, N, g, sqrts, sigmas)
+    return RingCert(ring.B, ring.m, N, g, roots, sqrts)
 end
 
 Base.show(io::IO, cert::RingCert) =

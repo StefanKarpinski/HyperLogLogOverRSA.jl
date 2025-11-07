@@ -35,6 +35,16 @@ function Client(cert::RingCert)
         throw(ArgumentError("semiprimality: divisible by $p (N=$N)"))
     end
 
+    # check the provided Nth roots
+    length(cert.roots) ≥ NTH_ROOT_SAMPLES ||
+        throw(ArgumentError("modulus: too few Nth roots (N=$N)"))
+    for i = 1:NTH_ROOT_SAMPLES
+        r = cert.roots[i]
+        x = ring_hash(N, :Nth_root, i)
+        powermod(r, N, N) == x ||
+            throw(ArgumentError("modulus: invalid Nth root (N=$N)"))
+    end
+
     # find a deterministic twist element
     τ = zero(N)
     for i = 1:N
@@ -42,7 +52,7 @@ function Client(cert::RingCert)
         jacobi(τ, N) == -1 && break
     end
 
-    # check that N has ≤ two distinct prime factors (p ≥ 1 - ε)
+    # check the provided square roots
     sqrts = Dict(cert.sqrts)
     i = j = 0
     while i < SQRT_SAMPLES
@@ -59,17 +69,6 @@ function Client(cert::RingCert)
     end
     j ≥ SQRT_MINIMUM ||
         throw(ArgumentError("semiprimality: too few sqrts (N=$N)"))
-
-    # check Σ-protocol proofs of Nth roots
-    length(cert.sigmas) ≥ NTH_ROOT_SAMPLES ||
-        throw(ArgumentError("modulus: too few Nth roots (N=$N)"))
-    for i = 1:NTH_ROOT_SAMPLES
-        x = ring_hash(N, :Nth_root, i)
-        a, b = cert.sigmas[i]
-        c = proof_hash(N, x, a) # challenge
-        mod(widen(a) * powermod(x, c, N), N) == powermod(b, N, N) ||
-            throw(ArgumentError("modulus: invalid Nth root proof (N=$N)"))
-    end
 
     Client(cert.B, cert.m, cert.N, cert.g)
 end
