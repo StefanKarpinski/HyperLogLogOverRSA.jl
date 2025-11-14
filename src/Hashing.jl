@@ -39,9 +39,9 @@ function ring_hash(
     return x
 end
 
-function hash_resource_class(salt::SHA1, class::AbstractString)
-    bytes = sha1("$salt\0$class\0")
-    h = zero(UInt64)
+function hash_resource_class(salt::Any, class::Any)
+    bytes = sha256("$salt\0$class\0")
+    h = zero(UInt128)
     for i = 1:8
         h <<= 8
         h |= bytes[i]

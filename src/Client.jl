@@ -4,7 +4,6 @@ struct Client{T<:Integer}
     N :: T   # ring modulus
     g :: T   # server-provided, common ring semigenerator
     x₀ :: T  # client-specific random Jacobi twist element
-    salt :: SHA1 # pre-computed hash of x₀
 end
 
 function Client(
@@ -14,8 +13,7 @@ function Client(
     g :: T,
 ) where {T<:Integer}
     x₀ = rand_jacobi_twist(N)
-    salt = SHA1(sha1(string(x₀, base=62)))
-    Client(B, m, N, g, x₀, salt)
+    Client(B, m, N, g, x₀)
 end
 
 function Client(cert::RingCert)
@@ -77,10 +75,10 @@ end
 Base.show(io::IO, c::Client) =
     print(io, "Client(B=$(c.B), m=$(c.m), N=$(c.N), x₀=$(c.x₀))")
 
-function hll_generate(client::Client, class::AbstractString)
+function hll_generate(client::Client, class::Any="/registries")
     N, B, g, x₀ = client.N, client.B, client.g, client.x₀
-    h = hash_resource_class(client.salt, class)
-    x = mod(x₀ * powermod(g, h, N), N)    # x = x₀ g^h
-    t = 2B*rand(rng, 0:(N-1)÷(2B)-1) + 1  # t ∈ ℤ_N st t = 1 mod 2B
-    y = powermod(x, t, N)                 # y = x^t
+    h = hash_resource_class(x₀, class)  # h = H(x₀, class)
+    x = mod(x₀ * powermod(g, h, N), N)  # x = x₀ g^h
+    t = 2B*rand(rng, 0:(N-2)÷(2B)) + 1  # t ∈ ℤ_N st t = 1 mod 2B
+    y = powermod(x, t, N)               # y = x^t
 end
