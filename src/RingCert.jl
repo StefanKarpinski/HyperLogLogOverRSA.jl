@@ -59,6 +59,7 @@ function RingCert(ring::Ring{T}) where {T<:Integer}
         r_P = modsqrt(x, P); r_P === nothing && continue
         r_Q = modsqrt(x, Q); r_Q === nothing && continue
         r = mod(r_P*vQ + r_Q*uP, N) # sqrt of x
+        jacobi(r, N) == -1 && (r = N - r)
         @assert powermod(r, 2, N) == x
         push!(sqrts, r)
     end
@@ -95,8 +96,7 @@ Otherwise uses Tonelli–Shanks (always works for odd primes).
 
 The returned root is canonical: r ≤ p - r.
 """
-modsqrt(x::Integer, p::Integer) =
-    _modsqrt(promote(x, widen(p))...)
+modsqrt(x::Integer, p::Integer) = _modsqrt(promote(x, widen(p))...)
 
 function _modsqrt(x::Integer, p::Integer)
     p ≥ 2 && isprime(p) ||
