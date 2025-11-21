@@ -2,9 +2,19 @@ using Distributions
 
 const ε = exp2(-40)
 const TRIALDIV_MAX = 2^10
-const ROOT_SAMPLES = ceil(Int, -log2(ε)/log2(TRIALDIV_MAX))
-const SQRT_SAMPLES = ceil(Int, -21.96*log2(ε))
-const SQRT_MINIMUM = quantile(Binomial(SQRT_SAMPLES, 0.5), ε)
+const Nth_ROOT_SAMPLES = ceil(Int, -log2(ε)/log2(TRIALDIV_MAX))
+const Mth_ROOT_SAMPLES = ceil(Int, -log2(ε)/log2(3))
+const SQR_ROOT_SAMPLES = ceil(Int, -21.96*log2(ε))
+const SQR_ROOT_MINIMUM = quantile(Binomial(SQR_ROOT_SAMPLES, 0.5), ε)
+
+function cert_M(B::Integer, N::Integer)
+    M = one(BigInt)
+    for p = 3:2:ceil(Int, log2(N))
+        gcd(p, M) == 1 || continue
+        M *= p
+    end
+    M ÷= gcd(M, B)
+end
 
 struct RingCert{T<:Integer}
     # general shape
@@ -16,12 +26,14 @@ struct RingCert{T<:Integer}
     g :: T # semigenerator
 
     # roots of hash-generated elements
-    roots :: Vector{T} # Nth roots
-    sqrts :: Vector{T} # square roots
+    Nth_roots :: Vector{T}
+    Mth_roots :: Vector{T}
+    sqr_roots :: Vector{T}
 end
 
 function RingCert(ring::Ring{T}) where {T<:Integer}
     P, Q = factors(ring)
+    λ = ring.λ
     N = P*Q
 
     # test required properties
@@ -36,13 +48,24 @@ function RingCert(ring::Ring{T}) where {T<:Integer}
     g = rand_semigenerator(ring)
 
     # compute Nth roots of hashed elements
-    roots = T[]
-    D = invmod(N, lambda(ring)) # ∀ x: (x^N)^D == x mod N
-    for i = 1:ROOT_SAMPLES
+    Nth_roots = T[]
+    N⁻¹ = invmod(N, λ) # ∀ x: (x^N)^N⁻¹ == x mod N
+    for i = 1:Nth_ROOT_SAMPLES
         x = ring_hash(N, :Nth_root, i)
-        r = powermod(x, D, N) # Nth root of x
+        r = powermod(x, N⁻¹, N) # Nth root of x
         @assert powermod(r, N, N) == x
-        push!(roots, r)
+        push!(Nth_roots, r)
+    end
+
+    # compute M and Mth roots of hashed elements
+    Mth_roots = T[]
+    M = cert_M(ring.B, N)
+    M⁻¹ = invmod(M, λ) # ∀ x: (x^M)^M⁻¹ == x mod N
+    for i = 1:Mth_ROOT_SAMPLES
+        x = ring_hash(N, :Mth_root, i)
+        r = powermod(x, M⁻¹, N) # Mth root of x
+        @assert powermod(r, M, N) == x
+        push!(Mth_roots, r)
     end
 
     # Bézout & CRT coefficients
@@ -51,23 +74,23 @@ function RingCert(ring::Ring{T}) where {T<:Integer}
     vQ = widen(mod(v*Q, N))
 
     # compute sqrts of hashed elements
-    sqrts = T[]
+    sqr_roots = T[]
     τ = hash_twist(N)
-    for i = 1:SQRT_SAMPLES
-        length(sqrts) ≥ SQRT_MINIMUM && break
-        x = ring_hash(N, :sqrt, i; untwist=τ)
+    for i = 1:SQR_ROOT_SAMPLES
+        length(sqr_roots) ≥ SQR_ROOT_MINIMUM && break
+        x = ring_hash(N, :sqr_root, i; untwist=τ)
         r_P = modsqrt(x, P); r_P === nothing && continue
         r_Q = modsqrt(x, Q); r_Q === nothing && continue
         r = mod(r_P*vQ + r_Q*uP, N) # sqrt of x
         jacobi(r, N) == -1 && (r = N - r)
         @assert powermod(r, 2, N) == x
-        push!(sqrts, r)
+        push!(sqr_roots, r)
     end
     # probability ε of failure for a valid ring
-    length(sqrts) ≥ SQRT_MINIMUM ||
+    length(sqr_roots) ≥ SQR_ROOT_MINIMUM ||
         throw(ArgumentError("ring: fails semiprimality test (N=$N)"))
 
-    return RingCert(ring.B, ring.m, N, g, roots, sqrts)
+    return RingCert(ring.B, ring.m, N, g, Nth_roots, Mth_roots, sqr_roots)
 end
 
 Base.show(io::IO, cert::RingCert) =
