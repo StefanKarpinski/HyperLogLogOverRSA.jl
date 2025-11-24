@@ -47,8 +47,8 @@ function RingCert(ring::Ring{T}) where {T<:Integer}
 
     # Bézout & CRT coefficients
     _, u, v = gcdx(P, Q)
-    uP = widen(mod(u*P, N))
-    vQ = widen(mod(v*Q, N))
+    uP = mod(widemul(u, P), N)
+    vQ = mod(widemul(v, Q), N)
 
     # compute sqrts of hashed elements
     sqrts = T[]
@@ -96,9 +96,7 @@ Otherwise uses Tonelli–Shanks (always works for odd primes).
 
 The returned root is canonical: r ≤ p - r.
 """
-modsqrt(x::Integer, p::Integer) = _modsqrt(promote(x, widen(p))...)
-
-function _modsqrt(x::Integer, p::Integer)
+function modsqrt(x::Integer, p::Integer)
     p ≥ 2 && isprime(p) ||
         throw(ArgumentError("Modulus must be prime"))
 
@@ -121,8 +119,8 @@ function _modsqrt(x::Integer, p::Integer)
     if (p & 7) == 5
         r = powermod(x, (p + 3) >> 3, p)
         # if wrong square, multiply by 2^((p-1)/4)
-        if mod(r^2, p) ≠ x
-            r = mod(r*powermod(2, (p - 1) >> 2, p), p)
+        if modmul(r, r, p) ≠ x
+            r = modmul(r, powermod(2, (p - 1) >> 2, p), p)
         end
         return min(r, p - r)
     end
@@ -147,25 +145,28 @@ function _modsqrt(x::Integer, p::Integer)
     while t ≠ 1
         # find minimal i in [1, m-1] with t^(2^i) == 1
         i = 1
-        t′ = mod(t^2, p)
+        t′ = modmul(t, t,  p)
         while t′ ≠ 1
             i += 1
-            t′ = mod(t′^2, p)
+            t′ = modmul(t′, t′,  p)
             i ≥ m && break
         end
 
         # b = c^(2^(m-i-1))
         b = c
         for _ in 1:m-i-1
-            b = mod(b^2, p)
+            b = modmul(b, b,  p)
         end
 
-        r = mod(r * b, p)
-        b′ = mod(b^2, p)
-        t = mod(t * b′, p)
+        r = modmul(r, b, p)
+        b′ = modmul(b, b,  p)
+        t = modmul(t, b′, p)
         c = b′
         m = i
     end
 
     return min(r, p - r)
 end
+
+modmul(a::Integer, b::Integer, m::Integer) =
+    oftype(m, mod(widemul(a, b), m))
