@@ -42,7 +42,7 @@ end
 function hash_resource_class(salt::Any, class::Any)
     bytes = sha256("$salt\0$class\0")
     h = zero(UInt128)
-    for i = 1:8
+    for i = 1:sizeof(h)
         h <<= 8
         h |= bytes[i]
     end
