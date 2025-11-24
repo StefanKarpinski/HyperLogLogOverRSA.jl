@@ -76,9 +76,12 @@ Base.show(io::IO, c::Client) =
     print(io, "Client(B=$(c.B), m=$(c.m), N=$(c.N), x₀=$(c.x₀))")
 
 function hll_generate(client::Client, class::Any="/registries")
-    N, B, g, x₀ = client.N, client.B, client.g, client.x₀
-    h = hash_resource_class(x₀, class)  # h = H(x₀, class)
-    x = mod(x₀ * powermod(g, h, N), N)  # x = x₀ g^h
-    t = 2B*rand(rng, 0:(N-2)÷(2B)) + 1  # t ∈ ℤ_N st t = 1 mod 2B
-    y = powermod(x, t, N)               # y = x^t
+    N, B, m, g, x₀ = client.N, client.B, client.m, client.g, client.x₀
+    B2ᵐ = big(B) << m
+    η = B2ᵐ*rand(rng, 0:(N-1)÷(B2ᵐ))          # η = 0 mod B2^m
+    h = hash_resource_class(x₀, class)        # h = H(x₀, class)
+    x = modmul(x₀, powermod(g, h + η, N), N)  # x = x₀ g^(h + η)
+    i = rand(rng, 0:(Int64(1)<<(m-1))-1)      # i ∈ [0, 2^(m-1))
+    t = widemul(2B, i) + 1                    # t = 1 mod 2B
+    y = powermod(x, t, N)                     # y = x^t
 end
