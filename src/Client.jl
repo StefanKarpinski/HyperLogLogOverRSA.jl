@@ -38,11 +38,9 @@ function Client(cert::RingCert)
         throw(ArgumentError("cert: invalid semigenerator g=$(cert.g) (N=$N)"))
 
     # check that cert contains enough roots
-    length(cert.Nth_roots) ≥ Nth_ROOT_SAMPLES ||
+    length(cert.roots) ≥ ROOT_SAMPLES ||
         throw(ArgumentError("cert: too few Nth roots (N=$N)"))
-    length(cert.Mth_roots) ≥ Mth_ROOT_SAMPLES ||
-        throw(ArgumentError("cert: too few Mth roots (N=$N)"))
-    length(cert.sqr_roots) ≥ SQR_ROOT_MINIMUM ||
+    length(cert.sqrts) ≥ SQRT_MINIMUM ||
         throw(ArgumentError("cert: too few sqrts (N=$N)"))
 
     # check N not divisible by odd p ≤ TRIALDIV_MAX
@@ -53,26 +51,19 @@ function Client(cert::RingCert)
     end
 
     # check provided Nth roots
-    for (i, r) in enumerate(cert.Nth_roots)
+    for (i, r) in enumerate(cert.roots)
         powermod(r, N, N) == ring_hash(N, :Nth_root, i) ||
             throw(ArgumentError("cert: invalid Nth root (N=$N)"))
-    end
-
-    # check provided Mth roots
-    M = cert_M(cert.B, N)
-    for (i, r) in enumerate(cert.Mth_roots)
-        powermod(r, M, N) == ring_hash(N, :Mth_root, i) ||
-            throw(ArgumentError("cert: invalid Mth root (N=$N)"))
     end
 
     # check provided square roots
     i = 0
     τ = hash_twist(N)
-    for (j, r) in enumerate(cert.sqr_roots)
-        j > SQR_ROOT_MINIMUM && break # checked enough sqrts
+    for (j, r) in enumerate(cert.sqrts)
+        j > SQRT_MINIMUM && break # checked enough sqrts
         r² = powermod(r, 2, N)
-        while ring_hash(N, :sqr_root, i+=1; untwist=τ) ≠ r²
-            i ≤ SQR_ROOT_SAMPLES ||
+        while ring_hash(N, :sqrt, i+=1; untwist=τ) ≠ r²
+            i ≤ SQRT_SAMPLES ||
                 throw(ArgumentError("cert: sqrt test failed (N=$N)"))
         end
     end
