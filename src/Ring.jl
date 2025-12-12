@@ -25,8 +25,7 @@ end
 function Ring{T}(
     B :: Integer, # bucket factor — must be odd
     m :: Integer, # max geometric sample size
-    L :: Integer; # bit length of modulus
-    certifiable :: Bool = true,
+    L :: Integer, # bit length of modulus
 ) where {T<:Integer}
     # argument checks
     isodd(B) || throw(ArgumentError("B must be odd"))
@@ -85,10 +84,6 @@ function Ring{T}(
         # otherwise we could end up looping forever
     end
 
-    swap = rand(rng, Bool) # generate left or right first?
-    if swap
-    end
-
     swap = false
     local P, Q, p, q
     while true
@@ -112,15 +107,7 @@ function Ring{T}(
         # generate (Q, q) pair
         Q, q = gen_prime_pair(Q_scale, Q_min′, Q_max′)
         allunique([B_factors; P; p; Q; q]) || continue
-        if certifiable
-            # check that (N-1)/2 is prime
-            N = P*Q
-            isprime(N >> 1) || continue
-            # test that 2 is a Rabin-Miller witness
-            powermod(2, N >> 1, N) ∉ (1, N-1) || continue
-            # structure of N guarantees this with near certainty
-        end
-        break # we found a good modulus!
+        break
     end
     # unswap if needed
     if swap
@@ -137,9 +124,8 @@ function Ring(
     B :: Integer, # bucket factor — must be odd
     m :: Integer, # max geometric sample size
     L :: Integer; # bit length of modulus
-    certifiable :: Bool = true,
 )
-    Ring{ring_type(L)}(B, m, L; certifiable)
+    Ring{ring_type(L)}(B, m, L)
 end
 
 Base.getproperty(ring::Ring, name::Symbol) =

@@ -88,7 +88,7 @@ end
     rings = Ring{Int}[]
     for log_B = 2:5, m = 2:5
         B = 2^log_B + 1
-        ring = Ring(B, m, 20, certifiable=false)
+        ring = Ring(B, m, 20)
         check_ring(ring)
         push!(rings, ring)
     end

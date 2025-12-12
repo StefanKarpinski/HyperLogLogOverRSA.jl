@@ -21,16 +21,15 @@ struct RingCert{T<:Integer}
 end
 
 function RingCert(ring::Ring{T}) where {T<:Integer}
+    B = ring.B
     P, Q = factors(ring)
     N = P*Q
 
-    # test required properties
+    # test modulus
     (N & 3) == 3 ||
         throw(ArgumentError("modulus: N ≠ 3 mod 4 (N=$N)"))
-    isprime(N >> 1) ||
-        throw(ArgumentError("modulus: (N-1)/2 not prime (N=$N)"))
-    powermod(2, N >> 1, N) ∉ (1, N-1) ||
-        throw(ArgumentError("modulus: 2 fails to witness compositeness (N=$N)"))
+    gcd(B, N-1) == 1 ||
+        throw(ArgumentError("modulus: gcd(B, N-1) ≠ 1 (N=$N)"))
 
     # generate a semigenerator element
     g = rand_semigenerator(ring)

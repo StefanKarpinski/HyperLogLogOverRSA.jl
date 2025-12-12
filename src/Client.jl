@@ -17,6 +17,7 @@ function Client(
 end
 
 function Client(cert::RingCert)
+    B = cert.B
     N = cert.N
 
     # check shape parameters
@@ -26,12 +27,10 @@ function Client(cert::RingCert)
         throw(ArgumentError("cert: m ≤ 1: $(cert.m)"))
 
     # check basic modulus properties
-    mod4(N) == 3 ||
+    (N & 3) == 3 ||
         throw(ArgumentError("cert: N ≠ 3 mod 4 (N=$N)"))
-    isprime(N >> 1) ||
-        throw(ArgumentError("cert: (N-1)/2 not prime (N=$N)"))
-    powermod(2, N >> 1, N) ∉ (1, N-1) ||
-        throw(ArgumentError("cert: 2 fails to witness compositeness (N=$N)"))
+    gcd(B, N-1) == 1 ||
+        throw(ArgumentError("cert: gcd(B, N-1) ≠ 1 (N=$N)"))
 
     # check semigenerator Jacobi symbol
     jacobi(cert.g, N) == 1 ||
