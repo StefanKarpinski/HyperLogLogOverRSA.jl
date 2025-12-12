@@ -3,8 +3,7 @@ using Distributions
 const ε = exp2(-40)
 const TRIALDIV_MAX = 2^10
 const ROOT_SAMPLES = ceil(Int, -log2(ε)/log2(TRIALDIV_MAX))
-const SQRT_SAMPLES = ceil(Int, -21.96*log2(ε))
-const SQRT_MINIMUM = quantile(Binomial(SQRT_SAMPLES, 0.5), ε)
+const SQRT_SAMPLES = ceil(Int, -log2(ε)/(log2(8)-log2(5)))
 
 struct RingCert{T<:Integer}
     # general shape
@@ -38,7 +37,7 @@ function RingCert(ring::Ring{T}) where {T<:Integer}
     roots = T[]
     D = invmod(N, lambda(ring)) # ∀ x: (x^N)^D == x mod N
     for i = 1:ROOT_SAMPLES
-        x = ring_hash(N, :Nth_root, i)
+        x = ring_hash(N, :root, i)
         r = powermod(x, D, N) # Nth root of x
         @assert powermod(r, N, N) == x
         push!(roots, r)
@@ -49,22 +48,28 @@ function RingCert(ring::Ring{T}) where {T<:Integer}
     uP = mod(widemul(u, P), N)
     vQ = mod(widemul(v, Q), N)
 
+    # closure for square roots modulo N
+    function push_sqrt_mod_N(x::Integer)
+        r_P = modsqrt(x, P); r_P === nothing && return false
+        r_Q = modsqrt(x, Q); r_Q === nothing && return false
+        r = mod(r_P*vQ + r_Q*uP, N) # sqrt of x
+        @assert powermod(r, 2, N) == x
+        push!(sqrts, r)
+        return true
+    end
+
     # compute sqrts of hashed elements
     sqrts = T[]
     τ = hash_twist(N)
     for i = 1:SQRT_SAMPLES
-        length(sqrts) ≥ SQRT_MINIMUM && break
-        x = ring_hash(N, :sqrt, i; untwist=τ)
-        r_P = modsqrt(x, P); r_P === nothing && continue
-        r_Q = modsqrt(x, Q); r_Q === nothing && continue
-        r = mod(r_P*vQ + r_Q*uP, N) # sqrt of x
-        jacobi(r, N) == -1 && (r = N - r)
-        @assert powermod(r, 2, N) == x
-        push!(sqrts, r)
-    end
-    # probability ε of failure for a valid ring
-    length(sqrts) ≥ SQRT_MINIMUM ||
+        x = ring_hash(N, :sqrt_x, i; untwist=τ)
+        push_sqrt_mod_N(x) && continue
+        y = ring_hash(N, :sqrt_y, i; untwist=τ)
+        push_sqrt_mod_N(y) && continue
+        z = modmul(x, y, N)
+        push_sqrt_mod_N(z) && continue
         throw(ArgumentError("ring: fails semiprimality test (N=$N)"))
+    end
 
     return RingCert(ring.B, ring.m, N, g, roots, sqrts)
 end

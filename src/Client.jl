@@ -39,7 +39,7 @@ function Client(cert::RingCert)
     # check that cert contains enough roots
     length(cert.roots) ≥ ROOT_SAMPLES ||
         throw(ArgumentError("cert: too few Nth roots (N=$N)"))
-    length(cert.sqrts) ≥ SQRT_MINIMUM ||
+    length(cert.sqrts) ≥ SQRT_SAMPLES ||
         throw(ArgumentError("cert: too few sqrts (N=$N)"))
 
     # check N not divisible by odd p ≤ TRIALDIV_MAX
@@ -51,20 +51,21 @@ function Client(cert::RingCert)
 
     # check provided Nth roots
     for (i, r) in enumerate(cert.roots)
-        powermod(r, N, N) == ring_hash(N, :Nth_root, i) ||
+        powermod(r, N, N) == ring_hash(N, :root, i) ||
             throw(ArgumentError("cert: invalid Nth root (N=$N)"))
     end
 
     # check provided square roots
-    i = 0
     τ = hash_twist(N)
-    for (j, r) in enumerate(cert.sqrts)
-        j > SQRT_MINIMUM && break # checked enough sqrts
+    for (i, r) in enumerate(cert.sqrts)
         r² = powermod(r, 2, N)
-        while ring_hash(N, :sqrt, i+=1; untwist=τ) ≠ r²
-            i ≤ SQRT_SAMPLES ||
-                throw(ArgumentError("cert: sqrt test failed (N=$N)"))
-        end
+        x = ring_hash(N, :sqrt_x, i; untwist=τ)
+        x == r² && continue
+        y = ring_hash(N, :sqrt_y, i; untwist=τ)
+        y == r² && continue
+        z = modmul(x, y, N)
+        z == r² && continue
+        throw(ArgumentError("cert: invalid sqrt (N=$N)"))
     end
 
     # cert is valid, N is safe
