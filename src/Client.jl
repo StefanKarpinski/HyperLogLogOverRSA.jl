@@ -16,7 +16,7 @@ function Client(
     Client(B, m, N, g, x₀)
 end
 
-function Client(cert::RingCert)
+function Client(cert::RingCert; ε::Real=ε)
     B = cert.B
     N = cert.N
 
@@ -36,11 +36,13 @@ function Client(cert::RingCert)
     jacobi(cert.g, N) == 1 ||
         throw(ArgumentError("cert: invalid semigenerator g=$(cert.g) (N=$N)"))
 
-    # check that cert contains enough roots
-    length(cert.roots) ≥ ROOT_SAMPLES ||
-        throw(ArgumentError("cert: too few Nth roots (N=$N)"))
-    length(cert.sqrts) ≥ SQRT_SAMPLES ||
+    # check that cert contains enough square roots
+    (5/8)^length(cert.sqrts) ≤ ε ||
         throw(ArgumentError("cert: too few sqrts (N=$N)"))
+
+    # compute how big L needs to be for Nth root count
+    L = max(L_MIN, ceil(Int, 1.5*exp2(-log2(ε)/length(cert.roots))))
+    L ≤ L_MAX || throw(ArgumentError("cert: too few Nth roots (N=$N)"))
 
     # check N not divisible by odd p ≤ L
     for p = 3:2:L

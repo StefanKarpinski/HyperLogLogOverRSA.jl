@@ -1,7 +1,13 @@
-const L = 2^10
 const ε = exp2(-40)
+const L_MIN = 2^10
+const L_MAX = 2^20
+const L = L_MIN
+
 const ROOT_SAMPLES = ceil(Int, -log2(ε)/(log2(L)-log2(3)+1))
 const SQRT_SAMPLES = ceil(Int, -log2(ε)/(log2(8)-log2(5)))
+
+@assert (3/2L)^ROOT_SAMPLES ≤ ε < (3/2L)^(ROOT_SAMPLES-1)
+@assert (5/8)^SQRT_SAMPLES  ≤ ε < (5/8)^(SQRT_SAMPLES-1)
 
 struct RingCert{T<:Integer}
     # general shape
