@@ -58,7 +58,7 @@ function Client(cert::RingCert; ε::Real=ε)
     end
 
     # check provided square roots
-    τ = hash_twist(N)
+    τ = fixed_twist(N)
     for (i, r) in enumerate(cert.sqrts)
         r² = powermod(r, 2, N)
         x = ring_hash(N, :sqrt_x, i; untwist=τ)

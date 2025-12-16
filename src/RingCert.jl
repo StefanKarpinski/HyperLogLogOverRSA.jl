@@ -64,7 +64,7 @@ function RingCert(ring::Ring{T}) where {T<:Integer}
 
     # compute sqrts of hashed elements
     sqrts = T[]
-    τ = hash_twist(N)
+    τ = fixed_twist(N)
     for i = 1:SQRT_SAMPLES
         x = ring_hash(N, :sqrt_x, i; untwist=τ)
         push_sqrt_mod_N(x) && continue
@@ -81,12 +81,11 @@ end
 Base.show(io::IO, cert::RingCert) =
     print(io, "RingCert(B=$(cert.B), m=$(cert.m), N=$(cert.N))")
 
-function hash_twist(N::Integer)
-    i = 0
-    while true
-        τ = ring_hash(N, :twist, i += 1)
+function fixed_twist(N::Integer)
+    for τ in 1:N-1
         jacobi(τ, N) == -1 && return τ
     end
+    @assert false "no twist value found"
 end
 
 """
