@@ -27,7 +27,7 @@ function Client(cert::RingCert)
         throw(ArgumentError("cert: m ≤ 1: $(cert.m)"))
 
     # check basic modulus properties
-    (N & 3) == 3 ||
+    mod4(N) == 3 ||
         throw(ArgumentError("cert: N ≠ 3 mod 4 (N=$N)"))
     gcd(B, N-1) == 1 ||
         throw(ArgumentError("cert: gcd(B, N-1) ≠ 1 (N=$N)"))
@@ -42,8 +42,8 @@ function Client(cert::RingCert)
     length(cert.sqrts) ≥ SQRT_SAMPLES ||
         throw(ArgumentError("cert: too few sqrts (N=$N)"))
 
-    # check N not divisible by odd p ≤ TRIALDIV_MAX
-    for p = 3:2:TRIALDIV_MAX
+    # check N not divisible by odd p ≤ L
+    for p = 3:2:L
         N % p ≠ 0 && continue
         isprime(N ÷ p) && break # N semiprime w. very small factor
         throw(ArgumentError("cert: not semiprime N = $p*$(N ÷ p)"))

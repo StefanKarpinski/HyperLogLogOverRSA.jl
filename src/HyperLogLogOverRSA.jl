@@ -14,7 +14,6 @@ export
     Ring,
     RingCert,
     Client,
-    rand_semigenerator,
     bucket_map,
     hll_generate,
     hll_decode

@@ -1,8 +1,6 @@
-using Distributions
-
+const L = 2^10
 const ε = exp2(-40)
-const TRIALDIV_MAX = 2^10
-const ROOT_SAMPLES = ceil(Int, -log2(ε)/log2(TRIALDIV_MAX))
+const ROOT_SAMPLES = ceil(Int, -log2(ε)/(log2(L)-log2(3)+1))
 const SQRT_SAMPLES = ceil(Int, -log2(ε)/(log2(8)-log2(5)))
 
 struct RingCert{T<:Integer}
@@ -25,7 +23,7 @@ function RingCert(ring::Ring{T}) where {T<:Integer}
     N = P*Q
 
     # test modulus
-    (N & 3) == 3 ||
+    mod4(N) == 3 ||
         throw(ArgumentError("modulus: N ≠ 3 mod 4 (N=$N)"))
     gcd(B, N-1) == 1 ||
         throw(ArgumentError("modulus: gcd(B, N-1) ≠ 1 (N=$N)"))
