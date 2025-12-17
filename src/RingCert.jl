@@ -1,12 +1,6 @@
-const ε = exp2(-40)
-const L_MIN = 2^10
-const L_MAX = 2^20
-const L = L_MIN
-
-const ROOT_SAMPLES = ceil(Int, -log2(ε)/(log2(L)-log2(3)+1))
+const ε = exp2(-50)
 const SQRT_SAMPLES = ceil(Int, -log2(ε)/(log2(8)-log2(5)))
 
-@assert (3/2L)^ROOT_SAMPLES ≤ ε < (3/2L)^(ROOT_SAMPLES-1)
 @assert (5/8)^SQRT_SAMPLES  ≤ ε < (5/8)^(SQRT_SAMPLES-1)
 
 struct RingCert{T<:Integer}
@@ -18,9 +12,8 @@ struct RingCert{T<:Integer}
     N :: T # modulus
     g :: T # semigenerator
 
-    # roots of hash-generated elements
-    roots :: Vector{T} # Nth roots
-    sqrts :: Vector{T} # square roots
+    # square roots of hash-generated elements
+    sqrts :: Vector{T}
 end
 
 function RingCert(ring::Ring{T}) where {T<:Integer}
@@ -31,21 +24,13 @@ function RingCert(ring::Ring{T}) where {T<:Integer}
     # test modulus
     mod4(N) == 3 ||
         throw(ArgumentError("modulus: N ≠ 3 mod 4 (N=$N)"))
+    gcd(B, N) == 1 ||
+        throw(ArgumentError("modulus: gcd(B, N) ≠ 1 (N=$N)"))
     gcd(B, N-1) == 1 ||
         throw(ArgumentError("modulus: gcd(B, N-1) ≠ 1 (N=$N)"))
 
     # generate a semigenerator element
     g = rand_semigenerator(ring)
-
-    # compute Nth roots of hashed elements
-    roots = T[]
-    D = invmod(N, lambda(ring)) # ∀ x: (x^N)^D == x mod N
-    for i = 1:ROOT_SAMPLES
-        x = ring_hash(N, :root, i)
-        r = powermod(x, D, N) # Nth root of x
-        @assert powermod(r, N, N) == x
-        push!(roots, r)
-    end
 
     # Bézout & CRT coefficients
     _, u, v = gcdx(P, Q)
@@ -75,7 +60,7 @@ function RingCert(ring::Ring{T}) where {T<:Integer}
         throw(ArgumentError("ring: fails semiprimality test (N=$N)"))
     end
 
-    return RingCert(ring.B, ring.m, N, g, roots, sqrts)
+    return RingCert(ring.B, ring.m, N, g, sqrts)
 end
 
 Base.show(io::IO, cert::RingCert) =

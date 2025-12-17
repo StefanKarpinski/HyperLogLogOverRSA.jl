@@ -26,9 +26,11 @@ function Client(cert::RingCert; ε::Real=ε)
     cert.m > 1 ||
         throw(ArgumentError("cert: m ≤ 1: $(cert.m)"))
 
-    # check basic modulus properties
+    # check modulus properties
     mod4(N) == 3 ||
         throw(ArgumentError("cert: N ≠ 3 mod 4 (N=$N)"))
+    gcd(B, N) == 1 ||
+        throw(ArgumentError("cert: gcd(B, N) ≠ 1 (N=$N)"))
     gcd(B, N-1) == 1 ||
         throw(ArgumentError("cert: gcd(B, N-1) ≠ 1 (N=$N)"))
 
@@ -39,23 +41,6 @@ function Client(cert::RingCert; ε::Real=ε)
     # check that cert contains enough square roots
     (5/8)^length(cert.sqrts) ≤ ε ||
         throw(ArgumentError("cert: too few sqrts (N=$N)"))
-
-    # compute how big L needs to be for Nth root count
-    L = max(L_MIN, ceil(Int, 1.5*exp2(-log2(ε)/length(cert.roots))))
-    L ≤ L_MAX || throw(ArgumentError("cert: too few Nth roots (N=$N)"))
-
-    # check N not divisible by odd p ≤ L
-    for p = 3:2:L
-        N % p ≠ 0 && continue
-        isprime(N ÷ p) && break # N semiprime w. very small factor
-        throw(ArgumentError("cert: not semiprime N = $p*$(N ÷ p)"))
-    end
-
-    # check provided Nth roots
-    for (i, r) in enumerate(cert.roots)
-        powermod(r, N, N) == ring_hash(N, :root, i) ||
-            throw(ArgumentError("cert: invalid Nth root (N=$N)"))
-    end
 
     # check provided square roots
     τ = fixed_twist(N)
