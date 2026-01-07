@@ -1,7 +1,7 @@
-const ε = exp2(-50)
-const SQRT_SAMPLES = ceil(Int, -log2(ε)/(log2(8)-log2(5)))
+const log_α = 50
+const SQRT_SAMPLES = ceil(Int, log_α/(log2(8)-log2(5)))
 
-@assert (5/8)^SQRT_SAMPLES  ≤ ε < (5/8)^(SQRT_SAMPLES-1)
+@assert (8/5)^(SQRT_SAMPLES-1) < exp2(log_α) ≤ (8/5)^SQRT_SAMPLES
 
 struct RingCert{T<:Integer}
     # general shape
