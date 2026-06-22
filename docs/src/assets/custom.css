@@ -1,0 +1,9 @@
+/* Center tables: shrink to content width and center them in the column,
+   instead of the Documenter theme default (full-width, left-aligned).
+   !important is needed to beat the higher-specificity per-theme rules
+   (e.g. `html.theme--documenter-dark .content table { width: 100% }`). */
+.content table {
+    width: auto !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}

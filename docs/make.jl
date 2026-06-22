@@ -69,6 +69,7 @@ makedocs(
         mathengine = Documenter.KaTeX(Dict(:macros => MATH_MACROS)),
         prettyurls = get(ENV, "CI", nothing) == "true",
         canonical  = "https://stefankarpinski.github.io/HyperLogLogOverRSA.jl",
+        assets     = ["assets/custom.css"],
     ),
     pages = [
         "Home"              => "index.md",
