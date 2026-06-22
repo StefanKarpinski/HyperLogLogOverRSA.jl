@@ -3,6 +3,17 @@ const m_max = 128
 const L_max = 2^20
 const α_min = exp2(50)
 
+"""
+    Client(cert::RingCert) -> Client
+
+Verify a published [`RingCert`](@ref) and, if every check passes, construct a
+client holding the public ring parameters together with a freshly chosen random
+secret `x₀` (a Jacobi "twist" element). Throws an `ArgumentError` if the
+certificate fails any check.
+
+Call [`hll_generate`](@ref) to produce the encrypted HyperLogLog token to send
+with a request.
+"""
 struct Client{T<:Integer}
     B :: Int # bucket factor (odd)
     m :: Int # max geometric sample size
@@ -72,6 +83,15 @@ end
 Base.show(io::IO, c::Client) =
     print(io, "Client(B=$(c.B), m=$(c.m), N=$(c.N), x₀=$(c.x₀))")
 
+"""
+    hll_generate(client::Client, class="/registries") -> Integer
+
+Produce a fresh, randomized encrypted HyperLogLog token `y = w xᵗ` for the given
+resource `class`, to send along with a request. Every call re-randomizes the
+token, so two tokens from the same client are unlinkable; yet they all decode
+(by the ring holder) to that client's single, stable HLL value for the class.
+The client cannot itself decode or bias the value it samples.
+"""
 function hll_generate(client::Client, class::Any="/registries")
     B, m, N, g, x₀ = client.B, client.m, client.N, client.g, client.x₀
     h = hash_resource_class(x₀, class)      # h = H(x₀, class)

@@ -1,6 +1,14 @@
-This respository contains a test/demo implementation of the HyperLogLog Over RSA protocol that is described here:
+# HyperLogLog Over RSA
 
-https://hackmd.io/@HLLoverRSA
+A test/demo implementation of the **HyperLogLog Over RSA** protocol — a scheme for
+estimating the number of unique clients of a service without anyone, even someone
+with full access to the server logs, being able to identify or track individual
+clients.
+
+📖 **Documentation & writeup:** <https://stefankarpinski.github.io/HyperLogLogOverRSA.jl/>
+
+That site is both the API documentation for this package and a full writeup of the
+protocol's motivation, design, and security arguments.
 
 Here's a simple usage example:
 ```julia-repl

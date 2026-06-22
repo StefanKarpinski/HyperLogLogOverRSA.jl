@@ -3,6 +3,15 @@ const SQRT_SAMPLES = ceil(Int, log_α/(log2(8)-log2(5)))
 
 @assert (8/5)^(SQRT_SAMPLES-1) < exp2(log_α) ≤ (8/5)^SQRT_SAMPLES
 
+"""
+    RingCert(ring::Ring) -> RingCert
+
+A publishable certificate for a [`Ring`](@ref): the public parameters `B`, `m`,
+`N`, a semigenerator `g`, and a list of square roots that together let anyone
+verify `N` is "fingerprint-free" — that it has the intended two-prime structure
+and so cannot be used to fingerprint clients — without revealing its
+factorization. A [`Client`](@ref) checks this certificate before trusting a ring.
+"""
 struct RingCert{T<:Integer}
     # general shape
     B :: Int # bucket factor (odd)

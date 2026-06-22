@@ -3,14 +3,26 @@ using Primes
 ## Representing & generating RSA Ring instances
 
 """
-Ring structure:
+    Ring(B, m, L) -> Ring
+
+A HyperLogLog RSA ring: a modulus `N` together with the secret structure that
+lets its holder decode HyperLogLog values while no one else can.
+
+The ring has the form
 
     N = P Q = (2 B p + 1)(2^m q + 1)
 
-    ℤ_N ≅ ℤ_P × ℤ_Q
-    ℤ_P^* ≅ C_2 × C_B × C_p
-    ℤ_Q^* ≅ C_(2^m) × C_q
+so that, multiplicatively,
 
+    ℤ_N^* ≅ C_2 × C_B × C_(2^m) × C_(p q)
+
+where `B` (which must be odd) is the number of HyperLogLog buckets and `m` is the
+maximum geometric sample value; `L` is the target bit-length of `N`.
+
+The primes `P`, `Q`, `p`, `q` are secret — and are deliberately omitted when a
+`Ring` is shown — so only a holder of the `Ring` can decode HLL values via
+[`hll_decode`](@ref). Publish a [`RingCert`](@ref) so that clients can use the
+ring without learning its factorization.
 """
 struct Ring{T<:Integer}
     # general shape
@@ -182,6 +194,12 @@ function rand_semigenerator(ring::Ring)
     return g
 end
 
+"""
+    bucket_map(ring::Ring) -> Dict
+
+Precompute the map from `C_B` representatives in `ℤ_P^*` to bucket indices
+`0:B-1`, so that repeated [`hll_decode`](@ref) calls need not recompute it.
+"""
 function bucket_map(ring::Ring{T}) where {T<:Integer}
     # find first g_B that generates the C_B part of ℤ_P^*
     P = ring.P
@@ -215,6 +233,13 @@ function hll_geometric(ring::Ring, x::Integer)
     return k
 end
 
+"""
+    hll_decode(ring::Ring, y; bmap=bucket_map(ring)) -> (bucket, geometric)
+
+Decode an encrypted HyperLogLog token `y` to its `(bucket, geometric)` value,
+using the secret factorization carried by `ring`. Pass a precomputed `bmap`
+(from [`bucket_map`](@ref)) to amortize bucket decoding across many tokens.
+"""
 function hll_decode(
     ring :: Ring{T},
     x    :: Integer;

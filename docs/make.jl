@@ -1,0 +1,96 @@
+using Documenter
+using HyperLogLogOverRSA
+
+# LaTeX macros mirroring the writeup's preamble (preamble.sty), registered with
+# KaTeX so the math in the writeup pages renders. Keys are the macro names; `#1`
+# etc. are macro arguments. Unused entries are harmless.
+const MATH_MACROS = Dict(
+    raw"\qq"      => raw"\qquad",
+    raw"\N"       => raw"\mathbb{N}",
+    raw"\Z"       => raw"\mathbb{Z}",
+    raw"\Q"       => raw"\mathbb{Q}",
+    raw"\R"       => raw"\mathbb{R}",
+    raw"\C"       => raw"\mathbb{C}",
+    raw"\nfrac"   => raw"#1/#2",
+    raw"\half"    => raw"\tfrac{1}{2}",
+    raw"\minmax"  => raw"\operatorname{minmax}",
+    raw"\eps"     => raw"\operatorname{eps}",
+    raw"\fr"      => raw"\operatorname{frac}",
+    raw"\fmod"    => raw"\operatorname{mod}",
+    raw"\lcm"     => raw"\operatorname{lcm}",
+    raw"\invmod"  => raw"\operatorname{invmod}",
+    raw"\sig"     => raw"\operatorname{sig}",
+    raw"\bitlen"  => raw"\operatorname{bitlen}",
+    raw"\fld"     => raw"\operatorname{fld}",
+    raw"\cld"     => raw"\operatorname{cld}",
+    raw"\fldmod"  => raw"\operatorname{fldmod}",
+    raw"\cldmod"  => raw"\operatorname{cldmod}",
+    raw"\divides" => raw"\mid",
+    raw"\inter"   => raw"\,\cap\,",
+    raw"\union"   => raw"\,\cup\,",
+    raw"\and"     => raw"\,\land\,",
+    raw"\or"      => raw"\,\lor\,",
+    raw"\xor"     => raw"\,\veebar\,",
+    raw"\not"     => raw"\,\lnot\,",
+    raw"\E"       => raw"\exists\:",
+    raw"\A"       => raw"\forall\:",
+    raw"\st"      => raw"\:\middle|\:",
+    raw"\par"     => raw"\left(#1\right)",
+    raw"\bra"     => raw"\left[#1\right]",
+    raw"\set"     => raw"\left\{#1\right\}",
+    raw"\seq"     => raw"\left\langle #1 \right\rangle",
+    raw"\gen"     => raw"\left\langle #1 \right\rangle",
+    raw"\norm"    => raw"\left\lvert #1 \right\rvert",
+    raw"\Norm"    => raw"\left\lVert #1 \right\rVert",
+    raw"\ceil"    => raw"\left\lceil #1 \right\rceil",
+    raw"\floor"   => raw"\left\lfloor #1 \right\rfloor",
+    raw"\round"   => raw"\operatorname{round}(#1)",
+    raw"\float"   => raw"\operatorname{float}",
+    raw"\tz"      => raw"\operatorname{tz}",
+    raw"\lz"      => raw"\operatorname{lz}",
+    raw"\ord"     => raw"\operatorname{ord}",
+    raw"\Im"      => raw"\operatorname{Im}",
+    raw"\Ker"     => raw"\operatorname{Ker}",
+    raw"\img"     => raw"\operatorname{img}",
+    raw"\hll"     => raw"\mathcal{H}",
+    raw"\Jacobi"  => raw"\mathcal{J}",
+    raw"\hash"    => raw"\mathsf{H}",
+)
+
+makedocs(
+    sitename = "HyperLogLog Over RSA",
+    authors  = "Stefan Karpinski",
+    modules  = [HyperLogLogOverRSA],
+    checkdocs = :exports,  # only require docstrings for exported names
+    format = Documenter.HTML(
+        mathengine = Documenter.KaTeX(Dict(:macros => MATH_MACROS)),
+        prettyurls = get(ENV, "CI", nothing) == "true",
+        canonical  = "https://stefankarpinski.github.io/HyperLogLogOverRSA.jl",
+    ),
+    pages = [
+        "Home"              => "index.md",
+        "Executive Summary" => "executive-summary.md",
+        "The Writeup" => [
+            "Anonymously Counting Users"   => "01-counting-users.md",
+            "HyperLogLog"                  => "02-hyperloglog.md",
+            "Resource Class Sharding"      => "03-resource-class-sharding.md",
+            "Signed HLLs?"                 => "04-signed-hlls.md",
+            "Encrypted Geometric Sampling" => "05-encrypted-geometric-sampling.md",
+            "Blurring Fingerprints"        => "06-blurring-fingerprints.md",
+            "Fighting Inflation"           => "07-fighting-inflation.md",
+            "HyperLogLog Over RSA"         => "08-hyperloglog-over-rsa.md",
+            "Proof of Anonymity"           => "09-proof-of-anonymity.md",
+            "Master Keys"                  => "10-master-keys.md",
+            "Malicious Clients"            => "11-malicious-clients.md",
+            "Malicious Servers"            => "12-malicious-servers.md",
+            "Protocol Summary"             => "13-protocol-summary.md",
+        ],
+        "For Cryptographers"      => "for-cryptographers.md",
+        "Reference Implementation" => "reference.md",
+    ],
+)
+
+deploydocs(
+    repo      = "github.com/StefanKarpinski/HyperLogLogOverRSA.jl",
+    devbranch = "main",
+)
