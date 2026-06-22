@@ -402,8 +402,8 @@ Based on these results, we can design a protocol for a server to convince client
 This convinces the client that there's at most a $(5/8)^{n}$ probability that $N$ has more than two distinct prime factors. If the client wants to be convinced to a probability of $\nfrac{1}{\alpha}$ for some large $\alpha$, they should choose $n$ such that:
 
 ```math
-\begin{alignedat}{1}
-\par{\frac{5}{8}}^{n}\! &≤ \frac{1}{\alpha}
+\begin{alignedat}{2}
+\left(\frac{5}{8}\right)^{n}\! &≤ \frac{1}{\alpha}
 ~~&\iff~
 n &≥ \frac{\log_2(\alpha)}{\log_2(8)-\log_2(5)}
 \end{alignedat}

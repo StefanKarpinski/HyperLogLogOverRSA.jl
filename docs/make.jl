@@ -38,7 +38,6 @@ const MATH_MACROS = Dict(
     raw"\E"       => raw"\exists\:",
     raw"\A"       => raw"\forall\:",
     raw"\st"      => raw"\:\middle|\:",
-    raw"\par"     => raw"\left(#1\right)",
     raw"\bra"     => raw"\left[#1\right]",
     raw"\set"     => raw"\left\{#1\right\}",
     raw"\seq"     => raw"\left\langle #1 \right\rangle",
