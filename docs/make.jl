@@ -31,7 +31,10 @@ const MATH_MACROS = Dict(
     raw"\and"     => raw"\,\land\,",
     raw"\or"      => raw"\,\lor\,",
     raw"\xor"     => raw"\,\veebar\,",
-    raw"\not"     => raw"\,\lnot\,",
+    # NB: do NOT override \not — KaTeX builds \neq, \notin, and the unicode
+    # ≠ / ∉ on top of the built-in \not, so redefining it renders them as
+    # "¬ =" / "¬ ∈". The writeup uses ≠ and \notin and never a standalone \not
+    # for logical negation (use \lnot / \neg for that).
     raw"\E"       => raw"\exists\:",
     raw"\A"       => raw"\forall\:",
     raw"\st"      => raw"\:\middle|\:",
