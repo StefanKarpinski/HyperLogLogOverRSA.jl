@@ -92,10 +92,10 @@ So $J_N^+/W_N$ is a quotient of a cyclic group with order dividing $B2^m$ which 
 
 Recall that $N = 3 \bmod 4$ implies that $-1 \in J_N^-$. This allows us to extend $\phi$ to all of ${} \Z_N^*$ by $\phi(x) = \phi(-x)$ for $x \in J_N^-$. We need to check four identities to verify that this is a homomorphism:
 
-1. $x \in J_N^-$: $\phi(x) \phi(x^{-1}) = \phi(-x) \phi(-x^{-1}) = \phi(1) = 1$
-2. $x \in J_N^-, y \in J_N^-$: $\phi(x)\phi(y) = \phi(-x)\phi(-y) = \phi(xy)$
-3. $x \in J_N^-, y \in J_N^+$: $\phi(x)\phi(y) = \phi(-x)\phi(y) = \phi(-xy) = \phi(xy)$
-4. $x \in J_N^+, y \in J_N^-$: $\phi(x)\phi(y) = \phi(x)\phi(-y) = \phi(-xy) = \phi(xy)$
+1. ``x \in J_N^-``: $\phi(x) \phi(x^{-1}) = \phi(-x) \phi(-x^{-1}) = \phi(1) = 1$
+2. ``x \in J_N^-, y \in J_N^-``: $\phi(x)\phi(y) = \phi(-x)\phi(-y) = \phi(xy)$
+3. ``x \in J_N^-, y \in J_N^+``: $\phi(x)\phi(y) = \phi(-x)\phi(y) = \phi(-xy) = \phi(xy)$
+4. ``x \in J_N^+, y \in J_N^-``: $\phi(x)\phi(y) = \phi(x)\phi(-y) = \phi(-xy) = \phi(xy)$
 
 We already know that
 
@@ -219,10 +219,10 @@ Since $t$ is odd, the second equality implies that $\tz(c_1) = \tz(c_2)$ which m
 
 **Proof.**  Since $N$ is fingerprint-free there exists $\phi: \Z_N^* \to C_B \times C_{2^m}$ with $\ker(\phi) = ±W_N$. The following conditions are equivalent for $x$ and $y$ with $\Jacobi_N(x) = \Jacobi_N(y)$:
 
-1. $\hll(x) = \hll(y)$
-2. $\bar{\hll}(\phi(x)) = \bar{\hll}(\phi(y))$
-3. $\E\, t = 1 \bmod{2B}$ such that $\phi(x)^t = \phi(y)$
-4. ${} \E\, t = 1 \bmod{2B},\, w \in W_N {}$ such that $wx^t = y$
+1. ``\hll(x) = \hll(y)``
+2. ``\bar{\hll}(\phi(x)) = \bar{\hll}(\phi(y))``
+3. ``\E\, t = 1 \bmod{2B}`` such that $\phi(x)^t = \phi(y)$
+4. ``{} \E\, t = 1 \bmod{2B},\, w \in W_N {}`` such that $wx^t = y$
 
 Equivalence of (1) and (2) is just the definition of $\hll = \bar{\hll}\phi$. The lemma we just proved gives equivalence of (2) and (3). That leaves us to prove equivalence of (3) and (4). We will show that for any odd exponent, $t$, we have:
 

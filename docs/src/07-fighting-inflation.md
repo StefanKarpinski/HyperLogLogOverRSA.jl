@@ -21,8 +21,8 @@ a &= 0 \bmod 2 &~~\wedge~~&& c &= 1 \bmod 2 \\
 
 This isn't exactly what we wanted, but it does give us what we need. Instead of requiring $a = 1$, we can require that $\Jacobi_N(wx^t) = -1$. This forces us into one of these two cases:
 
-1. $ta = 1 \bmod 2$ and $tc = 0 \bmod 2$
-2. $ta = 0 \bmod 2$ and $tc = 1 \bmod 2$
+1. ``ta = 1 \bmod 2`` and $tc = 0 \bmod 2$
+2. ``ta = 0 \bmod 2`` and $tc = 1 \bmod 2$
 
 Whereas if $t$ is even, then $ta = tc = 0 \bmod 2$, so this check guarantees that odd $t$ was used.
 

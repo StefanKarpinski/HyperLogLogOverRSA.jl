@@ -8,10 +8,10 @@ Our approach treats each client install as a "unique value" to count and uses Hy
 
 Before we get to the problems with naively using HyperLogLog for counting clients, let’s develop an intuition for how and why HyperLogLog works. Suppose each client draws a random geometric sample value, *i.e.*
 
-- $0$ has probability $\frac{1}{2}$
-- $1$ has probability $\frac{1}{4}$
-- $2$ has probability $\frac{1}{8}$
-- $k$ has probability $\frac{1}{2^{k+1}}$
+- ``0`` has probability $\frac{1}{2}$
+- ``1`` has probability $\frac{1}{4}$
+- ``2`` has probability $\frac{1}{8}$
+- ``k`` has probability $\frac{1}{2^{k+1}}$
 
 The basic intuition of HyperLogLog is that if the maximum geometric sample observed is $k$ then there are around $2^k$ unique values in the set. Of course, this estimator is terrible. It only ever estimates power-of-two cardinalities and has huge variance. HyperLogLog addresses both problems by uniformly splitting the space of clients into buckets, making a geometric estimate for each bucket, and then combining all those estimates into a single improved estimate. With enough buckets this actually produces a high quality estimate. The number of necessary buckets is not even inordinately large—in the common configuration we've mentioned, there are $2^{12} = 4096$ buckets, which gives relative standard error of $1.63\%$, corresponding to a 95% confidence interval of $±3.19\%$. If more accuracy is desired, it's relatively cheap to add more buckets and reduce the error bounds—the error is inversely proportional to the square root of the number of buckets.
 
