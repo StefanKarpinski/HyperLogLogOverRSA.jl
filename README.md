@@ -47,3 +47,33 @@ julia> y = hll_generate(client, "/package/123") # client's HLL value for "/packa
 julia> hll_decode(ring, y) # same HLL value
 (1902, 3)
 ```
+
+## Documentation
+
+The site under `docs/` is built with [Documenter.jl](https://documenter.juliadocs.org/)
+and deployed to GitHub Pages. To build it locally:
+
+```sh
+julia --project=docs -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
+julia --project=docs docs/make.jl
+```
+
+The output lands in `docs/build/`; open `docs/build/index.html` (or serve the
+directory) to preview it.
+
+### Checking the math
+
+Documenter renders math with KaTeX, which is stricter than the MathJax used by
+Obsidian/HackMD. `docs/check-math.js` renders every math block in the built
+docs through KaTeX and reports anything that fails to parse (unbraced
+multi-letter subscripts, wrong `alignat` column counts, stray non-breaking
+spaces, unsupported macros, …) before it ships as raw, unrendered LaTeX:
+
+```sh
+julia --project=docs docs/make.jl   # build first
+node docs/check-math.js             # then validate
+```
+
+It needs KaTeX, found automatically from either `npm install katex` or the
+Debian/Ubuntu `katex` package (`sudo apt install katex`). Exits non-zero if any
+block fails, so it can also gate CI.
