@@ -6,7 +6,7 @@ Readers may wonder how clients can check whether the $x$ that they've chosen has
 
 ```math
 \begin{aligned}
-a = 0 ~~\iff~~ \fmod(x,P)^p = 1
+a = 0 ~~\iff~~ \fmod(x,P)^p = 1
 \end{aligned}
 ```
 

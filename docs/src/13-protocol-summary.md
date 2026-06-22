@@ -35,16 +35,16 @@ The system operator chooses HyperLogLog parameters, RSA bit-length, and a certif
 
 On behalf of clients, the client implementor should choose acceptance criteria for protocol parameters, including:
 
-- ``B_{\max}`` — maximum bucket count
+- ``B_{\max}`` — maximum bucket count
     - The simplest way to fingerprint clients is just to choose $B = 2^{128}$ and let the bucket be the fingerprint. This limit prevents that kind of "attack".
     - Example: $B_{\max} = 2^{16}$
-- ``m_{\max}`` — maximum geometric sample
+- ``m_{\max}`` — maximum geometric sample
     - This is mostly a sanity check since extreme geometric samples are so rare as to not matter. We just want to prevent a malicious server from being able to DoS a client by having it compute enormous integer values.
     - Example: $m_{\max} = 128$
-- ``L_{\max}`` — maximum modulus bit-length
+- ``L_{\max}`` — maximum modulus bit-length
     - This is also mostly a sanity check to make sure that clients aren't DoSed by being made to do arithmetic in some absurdly large modulus.
     - Example: $L_{\max} = 2^{20}$
-- ``\alpha_{\min}`` — minimum certificate strength
+- ``\alpha_{\min}`` — minimum certificate strength
     - This is the least number of modulus values a malicious server would expect to have to try in order to find one that passes certificate checks. The server can provide more square roots than this strength implies, but not fewer.
     - Example: $\alpha_{\min} = 2^{80}$
 
@@ -113,11 +113,11 @@ Since $N$ is a semiprime, one of these three checks must succeed, so one square 
 
 The server publishes a ring certificate containing:
 
-- ``B`` — the bucket count
-- ``m`` — the maximum geometric sample
+- ``B`` — the bucket count
+- ``m`` — the maximum geometric sample
 - ``N`` — the RSA ring modulus
 - ``g`` — the ring semigenerator value
-- ``\text{sqrts}`` — a list of square roots
+- ``\text{sqrts}`` — a list of square roots
 
 **Client step 1: Ring certificate checking**
 
@@ -125,15 +125,15 @@ The client downloads the latest ring certificate at an agreed upon location. It 
 
 To check a ring certificate, the client should:
 
-- Check that $B ≤ B_\max$
+- Check that $B ≤ B_{\max}$
 - Check that $B$ is odd
-- Check that $2 ≤ m ≤ m_\max$
-- Check that $\log_2(N) ≤ L_\max$
+- Check that $2 ≤ m ≤ m_{\max}$
+- Check that $\log_2(N) ≤ L_{\max}$
 - Check that $N = 3 \bmod 4$
 - Check that $\gcd(B, N) = 1$
 - Check that $\gcd(B, N-1) = 1$
 - Check that $\Jacobi_N(g) = 1$
-- Check that $\alpha_\min ≤ (8/5)^n$ where $n$ is the length of $\text{sqrts}$
+- Check that $\alpha_{\min} ≤ (8/5)^n$ where $n$ is the length of $\text{sqrts}$
 - Check that each square root is valid
 
 If a certificate passes checks, the client should generate a random twist element:

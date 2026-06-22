@@ -33,7 +33,7 @@ W_N &= (\Z_N^*)^{B2^m}
 \end{aligned}
 ```
 
-Since $B2^m$ is even ($m ≥ 2$), every element has positive Jacobi symbol, so this is a subgroup of $J_N^+$. This subgroup is where we sample "noise" values to randomize the parts of $x$ that don't encode the HyperLogLog value. We previously described deriving individual $w$ values from random $z$ values; here we consider the entire group.
+Since $B2^m$ is even ($m ≥ 2$), every element has positive Jacobi symbol, so this is a subgroup of $J_N^+$. This subgroup is where we sample "noise" values to randomize the parts of $x$ that don't encode the HyperLogLog value. We previously described deriving individual $w$ values from random $z$ values; here we consider the entire group.
 
 **Definition.**  We call a positive integer, $N$, *"fingerprint-free"* if it is odd and there exists a group homomorphism
 
@@ -68,7 +68,7 @@ The reverse direction is harder. First, we'll show that if $\phi$ exists with $\
 
 ```math
 \begin{aligned}
-K ≤ W_N ≤ J_N^+
+K ≤ W_N ≤ J_N^+
 \end{aligned}
 ```
 

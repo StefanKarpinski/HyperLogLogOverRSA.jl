@@ -9,10 +9,10 @@ The first problem with HyperLogLog is that some clients get rare, highly identif
 
 For registries and artifacts, this is the full resource path; for packages, it lops off the package version hash, keeping only the package UUID. Note that this means that each client generates a new, statistically independent HyperLogLog values for each package and artifact that they request. This sharding scheme allows estimating:
 
-- Total Julia users via requests to `/registries`
-- Users of each registry via requests to `/registry/$uuid`
-- Users of each package via requests to `/package/$uuid`
-- Users of each artifact via requests to `/artifact/$hash`
+- Total Julia users via requests to `/registries`
+- Users of each registry via requests to `/registry/$uuid`
+- Users of each package via requests to `/package/$uuid`
+- Users of each artifact via requests to `/artifact/$hash`
 
 Estimates can be made for arbitrary slices of the request logs within each resource class too. We can, for example, aggregate at various time scales—daily, weekly, monthly, yearly. We can slice by region, operating system, Julia version, and any other data that the client shares with the servers. Or any combination of the above that may turn out to be of interest. There's no need to anticipate which ways of slicing and dicing will be useful ahead of time—logs can be queried and aggregated arbitrarily after the fact.
 

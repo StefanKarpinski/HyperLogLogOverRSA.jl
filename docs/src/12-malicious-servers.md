@@ -40,12 +40,12 @@ Can we convince a client that we aren't smuggling fingerprint bits in the struct
 
 - The correct structure has
   - ``P = 3 \bmod 4 \and Q = 1 \bmod 4 \implies N = PQ = 3 \bmod 4``
-  - ``P = 1 \bmod B \and Q ≠ 1 \bmod B \implies N = PQ ≠ 1 \bmod B``
+  - ``P = 1 \bmod B \and Q ≠ 1 \bmod B \implies N = PQ ≠ 1 \bmod B``
 - This incorrect structure has
   - ``N = P = Q = 1 \bmod 4``
   - ``N = P = Q = 1 \bmod B``
 
-Unfortunately, not all possible malicious structures are so easy to detect. For example, if $N = PQR$ where $P = Q = 1 \bmod 4$ and $P = Q = 1 \bmod B$ and $R = 3 \bmod 4$ and $R ≠ 1 \bmod B$, then you'd have $N = PQR = 3 \bmod 4$ and $N = PQR ≠ 1 \bmod B$ so $N$ looks normal from simple modular criteria, yet $PQ$ carries the $2 \log_2(B) + m$ bits of client fingerprint from before. To guarantee that a server cannot fingerprint clients, more evidence about the structure of $N$ needs to be provided.
+Unfortunately, not all possible malicious structures are so easy to detect. For example, if $N = PQR$ where $P = Q = 1 \bmod 4$ and $P = Q = 1 \bmod B$ and $R = 3 \bmod 4$ and $R ≠ 1 \bmod B$, then you'd have $N = PQR = 3 \bmod 4$ and $N = PQR ≠ 1 \bmod B$ so $N$ looks normal from simple modular criteria, yet $PQ$ carries the $2 \log_2(B) + m$ bits of client fingerprint from before. To guarantee that a server cannot fingerprint clients, more evidence about the structure of $N$ needs to be provided.
 
 Zero-knowledge proofs (ZPKs) are a popular solution to this kind of problem. I spent a good bit of time going down this rabbit hole. It's definitely doable. However, every time I sat down to implement zero-knowledge proofs of semiprimality, I found myself getting bogged down in complex and fussy details. This isn't just a matter of laziness—if the code is that hard to implement, I find it hard to convince myself that it's fully correct. And if we're not confident in the correctness of the code that checks whether $N$ has the right structure, then we haven't really proven anything.
 
@@ -76,7 +76,7 @@ N = \prod_{i=1}^D p_i^{n_i}
 \end{aligned}
 ```
 
-where $p_i$ are distinct odd primes and $n_i ≥ 1$. This prime factorization is, of course, uniquely determined by $N$. The ring structure of $\Z_N$ is given by:
+where $p_i$ are distinct odd primes and $n_i ≥ 1$. This prime factorization is, of course, uniquely determined by $N$. The ring structure of $\Z_N$ is given by:
 
 ```math
 \begin{aligned}
@@ -427,11 +427,11 @@ The lesson is that the $\alpha = 2^{50}$ I used in early test code is *not* "com
 
 The non-interactive version of this protocol serves as a certificate of fingerprint-freedom for a published $N$ value. The certificate structure contains:
 
-- ``B`` — the number of buckets
-- ``m`` — the maximum geometric sample value
-- ``N`` — the ring modulus
-- ``g`` — a server-selected semigenerator for $\Z_N^*$
-- ``\text{sqrts}`` — a list of square roots
+- ``B`` — the number of buckets
+- ``m`` — the maximum geometric sample value
+- ``N`` — the ring modulus
+- ``g`` — a server-selected semigenerator for $\Z_N^*$
+- ``\text{sqrts}`` — a list of square roots
 
 When downloading a new ring structure, a client checks the following requirements based on the data in this certificate:
 

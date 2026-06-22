@@ -41,7 +41,7 @@ This, then, is the generation part of our master key scheme:
 - The server, when generating the ring, also chooses and publishes a common "semigenerator" element, $g \in \Z_N^*$;
 - The client, when downloading the ring parameters for the first time, also chooses and saves a random $x_0 \in \Z_N^*$ with $\Jacobi_N(x_0) = -1$.
 
-Since half of the values in $\Z_N$ have negative Jacobi symbol, a viable $x_0$ is quick to find, and it only has to be done when once for a new ring. Regardless of which $x_0$ the client chooses, every $x \in \Z_N^*$ with $\Jacobi_N(x) = -1$ has $x = x_0 g^k$ for some $k$. The client's choice of $x_0$ changes how exponents map to $x$ values in a way that we'll explore below — this is the client's master key. We'll write its logarithm vector as:
+Since half of the values in $\Z_N$ have negative Jacobi symbol, a viable $x_0$ is quick to find, and it only has to be done when once for a new ring. Regardless of which $x_0$ the client chooses, every $x \in \Z_N^*$ with $\Jacobi_N(x) = -1$ has $x = x_0 g^k$ for some $k$. The client's choice of $x_0$ changes how exponents map to $x$ values in a way that we'll explore below — this is the client's master key. We'll write its logarithm vector as:
 
 ```math
 \begin{aligned}
@@ -107,15 +107,15 @@ To ensure the former, we want $t$ to be able to take every odd residue class in 
 
 Putting it all together, for each request a client makes, this scheme requires the client to:
 
-- Compute $h = \hash(x_0, \text{class})$ — one SHA256 hash operation
+- Compute $h = \hash(x_0, \text{class})$ — one SHA256 hash operation
 - Compute $g^h \bmod N$ — one modular exponentiation
-- Compute $x_h = x_0 g^h \bmod N$ — one modular multiplication
+- Compute $x_h = x_0 g^h \bmod N$ — one modular multiplication
 - Generate random $z \in \Z_N^*$
-- Compute $w = z^{B2^m}$ — one modular exponentiation
+- Compute $w = z^{B2^m}$ — one modular exponentiation
 - Generate random $i \in \Z_{2^{m-1}}$
 - Compute $t = 2Bi + 1$ a few small arithmetic operations
-- Compute $x_h^t \bmod N$ — one modular exponentiation
-- Compute $y = w x_h^t$ — one modular multiplication
+- Compute $x_h^t \bmod N$ — one modular exponentiation
+- Compute $y = w x_h^t$ — one modular multiplication
 
 When generatting $z \in \Z_N^*$ the client technically needs to choose $z \in \set{1, \dots, N-1}$ and then also check that $\gcd(z, N) = 1$. Otherwise there is an astronomically slim chance that
 
@@ -135,4 +135,4 @@ i = rand(rng, 0:(1 << (m-1)) - 1)
 t = widemul(2B, i) + 1
 y = modmul(w, powermod(x, t, N), N)
 ```
-As you can see, this is a very literal rendition of the steps described. On my M2 MacBook Air, for $1024$-bit $N$, this takes around $80$ microseconds; for $2048$-bit $N$, it takes $435$ microseconds, less than half a millisecond. In other words, these computations are easily fast enough to perform during each Pkg request — the network request itself will take orders of magnitude more time.
+As you can see, this is a very literal rendition of the steps described. On my M2 MacBook Air, for $1024$-bit $N$, this takes around $80$ microseconds; for $2048$-bit $N$, it takes $435$ microseconds, less than half a millisecond. In other words, these computations are easily fast enough to perform during each Pkg request — the network request itself will take orders of magnitude more time.
