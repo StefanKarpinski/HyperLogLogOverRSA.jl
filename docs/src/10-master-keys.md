@@ -5,7 +5,7 @@ At this point we have a clever scheme that allows clients to randomly choose $x 
 1. The client cannot decode or bias which HyperLogLog value they have sampled.
 2. The client's identity is perfectly obscured by sending $w x^t$ instead of $x$, where $w$ and $t$ are random values such that ${} w \in W = (\Z_N^*)^{B2^m} {}$ and $t = 1 \bmod{2B}$.
 
-This is already quite good. Recall, however that we want to use different, independent values of $x$ for different resource classes. Clients could simply generate and store different independently random $x$ values for each resource class. But as we discussed when considering signed HLLs, this entails a nontrivial amount of storage that looks quite bad: assuming 256 bits per resource class key and 1024 bits per $\Z_N^*$ value, that's 160 bytes per resource class; if the typical user installs 5k packages over time, that's 0.8MB of storage. Once again, this is feasible on modern hardware, but it would be great if each client could generate and store just a single reasonably sized secret.
+This is already quite good. Recall, however, that we want to use different, independent values of $x$ for different resource classes. Clients could simply generate and store different independently random $x$ values for each resource class. But as we discussed when considering signed HLLs, this entails a nontrivial amount of storage that looks quite bad: assuming 256 bits per resource class key and 1024 bits per $\Z_N^*$ value, that's 160 bytes per resource class; if the typical user installs 5k packages over time, that's 0.8MB of storage. Once again, this is feasible on modern hardware, but it would be great if each client could generate and store just a single reasonably sized secret.
 
 In essence, we want a way for each client to generate a random "master key" and derive individual resource-class-specific $x$ values from the master key and resource class. The most obvious way to do this is to hash the master key and the resource class together into $\Z_N$:
 
@@ -34,14 +34,14 @@ C_2 \times C_B \times C_{2^m} \times C_{pq}
 \end{aligned}
 ```
 
-The only shared factor among cyclic component orders is a single factor of two shared by $C_2$ and $C_{2^m}$. This means that if $g$ is a semigenerator, then every element in $\Z_N^*$ is either of the form $g^k$ or $x_0 g^k$ where $x_0$ is any fixed element with $\Jacobi_N(x_0) = -1$. Recall that a semigenerator, $g \in \Z_N^*$, has $\fmod(x,P)$ and $\fmod(x,Q)$ both generators. All semigenerators in this ring have $\Jacobi_N(g) = 1$, so every element of the form $g^k$ has positive Jacobi symbol while every element of the form $x_0 g^k$ has negative Jacobi symbol. This gives us a natural way to generate every negative Jacobi value: fix $x_0$ and $g$ and let $k$ range over exponent values: for every $x \in J_N^-$ there is some $k$ such that $x = x_0 g^k$. The client can easily pick a valid $x_0$ since all they have to check is that $\Jacobi_N(x_0) = -1$. On the other hand, the client cannot check if $g$ is a semigenerator since it doesn't know the factorization of $N$. The server can do this, however, and publish $g$ along with $N$.
+The only shared factor among cyclic component orders is a single factor of two shared by $C_2$ and $C_{2^m}$. This means that if $g$ is a semigenerator, then every element in $\Z_N^*$ is either of the form $g^k$ or $x_0 g^k$ where $x_0$ is any fixed element with $\Jacobi_N(x_0) = -1$. Recall that a semigenerator, $g \in \Z_N^*$, has both $\fmod(g,P)$ and $\fmod(g,Q)$ as generators. All semigenerators in this ring have $\Jacobi_N(g) = 1$, so every element of the form $g^k$ has positive Jacobi symbol while every element of the form $x_0 g^k$ has negative Jacobi symbol. This gives us a natural way to generate every negative Jacobi value: fix $x_0$ and $g$ and let $k$ range over exponent values: for every $x \in J_N^-$ there is some $k$ such that $x = x_0 g^k$. The client can easily pick a valid $x_0$ since all they have to check is that $\Jacobi_N(x_0) = -1$. On the other hand, the client cannot check if $g$ is a semigenerator since it doesn't know the factorization of $N$. The server can do this, however, and publish $g$ along with $N$.
 
 This, then, is the generation part of our master key scheme:
 
 - The server, when generating the ring, also chooses and publishes a common "semigenerator" element, $g \in \Z_N^*$;
 - The client, when downloading the ring parameters for the first time, also chooses and saves a random $x_0 \in \Z_N^*$ with $\Jacobi_N(x_0) = -1$.
 
-Since half of the values in $\Z_N$ have negative Jacobi symbol, a viable $x_0$ is quick to find, and it only has to be done when once for a new ring. Regardless of which $x_0$ the client chooses, every $x \in \Z_N^*$ with $\Jacobi_N(x) = -1$ has $x = x_0 g^k$ for some $k$. The client's choice of $x_0$ changes how exponents map to $x$ values in a way that we'll explore below — this is the client's master key. We'll write its logarithm vector as:
+Since half of the values in $\Z_N$ have negative Jacobi symbol, a viable $x_0$ is quick to find, and it only has to be done once for a new ring. Regardless of which $x_0$ the client chooses, every $x \in \Z_N^*$ with $\Jacobi_N(x) = -1$ has $x = x_0 g^k$ for some $k$. The client's choice of $x_0$ changes how exponents map to $x$ values in a way that we'll explore below — this is the client's master key. We'll write its logarithm vector as:
 
 ```math
 \begin{aligned}
@@ -113,11 +113,11 @@ Putting it all together, for each request a client makes, this scheme requires t
 - Generate random $z \in \Z_N^*$
 - Compute $w = z^{B2^m}$ — one modular exponentiation
 - Generate random $i \in \Z_{2^{m-1}}$
-- Compute $t = 2Bi + 1$ a few small arithmetic operations
+- Compute $t = 2Bi + 1$ — a few small arithmetic operations
 - Compute $x_h^t \bmod N$ — one modular exponentiation
 - Compute $y = w x_h^t$ — one modular multiplication
 
-When generatting $z \in \Z_N^*$ the client technically needs to choose $z \in \set{1, \dots, N-1}$ and then also check that $\gcd(z, N) = 1$. Otherwise there is an astronomically slim chance that
+When generating $z \in \Z_N^*$ the client technically needs to choose $z \in \set{1, \dots, N-1}$ and then also check that $\gcd(z, N) = 1$. Otherwise there is an astronomically slim chance that
 
 ```math
 \Jacobi_N(y) = \Jacobi_N(w) = \Jacobi_N(z) = 0.

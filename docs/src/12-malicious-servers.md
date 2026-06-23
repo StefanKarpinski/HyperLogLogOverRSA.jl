@@ -47,7 +47,7 @@ Can we convince a client that we aren't smuggling fingerprint bits in the struct
 
 Unfortunately, not all possible malicious structures are so easy to detect. For example, if $N = PQR$ where $P = Q = 1 \bmod 4$ and $P = Q = 1 \bmod B$ and $R = 3 \bmod 4$ and $R ≠ 1 \bmod B$, then you'd have $N = PQR = 3 \bmod 4$ and $N = PQR ≠ 1 \bmod B$ so $N$ looks normal from simple modular criteria, yet $PQ$ carries the $2 \log_2(B) + m$ bits of client fingerprint from before. To guarantee that a server cannot fingerprint clients, more evidence about the structure of $N$ needs to be provided.
 
-Zero-knowledge proofs (ZPKs) are a popular solution to this kind of problem. I spent a good bit of time going down this rabbit hole. It's definitely doable. However, every time I sat down to implement zero-knowledge proofs of semiprimality, I found myself getting bogged down in complex and fussy details. This isn't just a matter of laziness—if the code is that hard to implement, I find it hard to convince myself that it's fully correct. And if we're not confident in the correctness of the code that checks whether $N$ has the right structure, then we haven't really proven anything.
+Zero-knowledge proofs (ZKPs) are a popular solution to this kind of problem. I spent a good bit of time going down this rabbit hole. It's definitely doable. However, every time I sat down to implement zero-knowledge proofs of semiprimality, I found myself getting bogged down in complex and fussy details. This isn't just a matter of laziness—if the code is that hard to implement, I find it hard to convince myself that it's fully correct. And if we're not confident in the correctness of the code that checks whether $N$ has the right structure, then we haven't really proven anything.
 
 I found myself really wishing for a simpler way to demonstrate the structure of $\Z_N^*$. One that would be easier to have confidence in, both in the sense of having a simpler implementation to review, but also in the sense of having mathematics that's easier for more people (including myself) to understand. After some research, I found some straightforward evidence that the server can provide to convince clients a server-provided modulus cannot be used to fingerprint clients.
 
@@ -101,7 +101,7 @@ Let $g$ be a semigenerator for $\Z_N^*$ so we can write the logarithm of a gener
 \end{aligned}
 ```
 
-We will often prove results in terms of logarithmic coordinates. These kind of results are not usually proven with this approach, but since we've already worked extensively with this viewpoint, it will hopefully be more illuminating in this context.
+We will often prove results in terms of logarithmic coordinates. These kinds of results are not usually proven with this approach, but since we've already worked extensively with this viewpoint, it will hopefully be more illuminating in this context.
 
 **Fact.**  $\gcd_i(p_i-1) \divides \gcd(N-1)$.
 
@@ -128,7 +128,7 @@ This means that $d \divides N-1$ as required. $\square$
 - ``x`` is a quadratic residue iff none of the $\ell_i$ are odd
 
 In the $D = 1$ case, $\Jacobi_N(x) = 1$ if and only if $x$ is a quadratic residue, so all three of $x$, $y$ and $xy$ are quadratic residues.
-In the $D = 2$ case, lets write coordinates for $x$, $y$ and $xy$:
+In the $D = 2$ case, let's write coordinates for $x$, $y$ and $xy$:
 
 ```math
 \begin{aligned}
@@ -312,7 +312,7 @@ i (B/B_V) 2^m &= d' && \pmod{V/B_V} \\
 \end{aligned}
 ```
 
-Here we have divide common factors—$B_U$, $2^{\bar{m}}$ and $B_V$, respectively—out of each equation and modulus. These equations are in turn equivalent to:
+Here we have divided common factors—$B_U$, $2^{\bar{m}}$ and $B_V$, respectively—out of each equation and modulus. These equations are in turn equivalent to:
 
 ```math
 \begin{aligned}
@@ -341,7 +341,7 @@ This gives us a concrete set of criteria on $N$, which, taken together, imply th
 
 ### Upper bound on quadratic residues
 
-The server cannot provide a square root for one of $\set{x, y, xy}$ for every pair $\set{x, y} \subseteq J_N^+$. But if the client can challenge the server to produce square roots for arbitrary pairs, then the server can interactively convince the client that either every pair has this property or the server has gotten very lucky. And if the client can challenge the server to provide a square root for as many pairs as it wants, then it can require the server to be implausibly lucky. Moreover, an interactive protocols like this can be converted into non-interactive certificates in a standard way by using cryptographic hashing to produce random elements instead of having the client choose them. In order to know how many challenges a server should be required to answer, however, we need an upper bound on the fraction of pairs that have square roots when $N$ has incorrect structure. The following theorem provides this upper bound.
+The server cannot provide a square root for one of $\set{x, y, xy}$ for every pair $\set{x, y} \subseteq J_N^+$. But if the client can challenge the server to produce square roots for arbitrary pairs, then the server can interactively convince the client that either every pair has this property or the server has gotten very lucky. And if the client can challenge the server to provide a square root for as many pairs as it wants, then it can require the server to be implausibly lucky. Moreover, an interactive protocol like this can be converted into non-interactive certificates in a standard way by using cryptographic hashing to produce random elements instead of having the client choose them. In order to know how many challenges a server should be required to answer, however, we need an upper bound on the fraction of pairs that have square roots when $N$ has incorrect structure. The following theorem provides this upper bound.
 
 **Theorem.** Let $N$ be an odd, positive integer. If $N$ has ${} D$ distinct prime factors, then the fraction of pairs ${} \set{x, y} \subseteq J_N^+ {}$ with at least one of $\set{x, y, xy}$ being a quadratic residue is
 
@@ -397,7 +397,7 @@ This bound allows a protocol whereby a server can convince a client that $N$ is 
 
 Based on these results, we can design a protocol for a server to convince clients that $N$ is fingerprint-free. First, the client checks that $N = 3 \bmod 4$, that $\gcd(B, N) = 1$, and that $\gcd(B, N-1) = 1$. These are simple numerical checks. The client is then ready to be convinced that $N$ has at most two prime divisors. The interactive version is:
 
-> The client picks $n$ random pairs $\set{x, y} \subseteq J_N^*$ and challenges the server to produce $r \in \Z_N^*$ for each pair such that $r^2 \in \set{x, y, xy} \bmod N$.
+> The client picks $n$ random pairs $\set{x, y} \subseteq J_N^+$ and challenges the server to produce $r \in \Z_N^*$ for each pair such that $r^2 \in \set{x, y, xy} \bmod N$.
 
 This convinces the client that there's at most a $(5/8)^{n}$ probability that $N$ has more than two distinct prime factors. If the client wants to be convinced to a probability of $\nfrac{1}{\alpha}$ for some large $\alpha$, they should choose $n$ such that:
 
@@ -409,7 +409,7 @@ n &≥ \frac{\log_2(\alpha)}{\log_2(8)-\log_2(5)}
 \end{alignedat}
 ```
 
-We can turn this into a non-interactive protocol by picking a cryptographic hashing scheme to generate pairs of values in such a way that the server cannot influence them. The hash should include $N$ as an input so that the set of hash-generated values is not fixed and must be computed after choosing a candidate modulus. This prevents solving generating $n$ pairs and solving for $N$ that happens to have quadratic residues for those pairs. In order to generate an incorrectly structured $N$ that passes this test, a malicious server would have to try about $\alpha$ candidate $N$ values before expecting to find one that passes. Since $n$ grows only as $\log_2(\alpha)$, we can demand an enormous amount of attacker work while keeping the certificate small—but we have to choose $\alpha$ with the real cost of a forgery attempt in mind, and here it pays to be pessimistic, because a successful forgery is catastrophic. The fingerprinting structures from the start of this section yield on the order of $2\log_2(B) + m \approx 87$ bits of fingerprint—enough to deanonymize every client of the system at once—so $\alpha$ is guarding against total failure, not a marginal leak.
+We can turn this into a non-interactive protocol by picking a cryptographic hashing scheme to generate pairs of values in such a way that the server cannot influence them. The hash should include $N$ as an input so that the set of hash-generated values is not fixed and must be computed after choosing a candidate modulus. This prevents generating $n$ pairs and then solving for an $N$ that happens to have quadratic residues for those pairs. In order to generate an incorrectly structured $N$ that passes this test, a malicious server would have to try about $\alpha$ candidate $N$ values before expecting to find one that passes. Since $n$ grows only as $\log_2(\alpha)$, we can demand an enormous amount of attacker work while keeping the certificate small—but we have to choose $\alpha$ with the real cost of a forgery attempt in mind, and here it pays to be pessimistic, because a successful forgery is catastrophic. The fingerprinting structures from the start of this section yield on the order of $2\log_2(B) + m \approx 87$ bits of fingerprint—enough to deanonymize every client of the system at once—so $\alpha$ is guarding against total failure, not a marginal leak.
 
 It's tempting to reason about the per-attempt cost in terms of the $n$ quadratic-residue checks, but that reasoning cuts the wrong way: the attacker is forging *their own* candidate moduli, so they know each candidate's factorization, which makes the QR checks essentially free for them. Worse for the defender, the attacker fails fast—each challenge pair passes a bad modulus with probability at most $5/8$, so on a doomed candidate they bail after two or three pairs and pay the full $n$ square roots only on the eventual success. The real per-attempt cost is dominated by generating a constrained candidate modulus, and the search is embarrassingly parallel. We should not lean on QR-testing being expensive; for this attacker, it isn't.
 

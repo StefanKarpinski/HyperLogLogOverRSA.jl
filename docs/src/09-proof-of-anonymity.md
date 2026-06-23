@@ -1,6 +1,6 @@
 # Proof of Anonymity
 
-In this section we present a formal proof that client anonymity is preserved by the protocol that we have outlined. Instead of assuming that $N = PQ = (2Bp + 1)(2^m q + 1)$, we generalize the setting somewhat. This weakens what needs to be shown to guarantee that clients cannot be fingerprinted by the server, which complicates the proof somewhat, but we will need this generality later on. We assume throughout that $B$ is odd and $m ≥ 2$. First, we'll present some definitions, then the main theorem and its proof, and finally conclude with why it guarantees client anonymity.
+In this section we present a formal proof that client anonymity is preserved by the protocol that we have outlined. Instead of assuming that $N = PQ = (2Bp + 1)(2^m q + 1)$, we generalize the setting somewhat. This weakens what needs to be shown to guarantee that clients cannot be fingerprinted by the server, which complicates the proof, but we will need this generality later on. We assume throughout that $B$ is odd and $m ≥ 2$. First, we'll present some definitions, then the main theorem and its proof, and finally conclude with why it guarantees client anonymity.
 
 **Definition.** We write the *"positive Jacobi subgroup"* in $\Z_N^*$ as:
 

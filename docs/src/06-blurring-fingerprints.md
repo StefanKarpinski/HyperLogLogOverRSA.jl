@@ -68,6 +68,6 @@ We can multiply by $w$ before or after exponentiating by $t$:
 \end{aligned}
 ```
 
-Either way, every possible value in the $C_p$ and $C_q$ components can be reached for some value of $w$ and $t$. We'll use $wx^t$; this version has a somwhat stronger guarantee: regardless of the other values, including $t$, there is some value of $w$ that can produce any pair of values in the $C_p$ and $C_q$ components.
+Either way, every possible value in the $C_p$ and $C_q$ components can be reached for some value of $w$ and $t$. We'll use $wx^t$; this version has a somewhat stronger guarantee: regardless of the other values, including $t$, there is some value of $w$ that can produce any pair of values in the $C_p$ and $C_q$ components.
 
-The final component we need to consider is $C_2$: the value of $a$ in $x$ is unchanged by both $x \mapsto x^t$ and by multiplication by $w^{2^m}$. As it turns out, however, we actually need this parity bit to to be preserved in order to prevent clients from artificially inflating their geometric samples.
+The final component we need to consider is $C_2$: the value of $a$ in $x$ is unchanged by both $x \mapsto x^t$ and by multiplication by $w^{2^m}$. As it turns out, however, we actually need this parity bit to be preserved in order to prevent clients from artificially inflating their geometric samples.

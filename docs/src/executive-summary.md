@@ -8,13 +8,13 @@ I'm proposing a new (as in novel) way to estimate how many unique clients use Ju
 
 The first two layers provide the privacy: you can't follow a client across packages, and every client hides in a crowd of lookalikes in most classes. The RSA layer doesn't change the privacy model, but stops clients from faking their samples to skew the counts. So if you accept the privacy of sharding + HLL and believe two short proofs about the RSA layer, then you should be ok with the whole protocol.
 
-I'd like to implement the client side of this protocol in Julia 1.14 and subsequently start using the data the server gets to publish client count estimates along with other pkg server stats.
+I'd like to implement the client side of this protocol in Julia 1.14, and then use the data the server collects to publish client-count estimates alongside other Pkg server stats.
 
 ## Overview
 
 We'd like to estimate how many people use Julia—and how many use each individual package—without tracking anyone. This isn't idle curiosity: open source funding and project survival often hinge on demonstrating impact ("installed on 50,000 systems last year"), and package authors deserve to know whether anyone is actually using their work. We'd also like aggregate breakdowns by operating system, Julia version, and region. The obstacle is that the obvious way to count unique installs—have each client send a persistent random ID—was rightly rejected as a privacy hazard: it would let anyone with access to Pkg server logs follow every request a client ever makes.
 
-Somewhat surprisingly there isn’t any really good technique for this in the literature—at least not that I or my research assistants, Claude and GPT, could find. To address this gap (and frankly to scratch an annoying itch), I’ve developed a new protocol for counting clients while keeping individual clients anonymous. I’m tentatively calling it HyperLogLog Over RSA, and I’m posting here to give people the chance to look at it and comment on it and raise any objections they might have to using it in Pkg. 
+Somewhat surprisingly, there isn’t any really good technique for this in the literature—at least not that I or my research assistants, Claude and GPT, could find. To address this gap (and frankly to scratch an annoying itch), I’ve developed a new protocol for counting clients while keeping individuals anonymous. I’m tentatively calling it HyperLogLog Over RSA, and I’m posting here to give people a chance to look it over, comment, and raise any objections they might have to using it in Pkg.
 
 The protocol’s privacy model is built in three layers, and the useful thing is that you can evaluate them independently. The headline result is this: **the privacy of the full system is exactly the privacy of the first two layers.** The third layer—the RSA cryptography—changes nothing about what the server learns about a client; it only keeps the clients from messing with the counts. So if you're comfortable with layers 1 and 2, and you trust the two proofs about layer 3, then you're comfortable with the whole protocol.
 
@@ -34,7 +34,7 @@ This is exactly the unfairness that sharding (Layer 1) cures. Because a client's
 
 Two honest limits remain. A class—or a fine-grained slice of one—with only a handful of clients in it can't hide anyone, no matter the scheme: there's simply almost no one to blend in with. You can probably enumerate every FreeBSD user from the OS field alone (sorry, Alex). That's inherent to counting a small population rather than anything specific to HyperLogLog, and we handle it by declining to report counts for slices below a minimum size. And all of the above concerns the value a client sends, not network-level identifiers like its IP address—those carry their own tracking risk and must be handled separately, as they are today.
 
-If you're still reading and you can accept the privacy model of HyperLogLog counting with resource class sharding, you've accepted the entire privacy model. Everything below is about integrity—ensuring that badly behaved clients cannot mess with the estimates too badly—not privacy.
+If you're still reading and you can accept the privacy model of HyperLogLog counting with resource class sharding, you've accepted the entire privacy model. Everything below is about integrity—ensuring that badly behaved clients cannot mess with the estimates too much—not privacy.
 
 ## Layer 3 — RSA, for integrity only
 
@@ -56,6 +56,6 @@ Compared to the rightly rejected unique-ID scheme, this approach gives up two th
 
 ## Why this is worth doing
 
-For Julia specifically, this would let us estimate total active installs, per-package user counts (real impact numbers for package authors and the funders who support them), and breakdowns by OS, version, and region. While we can provide an option to turn this off, for those who don't like it, because the design is built to be privacy-preserving, we can make it opt-out rather than opt-in. Which is fairly necessary for this kind of thing, since most people (but we don't know exactly how many) leave the default alone. A persistent identifier like a client UUID counts as personal data under regulations like the GDPR and CCPA, so a counting scheme we can turn on by default has to be one that genuinely protects users; that is precisely what this design aims to be.
+For Julia specifically, this would let us estimate total active installs, per-package user counts (real impact numbers for package authors and the funders who support them), and breakdowns by OS, version, and region. Because the design is built to be privacy-preserving, we can make it opt-out rather than opt-in, while still providing a way to turn it off for those who don't want it. Opt-out is fairly necessary for this kind of thing, since most people leave the default alone (though we don't know exactly how many). A persistent identifier like a client UUID counts as personal data under regulations like the GDPR and CCPA, so a counting scheme we can turn on by default has to be one that genuinely protects users; that is precisely what this design aims to be.
 
 If you want to dig into the details: HyperLogLog is covered in [Section 2](02-hyperloglog.md), resource class sharding in [Section 3](03-resource-class-sharding.md), and the two proofs in [Section 9](09-proof-of-anonymity.md) (anonymity) and [Section 12](12-malicious-servers.md) (fingerprint-freedom).

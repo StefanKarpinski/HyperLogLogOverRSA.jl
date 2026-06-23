@@ -8,7 +8,7 @@ N = P Q = (2 B p + 1)(2^m q + 1)
 \end{aligned}
 ```
 
-This is the full RSA ring shape for encrypted HyperLogLog sampling. As before, $P$, $Q$, $p$, $q$ and $m$ are distinct, odd primes, and $B$ is the number of HyperLogLog buckets, which must be odd and coprime to everything else. The multiplicative structure of a HyperLogLog RSA ring is:
+This is the full RSA ring shape for encrypted HyperLogLog sampling. As before, $P$, $Q$, $p$, and $q$ are distinct, odd primes, $m$ is the maximum geometric sample value, and $B$ is the number of HyperLogLog buckets, which must be odd and coprime to everything else. The multiplicative structure of a HyperLogLog RSA ring is:
 
 ```math
 \begin{aligned}

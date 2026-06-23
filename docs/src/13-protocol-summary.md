@@ -18,7 +18,7 @@ A test implementation of the entire HyperLogLog Over RSA protocol in Julia can b
 The system operator chooses HyperLogLog parameters, RSA bit-length, and a certificate strength:
 
 - ``B`` is the bucket count
-    - It must an odd number
+    - It must be an odd number
     - Example: $B = 2^{12} - 1$
 - ``m`` is the maximum geometric sample value
     - Maximum client estimate is around $2^m$
@@ -79,7 +79,7 @@ This can be accomplished by:
 - Check that $Q = 2^m q + 1$ is prime
 - Check that $\set{B, P, p} \inter \set{Q, q} = \emptyset$
 
-The ranges that $p$ and $q$ are chosen from should be computed such that $N = PQ$ falls into $[2^{L-1}, 2^L)$ as required. It's also desirable for $P$ and $Q$ to have $log_2(P) \approx L/2 \approx \log_2(Q)$ for some notion of approximation.
+The ranges that $p$ and $q$ are chosen from should be computed such that $N = PQ$ falls into $[2^{L-1}, 2^L)$ as required. It's also desirable for $P$ and $Q$ to have $\log_2(P) \approx L/2 \approx \log_2(Q)$ for some notion of approximation.
 
 **Server step 2: Semigenerator selection**
 
@@ -157,7 +157,7 @@ x = x_0 g^h = x_0 g^{\hash(x_0,\,\text{class})}
 \end{aligned}
 ```
 
-It then generates random a white noise element and a random exponent value:
+It then generates a random white noise element and a random exponent value:
 
 - Choose $z \in \set{1, 2, \dots, N-1}$ and let $w = z^{B2^m} \bmod N$
 - Choose $i \in \set{0, 1, \dots, 2^{m-1}-1}$ and let $t = 2Bi + 1$
@@ -172,9 +172,9 @@ y = \fmod(wx^t, N)
 
 This is the value it sends along with the request in a header. The request should also include some hash of the ring parameters so that the server can know which ring the value belongs to. This could just be the modulus, or a cryptographic hash of the ring certificate. Note that $N$ will be large enough that a cryptographic hash is actually the more compact option.
 
-**Server step 6: Request validation & decoding**
+**Server step 5: Request validation & decoding**
 
-The server should not attempt to validate request headers while responding to requests, it should simply serve requests and log the header information for later processing. This also means that the factorization of $N$ does not need to reside on public-facing servers—it only needs to be available for offline log processing. This significantly reduces the chances of the factorization being accidentally leaked or exfiltrated by and attacker.
+The server should not attempt to validate request headers while responding to requests, it should simply serve requests and log the header information for later processing. This also means that the factorization of $N$ does not need to reside on public-facing servers—it only needs to be available for offline log processing. This significantly reduces the chances of the factorization being accidentally leaked or exfiltrated by an attacker.
 
 When post-processing request logs, the server can validate the submitted $y$ values by checking that the $N$ value is known and that $\Jacobi_N(y) = -1$. Any request with an unknown ring modulus or that fails the Jacobi symbol test should be ignored for client counting purposes.
 
@@ -189,7 +189,7 @@ The server decodes the HLL value by computing:
 
 The bucket value is in $\Z_P$ which is huge, but there are only $B$ possible values it takes which can be mapped back to $\set{0, \dots, B-1}$ by any consistent mapping scheme. The geometric values are already in $\set{0, \dots, m}$ and the value can be computed efficiently by repeatedly squaring $\fmod(y^q,Q)$ until reaching one.
 
-**Server step 7: Count estimation**
+**Server step 6: Count estimation**
 
 Once the bucket and geometric count have been decoded, estimating the unique client count within any set of logs for the same resource class is a matter of doing normal HyperLogLog aggregation and estimation: compute the maximum geometric sample size for each bucket and use the histogram of maximum sample counts to estimate the most likely client count. The optimal maximum likelihood estimator was derived in ["New Cardinality Estimation Methods for HyperLogLog Sketches"](https://arxiv.org/abs/1706.07290). This is the recommended estimator—it supersedes the original estimator and the improved estimator that is sometimes called "HyperLogLog++."
 
