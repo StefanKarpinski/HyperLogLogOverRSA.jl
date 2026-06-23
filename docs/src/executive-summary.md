@@ -42,8 +42,8 @@ The two layers above completely define what the server can learn. The RSA layer'
 
 Two proofs make the privacy promise precise:
 
-1. **Anonymity is preserved exactly.** The encryption and the per-request re-randomization reveal *no more* about a client than a plaintext HyperLogLog value would. Layer 3 cannot make privacy any worse than layers 1 and 2 already are. (Proven in [Section 9](09-proof-of-anonymity.md).)
-2. **The server can't smuggle in a fingerprint.** A maliciously constructed RSA modulus *could* secretly tag clients, so the server must publish a certificate proving its modulus is "fingerprint-free." Clients verify this certificate before using a ring. (Proven in [Section 12](12-malicious-servers.md).)
+1. **Anonymity is preserved exactly.** The encryption and the per-request re-randomization reveal *no more* about a client than a plaintext HyperLogLog value would. Layer 3 cannot make privacy any worse than layers 1 and 2 already are. (Proven in [Proof of Anonymity](09-proof-of-anonymity.md).)
+2. **The server can't smuggle in a fingerprint.** A maliciously constructed RSA modulus *could* secretly tag clients, so the server must publish a certificate proving its modulus is "fingerprint-free." Clients verify this certificate before using a ring. (Proven in [Malicious Servers](12-malicious-servers.md).)
 
 If those proofs hold—and reviewing them is exactly the scrutiny this writeup invites—then RSA is purely a guardrail on honest counting, invisible to the privacy analysis.
 
@@ -58,4 +58,4 @@ Compared to the rightly rejected unique-ID scheme, this approach gives up two th
 
 For Julia specifically, this would let us estimate total active installs, per-package user counts (real impact numbers for package authors and the funders who support them), and breakdowns by OS, version, and region. Because the design is built to be privacy-preserving, we can make it opt-out rather than opt-in, while still providing a way to turn it off for those who don't want it. Opt-out is fairly necessary for this kind of thing, since most people leave the default alone (though we don't know exactly how many). A persistent identifier like a client UUID counts as personal data under regulations like the GDPR and CCPA, so a counting scheme we can turn on by default has to be one that genuinely protects users; that is precisely what this design aims to be.
 
-If you want to dig into the details: HyperLogLog is covered in [Section 2](02-hyperloglog.md), resource class sharding in [Section 3](03-resource-class-sharding.md), and the two proofs in [Section 9](09-proof-of-anonymity.md) (anonymity) and [Section 12](12-malicious-servers.md) (fingerprint-freedom).
+If you want to dig into the details: HyperLogLog and resource class sharding have their own sections ([HyperLogLog](02-hyperloglog.md), [Resource Class Sharding](03-resource-class-sharding.md)), and the two proofs are in [Proof of Anonymity](09-proof-of-anonymity.md) (anonymity) and [Malicious Servers](12-malicious-servers.md) (fingerprint-freedom).

@@ -1,4 +1,4 @@
-# Encrypted Geometric Sampling
+# HyperLogLog Over RSA
 
 What alternative is there to signing HyperLogLog values? In the last section we encrypted HLL values. What if clients could sample encrypted HLL values for themselves? Of course, the way we discussed encrypting them previously, each distinct HLL value would have an equal chance of being chosen, which is entirely the wrong distribution—the whole point is that it's geometric. But can we encrypt HLL values so that sampling encrypted values has the right distribution? This requires more common HLL values to appear in distinct encrypted forms many times: the most common values would have to appear $2^{m-1}$ times as often as the least common ones, where $m$ is the maximum geometric sample value. This is certainly possible—we can just encrypt a 128-bit unsigned random value and derive the HLL value from it on the server side. But that's a massive client fingerprint. We need another crucial ingredient: the client needs to be able to randomize what they send so that any client with the same HLL value could have sent that value. This seemingly impossible trick turns out to be possible in the mathematical setting of RSA rings.
 
@@ -145,3 +145,170 @@ The $C_q$ part of this can be annihilated by raising to the $q$ power:
  We could raise this to $q^{-1} \bmod{2^m}$ in order to undo the scaling by $q$, but we don't actually need to: since $q$ is odd, we have $k = \tz(qc) = \tz(c)$ and $\ord(\fmod(x,Q)^q) = 2^k$. We can efficiently find $k$ by starting with $\fmod(x,Q)^q$ and squaring it in $\Z_Q^*$ until we reach one, counting how many squarings are needed.
 
 This gives us a computationally efficient way for someone who knows the factorization of $N$ to turn a random, uniformly sampled element, $x \in \Z_N^*$, into a geometrically distributed sample value, $k = \tz(c)$. Crucially for our purposes, someone who doesn't know the factorization of $N$ cannot compute this geometric sample value.
+
+## Blurring Fingerprints
+
+We now have a construction where a client can sample a value with a geometric distribution without knowing the value they've sampled. We can't, however, have a client just generate a random $x \in \Z_N^*$ and send that $x$ every time—this would be a massive, uniquely identifying client fingerprint. We need some way of destroying all identifying information about $x$ _except_ for the geometric sample that we want. Fortunately, this turns out to be entirely doable.
+
+We want to erase all information about the $C_{2^m}$ component except for its order, effectively preserving only $\tz(c)$. Fortunately, this is actually straightforward: for any odd $t$, $x^t$ has the same geometric sample value as $x$. We can see this easily from logarithms:
+
+```math
+\begin{aligned}
+\log_g(x^t) = t (a, b, c, d) = (ta, tb, tc, td)
+\end{aligned}
+```
+
+Since ${} \tz(tc) = \tz(t) + \tz(c) = \tz(c)$ we know that $x^t$ and $x$ have the same geometric value. This crucially depends on $t$ being odd. The higher bits of $tc$ are fully random: given $c$ and $c'$ with $k = \tz(c) = \tz(c')$ we can find $t$ that connects them, namely $t = (c'/2^k)(c/2^k)^{-1} \bmod{2^m}$. Instead of sending $x$, the client can choose a new random, odd $t$ for each request and send $x^t$. As long as $t$ can fall into any odd residue class modulo $2^m$, the leading bits of $tc \bmod{2^m}$ are completely arbitrary and only the position of the trailing bit is preserved.
+
+Sending $x^t$ obscures $x$'s exact value of $c$, but what about the other components? The Chinese Remainder Theorem tells us that if $b$ and $d$ are non-zero, for any $b'$ and ${} d'$ there exists $t$ such that the following modular equalities all hold:
+
+```math
+\begin{aligned}
+t &= 1        &&\pmod 2 \\
+t &= b'b^{-1} &&\pmod p \\
+t &= d'd^{-1} &&\pmod q \\
+\end{aligned}
+```
+
+This is possible since $2$, $p$ and $q$ are pairwise coprime, and gives:
+
+```math
+\begin{aligned}
+\log_g(x^t) = (ta, tb, tc, td) = (a, b', tc, d')
+\end{aligned}
+```
+
+We have $ta = a \bmod 2$ since $t$ is odd. In other words, we can hit any combination of values in the $C_p$ and $C_q$ components for some value of $t \in \Z_{pq2^m}$.
+
+Being able to reach any possible values in the $C_p$ and $C_q$ components via exponentiation is predicated on $b$ and $d$ being non-zero, however. In an RSA ring with our proposed structure, if $N$ is thousands of bits (as it would be in real usage), it is astronomically unlikely to choose $x$ with zero exponents in the $C_p$ or $C_q$ components. For the sake of sheer thoroughness, however, let's erase even that tiny bit of information. Choose $z \in \Z_N^*$ at random and multiply by $w = z^{2^m}$. If $\log_g(z) = (a_{z}, b_{z}, c_{z}, d_{z})$, we have:
+
+```math
+\begin{aligned}
+\log_g(w)
+&= 2^m \, (a_{z}, b_{z}, c_{z}, d_{z}) \\
+&= (0, b_{z} 2^m, 0, d_{z} 2^m) \\
+\end{aligned}
+```
+
+The $C_2$ and $C_{2^m}$ exponents of $w$ are both zero since $2^m = 0$ in both moduli. The $C_p$ and $C_q$ parts are random and arbitrary since $b_{z}$ and $d_{z}$ are random and arbitrary and multiplication by $2^m$ just permutes those already random values. Since $p$ and $q$ are coprime, the Chinese Remainder Theorem guarantees the existence of $e \in \Z$ such that:
+
+```math
+\begin{aligned}
+e = b_{z} 2^m \pmod p \\
+e = d_{z} 2^m \pmod q \\
+\end{aligned}
+```
+
+This lets us write the logarithm of $w$ with a single unknown:
+
+```math
+\begin{aligned}
+\log_g(w) = (0, e, 0, e)
+\end{aligned}
+```
+
+We can multiply by $w$ before or after exponentiating by $t$:
+
+```math
+\begin{aligned}
+\log_g(wx^t) &= (a, tb + e, tc, td + e) \\
+\log_g((wx)^t) &= (a, t(b + e), tc, t(d + e)) \\
+\end{aligned}
+```
+
+Either way, every possible value in the $C_p$ and $C_q$ components can be reached for some value of $w$ and $t$. We'll use $wx^t$; this version has a somewhat stronger guarantee: regardless of the other values, including $t$, there is some value of $w$ that can produce any pair of values in the $C_p$ and $C_q$ components.
+
+The final component we need to consider is $C_2$: the value of $a$ in $x$ is unchanged by both $x \mapsto x^t$ and by multiplication by $w^{2^m}$. As it turns out, however, we actually need this parity bit to be preserved in order to prevent clients from artificially inflating their geometric samples.
+
+## Fighting Inflation
+
+Clients are supposed to raise $x$ to an odd power, $t$. What happens if they raise it to an even $t$ instead? For any values $t$ and ${} c$ we have $\tz(tc) = \tz(t) + \tz(c)$. When $t$ is odd we have $\tz(t) = 0$, so $\tz(tc) = \tz(c)$. But if $t$ is even then $\tz(t) > 0$ and $x^t$ inflates the geometric sample. If a client sends $x^{2^m}$, for example, then it is guaranteed to produce the maximal geometric sample value, which is supposed to be vanishingly rare, occurring with $1/2^m$ probability. If we require that $a = 1 \bmod 2$ in $x$, however, then $ta = t \bmod 2$, which lets us read the parity of $t$ from the first component of $wx^t$. Parity bit to the rescue! So we'd like to require clients to choose $x$ with odd $a$ and then check that $ta = 1$ in the $wx^t$ value that is sent. Any requests not satisfying this should be ignored for client count estimation purposes, since that indicates a malicious or malfunctioning client.
+
+Readers may wonder how clients can check whether the $x$ that they've chosen has $a = 1 \bmod 2$. After all, the whole point of working in $\Z_N$ is that people who don't know the factorization of $N$ can't extract the components of $x \in \Z_N$. Someone who knows the factorization of $N$ can, of course, check this easily:
+
+```math
+\begin{aligned}
+a = 0 ~~\iff~~ \fmod(x,P)^p = 1
+\end{aligned}
+```
+
+But the client doesn't know $P$ and can't check this. It is, however, possible to efficiently compute the [Jacobi symbol](https://en.wikipedia.org/wiki/Jacobi_symbol), $\Jacobi_N(x)$, without knowing the factorization of $N$. For this particular ring shape, the value of the Jacobi symbol is $(-1)^{a + c}$. In general, the Jacobi symbol is the total parity of all the log-coordinates whose moduli are even. This doesn't tell us the value of $a$ by itself, but if $\Jacobi_N(x) = -1$ then we know that $a + c = 1 \bmod 2$ so we are in one of these two cases:
+
+```math
+\begin{alignedat}{3}
+a &= 1 \bmod 2 &~~\wedge~~&& c &= 0 \bmod 2 \\
+a &= 0 \bmod 2 &~~\wedge~~&& c &= 1 \bmod 2 \\
+\end{alignedat}
+```
+
+This isn't exactly what we wanted, but it does give us what we need. Instead of requiring $a = 1$, we can require that $\Jacobi_N(wx^t) = -1$. This forces us into one of these two cases:
+
+1. ``ta = 1 \bmod 2`` and $tc = 0 \bmod 2$
+2. ``ta = 0 \bmod 2`` and $tc = 1 \bmod 2$
+
+Whereas if $t$ is even, then $ta = tc = 0 \bmod 2$, so this check guarantees that odd $t$ was used.
+
+Before proceeding with this, we should verify that conditioning on $\Jacobi_N(x) = -1$ does not change the relative probabilities of different $\tz(c)$ values. Fortunately it doesn't:
+
+```math
+\begin{aligned}
+\mathcal{P}(\tz(c) = 0 ~|~ \Jacobi_N(x) = -1)
+= \mathcal{P}(\tz(c) = 0)
+= \tfrac{1}{2}
+\end{aligned}
+```
+
+In summary, instead of requiring $x$ with $a = 1 \bmod 2$, which would work but cannot be checked by clients, we require $x$ with $\Jacobi_N(x) = -1$, which they can check. This implies that $\Jacobi_N(wx^t) = -1$ if and only if $t$ is odd. The server can check that this is the case and disregard any requests that don't satisfy this parity requirement.
+
+## Bucket Brigade
+
+We now have the ability for clients to blindly sample geometric values, but for full HyperLogLog sampling we also need a uniformly distributed bucket value. Can we modify our RSA ring to include a bucket value too? We certainly can:
+
+```math
+\begin{aligned}
+N = P Q = (2 B p + 1)(2^m q + 1)
+\end{aligned}
+```
+
+This is the full RSA ring shape for encrypted HyperLogLog sampling. As before, $P$, $Q$, $p$, and $q$ are distinct, odd primes, $m$ is the maximum geometric sample value, and $B$ is the number of HyperLogLog buckets, which must be odd and coprime to everything else. The multiplicative structure of a HyperLogLog RSA ring is:
+
+```math
+\begin{aligned}
+\Z_N^* \cong (C_2 \times C_B \times C_p) \times (C_{2^m} \times C_q)
+\end{aligned}
+```
+
+The $C_B$ component encodes the encrypted bucket value, the order of the $C_{2^m}$ component encodes the geometric sample value, and the $C_2$ component is used to ensure that clients don't inflate geometric samples by raising values to even powers. The $C_p$ and $C_q$ components are what make values hard to decode—we don't actually care about the values in these components. Since this is starting to be a lot of components and we don't actually care about $C_p$ and $C_q$, we'll combine these two into a single cyclic component with order $pq$:
+
+```math
+\begin{aligned}
+\Z_N^* \cong C_2 \times C_B \times C_{2^m} \times C_{pq}
+\end{aligned}
+```
+
+Note that $C_a \times C_b \cong C_{ab}$ only holds if $a$ and $b$ are coprime, which is the case here since $p$ and $q$ are distinct primes.
+
+The client randomly chooses and saves a persistent $x \in \Z_N^*$ value. For each new request, it randomly chooses $w \in (\Z_N^*)^{B2^m}$ and $t = 1 \bmod{2B}$ and sends $wx^t$. It's not too hard to intuitively see that the only meaningful pieces of information conveyed about $x$ are:
+
+1. The parity bit
+2. The bucket value
+3. The geometric sample
+
+We can analyze it in terms of generator exponents. Choose a semigenerator, $g$, in this new ring and write $\log_g(x) = (a, b, c, d)$ and $\log_g(w) = (0, 0, 0, e)$. Then:
+
+```math
+\begin{aligned}
+\log_g(wx^t)
+&= (ta, tb, tc, td + e) \\
+&= (a, b, tc, td + e) \\
+\end{aligned}
+```
+
+Spelling these four components out:
+
+- Parity bit: $ta = a \bmod 2$ since $t = 1 \bmod 2$
+- Bucket index: $tb = b$ since $t = 1 \bmod B$
+- Geometric sample: $\tz(tc) = \tz(t) + \tz(c) = \tz(c)$ since $\tz(t) = 0$
+- The rest: $td + e \bmod{pq}$ is freshly random in each request
+
+The Jacobi symbol works as before to guarantee that an odd exponent was used. If the above intuitive explanation of why only the Jacobi symbol and the HyperLogLog value can be recovered from $wx^t$ is good enough for you, you can skip the next section, but if you want to see how one can formally prove the claim of anonymity, read on.
