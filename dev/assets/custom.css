@@ -1,0 +1,12 @@
+/* Center each table as a whole block on the page: shrink it to its content
+   width and give it equal left/right margins, instead of the Documenter theme
+   default of full-width (left-aligned). This is about the table *block* — the
+   text alignment within columns is separate (set per-column in the Markdown).
+   !important beats the per-theme `.content table { width: 100% }` rules. */
+.content table {
+    display: table !important;       /* not block/flex, so auto margins center */
+    width: fit-content !important;   /* shrink the block to its content */
+    max-width: 100% !important;      /* but never overflow the column */
+    margin-left: auto !important;    /* equal margins on both sides => centered */
+    margin-right: auto !important;
+}
