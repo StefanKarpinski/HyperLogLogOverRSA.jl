@@ -4,16 +4,16 @@
 
 This site includes:
 
-- a **writeup** — a from-scratch explanation of the *motivation*, *design*, and *security arguments* behind it.
-- a **reference implementation** — the [`HyperLogLogOverRSA.jl`](https://github.com/StefanKarpinski/HyperLogLogOverRSA.jl) Julia package, a working test/demo implementation of the protocol; and
+- A **writeup** — a from-scratch explanation of the *motivation*, *design*, and *security arguments* behind it;
+- A **reference implementation** — the [`HyperLogLogOverRSA.jl`](https://github.com/StefanKarpinski/HyperLogLogOverRSA.jl) Julia package, a working test/demo implementation of the protocol.
 
 ## Reading the writeup
 
 For the design and the privacy model:
 
-- [Executive Summary](executive-summary.md) — the short version.
-- The writeup proper starts [here](01-counting-users.md) and proceeds in short chapters.
-- [For Cryptographers](for-cryptographers.md) — a condensed, notation-first tour for readers who want to check the math.
+- [Executive Summary](executive-summary.md) — the short version;
+- [For Cryptographers](for-cryptographers.md) — a condensed, notation-first tour for readers who want to check the math;
+- The full writeup starts [here](01-counting-users.md) and proceeds in short chapters.
 
 ## Using the package
 
