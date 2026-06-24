@@ -284,7 +284,7 @@ The $C_B$ component encodes the encrypted bucket value, the order of the $C_{2^m
 
 Note that $C_a \times C_b \cong C_{ab}$ only holds if $a$ and $b$ are coprime, which is the case here since $p$ and $q$ are distinct primes.
 
-The client randomly chooses and saves a persistent $x \in \Z_N^*$ value. For each new request, it randomly chooses $w \in (\Z_N^*)^{B2^m}$ and $t = 1 \bmod{2B}$ and sends $wx^t$. It's not too hard to intuitively see that the only meaningful pieces of information conveyed about $x$ are:
+The client randomly chooses and saves a persistent $x \in \Z_N^*$ value. For each new request, it randomly chooses $w \in (\Z_N^*)^{B2^m}$ and $t = 1 \bmod{2B}$ and sends $y = wx^t$. It's not too hard to intuitively see that the only meaningful pieces of information conveyed about $x$ are:
 
 1. The parity bit
 2. The bucket value
@@ -307,4 +307,8 @@ Spelling these four components out:
 - Geometric sample: $\tz(tc) = \tz(t) + \tz(c) = \tz(c)$ since $\tz(t) = 0$
 - The rest: $td + e \bmod{pq}$ is freshly random in each request
 
-The Jacobi symbol works as before to guarantee that an odd exponent was used. If the above intuitive explanation of why only the Jacobi symbol and the HyperLogLog value can be recovered from $wx^t$ is good enough for you, you can skip the next section, but if you want to see how one can formally prove the claim of anonymity, read on.
+## Summary
+
+We now have the complete HyperLogLog Over RSA protocol. The server constructs a ring with the shape $N = PQ = (2Bp+1)(2^m q+1)$, keeping $P$, $Q$, $p$, $q$ secret and publishing $N$ together with a semigenerator $g$. A client generates a persistent secret $x \in \Z_N^*$ with $\Jacobi_N(x) = -1$ and, for each request, sends a freshly randomized token $y = wx^t$ where $t \equiv 1 \bmod{2B}$ and $w$ is chosen from $(\Z_N^*)^{B2^m}$. The server uses its knowledge of $P$ and $Q$ to extract the bucket index from the $C_B$ component and the geometric sample $\tz(c)$ from the $C_{2^m}$ component, and discards any request where $\Jacobi_N(y) \neq -1$, since that indicates an even exponent was used. In the section called ["Master Keys"](10-master-keys.md) we'll make this work with resource class sharding, without having to store a per-class secret.
+
+The informal claim is that each token carries exactly one HyperLogLog value—bucket index and geometric sample—and nothing else: two tokens from the same client are indistinguishable from two tokens from different clients with the same HLL value. A client cannot steer its geometric sample towards a more favorable value without knowing the factorization of $N$. If this intuitive picture is convincing enough, you can skip the next section; if you want to see these claims proved formally, read on.
