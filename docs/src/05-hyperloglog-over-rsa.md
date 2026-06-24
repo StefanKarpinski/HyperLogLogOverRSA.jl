@@ -241,15 +241,18 @@ t(a + c) &= 1 \bmod 2 && \iff \\
 t = a + c &= 1 \bmod 2
 \end{aligned}
 ```
-In words, this requirement forces both $t$ and $a + c$ to be odd. We should also verify that conditioning on $\Jacobi_N(x) = -1$ does not change the relative probabilities of different $\tz(c)$ values. Fortunately it doesn't:
+In words, this requirement forces both $t$ and $a + c$ to be odd. We should also verify that conditioning on $\Jacobi_N(x) = -1$ does not change the distribution of $\tz(c)$. Since $a \in \{0,1\}$ is uniform and independent of $c$, for every value of $\tz(c)$ the probability mass is split equally between the two Jacobi values:
 
-```math
-\begin{aligned}
-\mathcal{P}(\tz(c) = 0 ~|~ \Jacobi_N(x) = -1)
-= \mathcal{P}(\tz(c) = 0)
-= \tfrac{1}{2}
-\end{aligned}
-```
+| $x \in$ | $\Z_N^*$ | $J_N^+$ | $J_N^-$ |
+|----:|:---:|:---:|:---:|
+| $\tz(c) = 0$ | $\tfrac{1}{2}$ | $\tfrac{1}{4}$  | $\tfrac{1}{4}$  |
+| $\tz(c) = 1$ | $\tfrac{1}{4}$ | $\tfrac{1}{8}$  | $\tfrac{1}{8}$  |
+| $\tz(c) = 2$ | $\tfrac{1}{8}$ | $\tfrac{1}{16}$ | $\tfrac{1}{16}$ |
+| $\vdots$     | $\vdots$       | $\vdots$        | $\vdots$        |
+| total        | $1$            | $\tfrac{1}{2}$  | $\tfrac{1}{2}$  |
+
+This table uses $J_N^± = \set{x \in \Z_N^* \st \Jacobi_N(x) = ± 1}$.
+Every row is split evenly between $J_N^+$ and $J_N^-$, so conditioning on $\Jacobi_N(x) = -1$ leaves the distribution of $\tz(c)$ intact. Equivalently, $\tz(c)$ and $\Jacobi_N(x)$ are independent random variables.
 
 In summary, instead of requiring $x$ with $a = 1 \bmod 2$, which would work but cannot be checked by clients, we require $x$ with $\Jacobi_N(x) = -1$, which they can check. This implies that $\Jacobi_N(wx^t) = -1$ if and only if $t$ is odd. The server can check that this is the case and disregard any requests that don't satisfy this parity requirement.
 
