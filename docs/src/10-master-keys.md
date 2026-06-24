@@ -7,6 +7,8 @@ At this point we have a clever scheme that allows clients to randomly choose $x 
 
 This is already quite good. Recall, however, that we want to use different, independent values of $x$ for different resource classes. Clients could simply generate and store different independently random $x$ values for each resource class. But as we discussed when considering signed HLLs, this entails a nontrivial amount of storage that looks quite bad: assuming 256 bits per resource class key and 1024 bits per $\Z_N^*$ value, that’s 160 bytes per resource class; if the typical user installs 5k packages over time, that’s 0.8MB of storage. Once again, this is feasible on modern hardware, but it would be great if each client could generate and store just a single reasonably sized secret.
 
+## Possible Approaches
+
 In essence, we want a way for each client to generate a random “master key” and derive individual resource-class-specific $x$ values from the master key and resource class. The most obvious way to do this is to hash the master key and the resource class together into $\Z_N$:
 
 ```math
@@ -24,6 +26,8 @@ x_i = \hash_N(\text{key}, \text{class}, i)
 ```
 
 and use the first $x_i$ such that $\Jacobi_N(x_i) = -1$. Since about half of the values in $\Z_N$ have Jacobi symbol of $-1$, it shouldn’t take too many attempts to find a usable $x_i$. This works, but is somewhat inelegant and involves computing a variable number of (large) hash values and Jacobi symbols for each. Keep in mind that this work has to be done for each request the Pkg client wants to make to a server. Can we come up with a scheme where the client generates a single pre-validated master key and constructs $x$ for each resource class so that it always has a negative Jacobi symbol? And ideally, every possible value in the negative Jacobi set would be reachable for some potential resource class. As it happens, this is possible.
+
+## What We Actually Do
 
 The key insight is that our particular shape of RSA ring, while not cyclic, is very nearly cyclic. Recall that it has this multiplicative structure:
 

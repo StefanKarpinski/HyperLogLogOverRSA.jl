@@ -2,6 +2,8 @@
 
 In this section we present a formal proof that client anonymity is preserved by the protocol that we have outlined. Instead of assuming that $N = PQ = (2Bp + 1)(2^m q + 1)$, we generalize the setting somewhat. This weakens what needs to be shown to guarantee that clients cannot be fingerprinted by the server, which complicates the proof, but we will need this generality later on. We assume throughout that $B$ is odd and $m ≥ 2$. First, we’ll present some definitions, then the main theorem and its proof, and finally conclude with why it guarantees client anonymity.
 
+## Definitions
+
 **Definition.** We write the *“positive Jacobi subgroup”* in $\Z_N^*$ as:
 
 ```math
@@ -150,6 +152,8 @@ The first value, $b$, implicitly depends on the choice of semigenerator, $\bar{g
 
 The HyperLogLog function for fingerprint-free $N$ on $\Z_N^*$ is defined as $\hll = \bar{\hll}\phi$, *i.e.* the composition of the $\phi$ whose existence is guaranteed by fingerprint-freeness with the essential HyperLogLog function. This depends on the choice of $\bar{g}$ for $\bar\hll$ and on which particular $\phi$ is chosen. For the purposes of the main proof, we can just assume that some fixed $\phi$ is chosen and used. The choice of $\phi$ doesn’t actually introduce any more ambiguity than already introduced by the choice of $\bar{g}$ — both choices merely permute the output bucket indices.
 
+## Proofs
+
 **Lemma.** For $\bar{x}, \bar{y} \in C_B \times C_{2^m}$ we have $\bar{\hll}(\bar{x}) = \bar{\hll}(\bar{y})$ if and only if there exists $t \in \Z$ with $t = 1 \bmod{2B}$ such that $\bar{x}^t = \bar{y}$.
 
 **Proof.**  Denote the logarithms of $\bar{x}$ and $\bar{y}$ as:
@@ -259,6 +263,8 @@ This requires $\Jacobi_N(x) = \Jacobi_N(y) \in \set{±1}$ and $t$ odd so that ra
 ```
 
 This proves equivalence of (3) and (4). $\square$
+
+## Interpretation
 
 How does this result prove that our scheme preserves client anonymity? Suppose there are two clients with $x_1$ and $x_2$ as their respective client secrets and assume that $\hll(x_1) = \hll(x_2)$. We also assume that the clients follow the protocol so that $\Jacobi_N(x_1) = \Jacobi_N(x_2) = -1$. The server receives $w_1x_1^{t_1}$ from the first client. Can the server tell that it got the message from the first client rather than the second? We can apply the theorem twice to show that it cannot. First, the theorem tells us that when the client chooses $w_1 \in W_N$ and $t_1$ with $t_1 = 1 \bmod{2B}$, we always have:
 
