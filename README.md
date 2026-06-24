@@ -5,7 +5,7 @@ estimating the number of unique clients of a service without anyone, even someon
 with full access to the server logs, being able to identify or track individual
 clients.
 
-📖 **Documentation & writeup:** <https://stefankarpinski.github.io/HyperLogLogOverRSA.jl/>
+📖 **Documentation & writeup:** <https://karpinski.org/HyperLogLogOverRSA.jl/>
 
 That site is both the API documentation for this package and a full writeup of the
 protocol's motivation, design, and security arguments.
