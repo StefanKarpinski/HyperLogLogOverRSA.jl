@@ -235,11 +235,13 @@ a = 0 ~~\iff~~ \fmod(x,P)^p = 1
 But the client doesn't know $P$ and can't check this. It is, however, possible to efficiently compute the [Jacobi symbol](https://en.wikipedia.org/wiki/Jacobi_symbol), $\Jacobi_N(x)$, without knowing the factorization of $N$. For this particular ring shape, the value of the Jacobi symbol is $(-1)^{a + c}$. In general, the Jacobi symbol is the total parity of all the log-coordinates whose moduli are even. This doesn't tell us the value of $a$ by itself, but if $\Jacobi_N(x) = -1$ then we know that $a + c = 1 \bmod 2$. This isn't exactly what we wanted, but it does give us what we need. Instead of requiring $a = 1$, we can require that
 ```math
 \begin{aligned}
-\Jacobi_N(wx^t) = (-1)^{t(a + c)} = -1
-~~\iff~~ t(a + c) = 1 \bmod 2
+\Jacobi_N(wx^t) &= -1 && \iff \\
+(-1)^{t(a + c)} &= -1 && \iff \\
+t(a + c) &= 1 \bmod 2 && \iff \\
+t = a + c &= 1 \bmod 2
 \end{aligned}
 ```
-which forces $t$ to be odd. We should also verify that conditioning on $\Jacobi_N(x) = -1$ does not change the relative probabilities of different $\tz(c)$ values. Fortunately it doesn't:
+In words, this requirement forces both $t$ and $a + c$ to be odd. We should also verify that conditioning on $\Jacobi_N(x) = -1$ does not change the relative probabilities of different $\tz(c)$ values. Fortunately it doesn't:
 
 ```math
 \begin{aligned}
