@@ -1,6 +1,7 @@
 # For Cryptographers
 
 This is a compressed, self-contained tour of the construction for readers comfortable with finite abelian groups and RSA. Everything here is developed in full in the numbered sections; the goal of this page is to let you see the whole shape quickly and decide where to dig in.
+Readers preferring a more gradual development from first principles should start with the [next section](01-counting-users.md).
 
 The protocol decouples into two parts that can be understood independently:
 
