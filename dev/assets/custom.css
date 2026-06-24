@@ -10,3 +10,9 @@
     margin-left: auto !important;    /* equal margins on both sides => centered */
     margin-right: auto !important;
 }
+
+/* Internal vertical grid lines between columns (not on the outer edges). */
+.content table td + td,
+.content table th + th {
+    border-left: 1px solid rgba(128, 128, 128, 0.5) !important;
+}
