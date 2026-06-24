@@ -1,6 +1,6 @@
 # HyperLogLog Over RSA
 
-**HyperLogLog Over RSA** is a new protocol for estimating the number of unique clients making requests to a service — for instance, the number of distinct installs hitting an open-source project's package servers — *without* anyone, even someone with full access to the server logs, being able to identify or track individual clients. It combines HyperLogLog cardinality estimation with the algebraic structure of RSA rings, so that clients sample encrypted HyperLogLog values they cannot themselves decode or bias.
+**HyperLogLog Over RSA** is a new protocol for estimating the number of unique clients making requests to a service — for instance, the number of distinct installs hitting an open-source project’s package servers — *without* anyone, even someone with full access to the server logs, being able to identify or track individual clients. It combines HyperLogLog cardinality estimation with the algebraic structure of RSA rings, so that clients sample encrypted HyperLogLog values they cannot themselves decode or bias.
 
 This site includes:
 

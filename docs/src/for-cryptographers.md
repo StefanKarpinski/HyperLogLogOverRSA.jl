@@ -10,7 +10,7 @@ The protocol decouples into two parts that can be understood independently:
 
 The design target is a per-request token $y \in \Z_N^*$ such that
 
-1. **it reveals exactly the client's HLL sketch value** $(b, k)$ and nothing else;
+1. **it reveals exactly the client’s HLL sketch value** $(b, k)$ and nothing else;
 2. **it can be freshly re-randomized on every request** without knowing the factorization of $N$, so repeated tokens from one client are unlinkable beyond sharing a sketch value; and
 3. **its sketch value cannot be read or biased by the client** without that factorization, so clients cannot manufacture rare values to inflate counts.
 
@@ -79,7 +79,7 @@ Two facts make the table work:
 - ``W`` is the image of the $B2^m$-power map. The orders of $C_2, C_B, C_{2^m}$ all divide $B2^m$, while $\gcd(pq,\, B2^m) = 1$, so that map annihilates the first three factors and is an automorphism on the last: $W = \set{0} \times \set{0} \times \set{0} \times C_{pq}$. Multiplying by uniform $w$ therefore replaces $d$ with fresh uniform randomness and touches nothing else.
 - For $t = 2Bi + 1$: $t \equiv 1 \pmod B$ and $t$ is odd, so $b$ and $a$ are fixed; and as $i$ ranges over $[0, 2^{m-1})$, $t \bmod 2^m$ runs over **every odd residue exactly once**, so $t$ acts as a uniform unit on $c$ — preserving $v_2(c) = \tz(c)$ but uniformizing $c$ within that valuation class.
 
-Hence the $(w, t)$-orbit of $x$ is exactly the fiber $\hll^{-1}(\hll(x)) \cap J_N^-$, and $y$ is **uniform** on that fiber, not merely supported on it. Two honest clients with the same sketch induce *identical* token distributions, and the server's entire view is a function of $(b, \tz(c))$. This is the anonymity theorem of [Proof of Anonymity](09-proof-of-anonymity.md); the only bookkeeping subtlety is the 2-torsion ($C_2$/Jacobi) accounting, which is exactly why tokens are confined to $J_N^-$. The proof is phrased in these semigenerator coordinates throughout — if there is a more standard way to present it, I'd welcome the pointer.
+Hence the $(w, t)$-orbit of $x$ is exactly the fiber $\hll^{-1}(\hll(x)) \cap J_N^-$, and $y$ is **uniform** on that fiber, not merely supported on it. Two honest clients with the same sketch induce *identical* token distributions, and the server’s entire view is a function of $(b, \tz(c))$. This is the anonymity theorem of [Proof of Anonymity](09-proof-of-anonymity.md); the only bookkeeping subtlety is the 2-torsion ($C_2$/Jacobi) accounting, which is exactly why tokens are confined to $J_N^-$. The proof is phrased in these semigenerator coordinates throughout — if there is a more standard way to present it, I’d welcome the pointer.
 
 ## Integrity I — malicious clients (unforgeable rank)
 
@@ -105,7 +105,7 @@ J_N^+ / W_N \text{ cyclic of order dividing } B2^m.
 \end{gathered}
 ```
 
-The third condition is what caps the leak at one sketch's worth of bits, and — combined with the first two — it holds **iff $N$ has at most two distinct prime factors**.
+The third condition is what caps the leak at one sketch’s worth of bits, and — combined with the first two — it holds **iff $N$ has at most two distinct prime factors**.
 
 That equivalence rests on a clean quadratic-residue criterion. For odd $N$ with $D$ distinct prime factors, every pair $\set{x, y} \subseteq J_N^+$ has at least one of $\set{x, y, xy}$ a quadratic residue **iff $D \le 2$**; and for $D \ge 3$, a uniform pair has this property with probability at most $5/8$. So the server proves $D \le 2$ by answering challenges: for random pairs $\set{x, y} \subseteq J_N^+$ it returns a square root of one of $x$, $y$, $xy$. A $D \ge 3$ modulus survives $n$ independent challenges with probability $\le (5/8)^n$; to force a forging server to try $\ge \alpha$ candidate moduli, take
 
@@ -115,7 +115,7 @@ n = \ceil{\frac{\log_2 \alpha}{\log_2(8/5)}}.
 
 Drawing the challenge pairs by hashing $N$ makes this a non-interactive certificate $(B, m, N, g, \text{square roots})$. Verification is one Jacobi symbol, two gcds, and $n$ squarings.
 
-Two cautions on $\alpha$ (detailed in [Malicious Servers](12-malicious-servers.md)): a forger knows its *own* candidate's factorization, so the QR checks are free for it and it fails fast, meaning $\alpha$ must be sized against attacker wall-clock rather than a bare trial count. Since $n$ grows only as $\log \alpha$, the certificate stays tiny regardless — so use $\alpha \ge 2^\lambda$ for the system security level $\lambda$, never below $2^{80}$, with $\alpha = 2^{128}$ ($n = 189$, ~24 KB) the comfortable default.
+Two cautions on $\alpha$ (detailed in [Malicious Servers](12-malicious-servers.md)): a forger knows its *own* candidate’s factorization, so the QR checks are free for it and it fails fast, meaning $\alpha$ must be sized against attacker wall-clock rather than a bare trial count. Since $n$ grows only as $\log \alpha$, the certificate stays tiny regardless — so use $\alpha \ge 2^\lambda$ for the system security level $\lambda$, never below $2^{80}$, with $\alpha = 2^{128}$ ($n = 189$, ~24 KB) the comfortable default.
 
 ## What is proven, and what is not
 

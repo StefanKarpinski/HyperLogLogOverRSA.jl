@@ -36,13 +36,13 @@ The system operator chooses HyperLogLog parameters, RSA bit-length, and a certif
 On behalf of clients, the client implementor should choose acceptance criteria for protocol parameters, including:
 
 - ``B_{\max}`` — maximum bucket count
-    - The simplest way to fingerprint clients is just to choose $B = 2^{128}$ and let the bucket be the fingerprint. This limit prevents that kind of "attack".
+    - The simplest way to fingerprint clients is just to choose $B = 2^{128}$ and let the bucket be the fingerprint. This limit prevents that kind of “attack”.
     - Example: $B_{\max} = 2^{16}$
 - ``m_{\max}`` — maximum geometric sample
     - This is mostly a sanity check since extreme geometric samples are so rare as to not matter. We just want to prevent a malicious server from being able to DoS a client by having it compute enormous integer values.
     - Example: $m_{\max} = 128$
 - ``L_{\max}`` — maximum modulus bit-length
-    - This is also mostly a sanity check to make sure that clients aren't DoSed by being made to do arithmetic in some absurdly large modulus.
+    - This is also mostly a sanity check to make sure that clients aren’t DoSed by being made to do arithmetic in some absurdly large modulus.
     - Example: $L_{\max} = 2^{20}$
 - ``\alpha_{\min}`` — minimum certificate strength
     - This is the least number of modulus values a malicious server would expect to have to try in order to find one that passes certificate checks. The server can provide more square roots than this strength implies, but not fewer.
@@ -79,7 +79,7 @@ This can be accomplished by:
 - Check that $Q = 2^m q + 1$ is prime
 - Check that $\set{B, P, p} \inter \set{Q, q} = \emptyset$
 
-The ranges that $p$ and $q$ are chosen from should be computed such that $N = PQ$ falls into $[2^{L-1}, 2^L)$ as required. It's also desirable for $P$ and $Q$ to have $\log_2(P) \approx L/2 \approx \log_2(Q)$ for some notion of approximation.
+The ranges that $p$ and $q$ are chosen from should be computed such that $N = PQ$ falls into $[2^{L-1}, 2^L)$ as required. It’s also desirable for $P$ and $Q$ to have $\log_2(P) \approx L/2 \approx \log_2(Q)$ for some notion of approximation.
 
 **Server step 2: Semigenerator selection**
 
@@ -121,7 +121,7 @@ The server publishes a ring certificate containing:
 
 **Client step 1: Ring certificate checking**
 
-The client downloads the latest ring certificate at an agreed upon location. It may or may not have a previously downloaded and verified ring certificate. If it has a downloaded ring and the new one is the same, then it can simply use the existing ring and twist element. If it doesn't have an existing ring certificate or the new one is different, then the client should delete the old ring certificate and proceed with checking and saving the new certificate and twist element.
+The client downloads the latest ring certificate at an agreed upon location. It may or may not have a previously downloaded and verified ring certificate. If it has a downloaded ring and the new one is the same, then it can simply use the existing ring and twist element. If it doesn’t have an existing ring certificate or the new one is different, then the client should delete the old ring certificate and proceed with checking and saving the new certificate and twist element.
 
 To check a ring certificate, the client should:
 
@@ -191,17 +191,17 @@ The bucket value is in $\Z_P$ which is huge, but there are only $B$ possible val
 
 **Server step 6: Count estimation**
 
-Once the bucket and geometric count have been decoded, estimating the unique client count within any set of logs for the same resource class is a matter of doing normal HyperLogLog aggregation and estimation: compute the maximum geometric sample size for each bucket and use the histogram of maximum sample counts to estimate the most likely client count. The optimal maximum likelihood estimator was derived in ["New Cardinality Estimation Methods for HyperLogLog Sketches"](https://arxiv.org/abs/1706.07290). This is the recommended estimator—it supersedes the original estimator and the improved estimator that is sometimes called "HyperLogLog++."
+Once the bucket and geometric count have been decoded, estimating the unique client count within any set of logs for the same resource class is a matter of doing normal HyperLogLog aggregation and estimation: compute the maximum geometric sample size for each bucket and use the histogram of maximum sample counts to estimate the most likely client count. The optimal maximum likelihood estimator was derived in [“New Cardinality Estimation Methods for HyperLogLog Sketches”](https://arxiv.org/abs/1706.07290). This is the recommended estimator—it supersedes the original estimator and the improved estimator that is sometimes called “HyperLogLog++.”
 
-A pleasant feature of this protocol is that once HyperLogLog values are validated and decoded, aggregation and estimation can be done by anyone, so long as they only try to aggregate within resource classes. In other words, the "over RSA" part of the protocol can be forgotten about entirely once HyperLogLog values are decoded. At that point, it's as if the collection of logs had been recorded with normal HyperLogLog values keyed on client ID and resource class for each record—which is also a reminder of what must *not* be done with them, the subject of the next section.
+A pleasant feature of this protocol is that once HyperLogLog values are validated and decoded, aggregation and estimation can be done by anyone, so long as they only try to aggregate within resource classes. In other words, the “over RSA” part of the protocol can be forgotten about entirely once HyperLogLog values are decoded. At that point, it’s as if the collection of logs had been recorded with normal HyperLogLog values keyed on client ID and resource class for each record—which is also a reminder of what must *not* be done with them, the subject of the next section.
 
 **Reporting and publishing counts safely**
 
-It is tempting to conclude that, because each decoded record is only a small HyperLogLog value, the decoded logs are harmless and could simply be published. They are not, and they should not be. A decoded record is a $(\text{class}, b, k, \dots)$ tuple, and the $(b, k)$ pair is a stable per-client pseudonym *within its class*. In any class small enough that few clients share a given $(b, k)$—the long tail of niche packages—publishing the per-request records hands every reader the same within-class linkability the server has, and lets anyone with a scrap of side knowledge ("my colleague installed package X from Berlin around 14:05") match a record and read off that client's entire history in the class. Per-request decoded tokens should be treated as personal data and never published.
+It is tempting to conclude that, because each decoded record is only a small HyperLogLog value, the decoded logs are harmless and could simply be published. They are not, and they should not be. A decoded record is a $(\text{class}, b, k, \dots)$ tuple, and the $(b, k)$ pair is a stable per-client pseudonym *within its class*. In any class small enough that few clients share a given $(b, k)$—the long tail of niche packages—publishing the per-request records hands every reader the same within-class linkability the server has, and lets anyone with a scrap of side knowledge (“my colleague installed package X from Berlin around 14:05”) match a record and read off that client’s entire history in the class. Per-request decoded tokens should be treated as personal data and never published.
 
 What *is* safe to expose is **aggregate** output: per-slice cardinality estimates (and, if needed, the aggregated per-bucket maxima that feed the estimator), never the per-request $(b, k)$ values themselves. Two further rules keep aggregate reporting safe:
 
-- **Enforce a minimum-cardinality floor.** Refuse to report any slice whose estimated cardinality is below a threshold, folding everything beneath it into a single "other" bucket. The floor's job is to guarantee a minimum anonymity-set size, so it should be sized from the anonymity set you actually want—not from where bucket collisions merely *begin*. Note that $\sqrt{B} \approx 64$ (for $B \approx 2^{12}$) is only the latter: at exactly that many clients there's already roughly a 39% chance of even one bucket collision, which is far from a robust crowd. A floor comfortably above $\sqrt{B}$, chosen for a target anonymity set, is the right setting; the exact value is an operator policy decision. The cost in utility is small because HyperLogLog is a poor estimator at small cardinalities anyway—the suppressed slices are the ones whose counts were least reliable.
-- **Beware differencing.** A floor on each individual slice does not by itself protect quantities an adversary can *compute* from several reported slices. If both "package X" and "package X ∧ Germany" are reported, their difference approximates "package X ∧ ¬Germany," which may itself be a sub-floor population that was never meant to be revealed. HyperLogLog has no clean set-difference operation, which blunts the sharpest form of this attack, but cardinality-*estimate* differencing still leaks approximately. A query interface that publishes counts should reason about the whole lattice of overlapping queries it answers, not just guard each slice in isolation.
+- **Enforce a minimum-cardinality floor.** Refuse to report any slice whose estimated cardinality is below a threshold, folding everything beneath it into a single “other” bucket. The floor’s job is to guarantee a minimum anonymity-set size, so it should be sized from the anonymity set you actually want—not from where bucket collisions merely *begin*. Note that $\sqrt{B} \approx 64$ (for $B \approx 2^{12}$) is only the latter: at exactly that many clients there’s already roughly a 39% chance of even one bucket collision, which is far from a robust crowd. A floor comfortably above $\sqrt{B}$, chosen for a target anonymity set, is the right setting; the exact value is an operator policy decision. The cost in utility is small because HyperLogLog is a poor estimator at small cardinalities anyway—the suppressed slices are the ones whose counts were least reliable.
+- **Beware differencing.** A floor on each individual slice does not by itself protect quantities an adversary can *compute* from several reported slices. If both “package X” and “package X ∧ Germany” are reported, their difference approximates “package X ∧ ¬Germany,” which may itself be a sub-floor population that was never meant to be revealed. HyperLogLog has no clean set-difference operation, which blunts the sharpest form of this attack, but cardinality-*estimate* differencing still leaks approximately. A query interface that publishes counts should reason about the whole lattice of overlapping queries it answers, not just guard each slice in isolation.
 
 These rules also close the inflation channel discussed in [Malicious Clients](11-malicious-clients.md): an attacker who can read fine-grained per-slice counts gains a decoding oracle for their own forged tokens, and denying counts on sub-floor slices removes it. So the cardinality floor pays for itself three times over—anonymity in small populations, safety of published output, and resistance to inflation.

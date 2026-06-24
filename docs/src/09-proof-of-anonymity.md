@@ -1,8 +1,8 @@
 # Proof of Anonymity
 
-In this section we present a formal proof that client anonymity is preserved by the protocol that we have outlined. Instead of assuming that $N = PQ = (2Bp + 1)(2^m q + 1)$, we generalize the setting somewhat. This weakens what needs to be shown to guarantee that clients cannot be fingerprinted by the server, which complicates the proof, but we will need this generality later on. We assume throughout that $B$ is odd and $m ≥ 2$. First, we'll present some definitions, then the main theorem and its proof, and finally conclude with why it guarantees client anonymity.
+In this section we present a formal proof that client anonymity is preserved by the protocol that we have outlined. Instead of assuming that $N = PQ = (2Bp + 1)(2^m q + 1)$, we generalize the setting somewhat. This weakens what needs to be shown to guarantee that clients cannot be fingerprinted by the server, which complicates the proof, but we will need this generality later on. We assume throughout that $B$ is odd and $m ≥ 2$. First, we’ll present some definitions, then the main theorem and its proof, and finally conclude with why it guarantees client anonymity.
 
-**Definition.** We write the *"positive Jacobi subgroup"* in $\Z_N^*$ as:
+**Definition.** We write the *“positive Jacobi subgroup”* in $\Z_N^*$ as:
 
 ```math
 \begin{aligned}
@@ -12,7 +12,7 @@ J_N^+
 \end{aligned}
 ```
 
-We'll write the *"negative Jacobi set"* (it's not a subgroup) as:
+We’ll write the *“negative Jacobi set”* (it’s not a subgroup) as:
 
 ```math
 \begin{aligned}
@@ -22,9 +22,9 @@ J_N^-
 \end{aligned}
 ```
 
-Since the Jacobi symbol only takes $±1$ values in $\Z_N^*$, $J_N^- = \Z_N^* \setminus J_N^+$, but it's convenient to have shorter notation. Note that the Jacobi symbol is only well-defined for odd $N$, so when we talk about $J_N^±$ it implicitly requires that $N$ is odd.
+Since the Jacobi symbol only takes $±1$ values in $\Z_N^*$, $J_N^- = \Z_N^* \setminus J_N^+$, but it’s convenient to have shorter notation. Note that the Jacobi symbol is only well-defined for odd $N$, so when we talk about $J_N^±$ it implicitly requires that $N$ is odd.
 
-**Definition.** We define the *"white noise"* subgroup of $\Z_N^*$ as:
+**Definition.** We define the *“white noise”* subgroup of $\Z_N^*$ as:
 
 ```math
 \begin{aligned}
@@ -33,9 +33,9 @@ W_N &= (\Z_N^*)^{B2^m}
 \end{aligned}
 ```
 
-Since $B2^m$ is even ($m ≥ 2$), every element has positive Jacobi symbol, so this is a subgroup of $J_N^+$. This subgroup is where we sample "noise" values to randomize the parts of $x$ that don't encode the HyperLogLog value. We previously described deriving individual $w$ values from random $z$ values; here we consider the entire group.
+Since $B2^m$ is even ($m ≥ 2$), every element has positive Jacobi symbol, so this is a subgroup of $J_N^+$. This subgroup is where we sample “noise” values to randomize the parts of $x$ that don’t encode the HyperLogLog value. We previously described deriving individual $w$ values from random $z$ values; here we consider the entire group.
 
-**Definition.**  We call a positive integer, $N$, *"fingerprint-free"* if it is odd and there exists a group homomorphism
+**Definition.**  We call a positive integer, $N$, *“fingerprint-free”* if it is odd and there exists a group homomorphism
 
 ```math
 \begin{aligned}
@@ -54,7 +54,7 @@ such that
 
 **Proposition.**  $N$ is fingerprint-free if and only if $N = 3 \bmod 4$ and there exists $\phi: J_N^+ \to C_B \times C_{2^m}$ such that $\ker(\phi) \subseteq W_N$.
 
-**Proof.**  The forward direction is easy: restricting $\phi$ to $J_N^+$ already gives most of what is required, we only need to show that $N = 3 \bmod 4$. It's a standard identity that
+**Proof.**  The forward direction is easy: restricting $\phi$ to $J_N^+$ already gives most of what is required, we only need to show that $N = 3 \bmod 4$. It’s a standard identity that
 
 ```math
 \begin{aligned}
@@ -64,7 +64,7 @@ such that
 
 which means that $N = 3 \bmod 4$ iff $-1 \in J_N^-$. Since $1 \in W_N$ we know that $-1 \in -W_N \subseteq J_N^-$ which implies that $N = 3 \bmod 4$.
 
-The reverse direction is harder. First, we'll show that if $\phi$ exists with $\ker(\phi) \subseteq W_N$ then we can also find $\phi'$ with $\ker(\phi') = W_N$. Let $K = \ker(\phi)$. The existence of $\phi: J_N^+ \to C_B \times C_{2^m}$ with $K = \ker(\phi) ≤ W_N$ tells us that $J_N^+/K$ is cyclic with order dividing $B2^m$. It also gives the following subgroup chain:
+The reverse direction is harder. First, we’ll show that if $\phi$ exists with $\ker(\phi) \subseteq W_N$ then we can also find $\phi'$ with $\ker(\phi') = W_N$. Let $K = \ker(\phi)$. The existence of $\phi: J_N^+ \to C_B \times C_{2^m}$ with $K = \ker(\phi) ≤ W_N$ tells us that $J_N^+/K$ is cyclic with order dividing $B2^m$. It also gives the following subgroup chain:
 
 ```math
 \begin{aligned}
@@ -88,7 +88,7 @@ J_N^+/W_N \cong (J_N^+/K)/(W_N/K)
 \end{aligned}
 ```
 
-So $J_N^+/W_N$ is a quotient of a cyclic group with order dividing $B2^m$ which means it must also match that description. This means there exists a homomorphism, $\phi': J_N^+ \to C_B \times C_{2^m}$ with $\ker(\phi') = W_N$ exactly. In what follows, we'll just assume that we had $\ker(\phi) = W_N$ in the first place.
+So $J_N^+/W_N$ is a quotient of a cyclic group with order dividing $B2^m$ which means it must also match that description. This means there exists a homomorphism, $\phi': J_N^+ \to C_B \times C_{2^m}$ with $\ker(\phi') = W_N$ exactly. In what follows, we’ll just assume that we had $\ker(\phi) = W_N$ in the first place.
 
 Recall that $N = 3 \bmod 4$ implies that $-1 \in J_N^-$. This allows us to extend $\phi$ to all of ${} \Z_N^*$ by $\phi(x) = \phi(-x)$ for $x \in J_N^-$. We need to check four identities to verify that this is a homomorphism:
 
@@ -113,11 +113,11 @@ Suppose $x \in -W_N$. Since $-x \in W_N \subseteq \ker(\phi)$, we have $\phi(x) 
 \end{aligned}
 ```
 
-This shows that our extension's kernel has the necessary intersections with $±W_N$. $\square$
+This shows that our extension’s kernel has the necessary intersections with $±W_N$. $\square$
 
-Our convention when $N$ is fingerprint-free will be that if $x \in \Z_N^*$ we'll write $\bar{x} = \phi(x) \in C_B \times C_{2^m}$ and if $\bar{f}$ is a function on $C_B \times C_{2^m}$, we'll write $f = \bar{f}\phi$ for the composition whose domain is $\Z_N^*$. So you can generally think of $\bar{\triangle}$ as the "essential version" of $\triangle$, whether $\triangle$ is an element or a function.
+Our convention when $N$ is fingerprint-free will be that if $x \in \Z_N^*$ we’ll write $\bar{x} = \phi(x) \in C_B \times C_{2^m}$ and if $\bar{f}$ is a function on $C_B \times C_{2^m}$, we’ll write $f = \bar{f}\phi$ for the composition whose domain is $\Z_N^*$. So you can generally think of $\bar{\triangle}$ as the “essential version” of $\triangle$, whether $\triangle$ is an element or a function.
 
-**Definition.** We generalize our earlier definition of a *"semigenerator"* in a multiplicative group. Let $G = \prod_{i=1}^n C_{\alpha_i}$ be a product of cyclic groups and let $\pi_i: G \to C_{\alpha_i}$ be the canonical projection onto the $i$th component. An element $g \in G$ is called a semigenerator if the projection of $g$ onto each cyclic component is a generator for that component:
+**Definition.** We generalize our earlier definition of a *“semigenerator”* in a multiplicative group. Let $G = \prod_{i=1}^n C_{\alpha_i}$ be a product of cyclic groups and let $\pi_i: G \to C_{\alpha_i}$ be the canonical projection onto the $i$th component. An element $g \in G$ is called a semigenerator if the projection of $g$ onto each cyclic component is a generator for that component:
 
 ```math
 \begin{aligned}
@@ -136,7 +136,7 @@ If the ${} \alpha_i$ are pairwise coprime, then $G$ is cyclic and $g$ is a true 
 
 In what follows, let $\bar{g} \in C_B \times C_{2^m}$ be a fixed semigenerator.
 
-**Definition.** The *"essential HyperLogLog function"* maps each value in $C_B \times C_{2^m}$ to its HyperLogLog sample value:
+**Definition.** The *“essential HyperLogLog function”* maps each value in $C_B \times C_{2^m}$ to its HyperLogLog sample value:
 
 ```math
 \begin{gathered}
@@ -148,7 +148,7 @@ In what follows, let $\bar{g} \in C_B \times C_{2^m}$ be a fixed semigenerator.
 
 The first value, $b$, implicitly depends on the choice of semigenerator, $\bar{g}$, whereas the latter, $\tz(c)$, does not: $\tz(c)$ only depends on the multiplicative order of the $C_{2^m}$ part of $\bar{x}$, which is independent of $\bar{g}$. The higher bits of $c$ do depend on $\bar{g}$, but the position of the last bit does not.
 
-The HyperLogLog function for fingerprint-free $N$ on $\Z_N^*$ is defined as $\hll = \bar{\hll}\phi$, *i.e.* the composition of the $\phi$ whose existence is guaranteed by fingerprint-freeness with the essential HyperLogLog function. This depends on the choice of $\bar{g}$ for $\bar\hll$ and on which particular $\phi$ is chosen. For the purposes of the main proof, we can just assume that some fixed $\phi$ is chosen and used. The choice of $\phi$ doesn't actually introduce any more ambiguity than already introduced by the choice of $\bar{g}$ — both choices merely permute the output bucket indices.
+The HyperLogLog function for fingerprint-free $N$ on $\Z_N^*$ is defined as $\hll = \bar{\hll}\phi$, *i.e.* the composition of the $\phi$ whose existence is guaranteed by fingerprint-freeness with the essential HyperLogLog function. This depends on the choice of $\bar{g}$ for $\bar\hll$ and on which particular $\phi$ is chosen. For the purposes of the main proof, we can just assume that some fixed $\phi$ is chosen and used. The choice of $\phi$ doesn’t actually introduce any more ambiguity than already introduced by the choice of $\bar{g}$ — both choices merely permute the output bucket indices.
 
 **Lemma.** For $\bar{x}, \bar{y} \in C_B \times C_{2^m}$ we have $\bar{\hll}(\bar{x}) = \bar{\hll}(\bar{y})$ if and only if there exists $t \in \Z$ with $t = 1 \bmod{2B}$ such that $\bar{x}^t = \bar{y}$.
 
@@ -213,7 +213,7 @@ t c_1 &= c_2 && \pmod{2^m} \\
 \end{aligned}
 ```
 
-Since $t$ is odd, the second equality implies that $\tz(c_1) = \tz(c_2)$ which means we've shown that $\bar{\hll}(\bar{x}) = \bar{\hll}(\bar{y})$. $\square$
+Since $t$ is odd, the second equality implies that $\tz(c_1) = \tz(c_2)$ which means we’ve shown that $\bar{\hll}(\bar{x}) = \bar{\hll}(\bar{y})$. $\square$
 
 **Theorem.** Let $N$ be fingerprint-free. For $x, y \in \Z_N^*$ with the same Jacobi symbol: $\hll(x) = \hll(y)$ if and only if there exists $w \in W_N$ and $t \in \Z$ with $t = 1 \bmod{2B}$ such that $wx^t = y \bmod N$.
 
@@ -247,7 +247,7 @@ which means (3) and (4) are logically equivalent. Suppose that $\phi(x)^t = \phi
 \end{aligned}
 ```
 
-This requires $\Jacobi_N(x) = \Jacobi_N(y) \in \set{±1}$ and $t$ odd so that raising to $-t$ doesn't change the sign. In the other direction, suppose $w \in W_N \subseteq \ker(\phi)$ with $wx^t = y$. Check the required equality:
+This requires $\Jacobi_N(x) = \Jacobi_N(y) \in \set{±1}$ and $t$ odd so that raising to $-t$ doesn’t change the sign. In the other direction, suppose $w \in W_N \subseteq \ker(\phi)$ with $wx^t = y$. Check the required equality:
 
 ```math
 \begin{aligned}
@@ -278,4 +278,4 @@ w_2 x_2^{t_2} = w_1 x_1^{t_1}
 
 This means that either client could have sent the same value—the server cannot distinguish between messages from correctly behaving clients with the same $\hll$ value.
 
-There is also the question of distribution of values: it could be possible that either client _could_ send the same value but it's much more likely for one of them to do so. This depends on how $w$ and $t$ values are chosen, which we haven't addressed yet. Fortunately, so long as they are chosen uniformly from publicly known ranges, every possible value is equally likely for each client, so there is truly no way to distinguish between clients with the same HyperLogLog value.
+There is also the question of distribution of values: it could be possible that either client _could_ send the same value but it’s much more likely for one of them to do so. This depends on how $w$ and $t$ values are chosen, which we haven’t addressed yet. Fortunately, so long as they are chosen uniformly from publicly known ranges, every possible value is equally likely for each client, so there is truly no way to distinguish between clients with the same HyperLogLog value.
