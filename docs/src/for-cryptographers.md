@@ -55,7 +55,7 @@ where $\tz(c) = v_2(c)$ is the 2-adic valuation (trailing-zero count, with $\tz(
 
 ## The token, and why it leaks only the sketch
 
-A client draws a persistent secret $x_0 \in J_N^-$ (Jacobi symbol $-1$) and derives its per-class secret by hashing into the exponent, $x = x_0\, g^{H(\text{class})}$. Per request it samples
+A client draws a persistent secret $x_0 \in J_N^-$ (Jacobi symbol $-1$) and derives its per-class secret by hashing into the exponent, $x = x_0\, g^{H(x_0, \text{class})}$. Per request it samples
 
 ```math
 w \in W = (\Z_N^*)^{B2^m}, \qquad
