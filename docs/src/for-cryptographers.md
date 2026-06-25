@@ -52,7 +52,7 @@ multiplication adds coordinates, and exponentiation by $t$ scales them by $t$. T
 \hll(x) = \big(b,\; \tz(c)\big),
 ```
 
-where $\tz(c) = v_2(c)$ is the 2-adic valuation (trailing-zero count, with $\tz(0) = m$). For uniform $x$, $b$ is uniform on $\Z_B$ and $\tz(c)$ is geometric on $\set{0, \dots, m}$ — exactly the HLL distribution (made rigorous in [Geometric RSA Rings](05-hyperloglog-over-rsa.md#Geometric-RSA-Rings)). The remaining coordinates are noise to be washed out: $a \in \Z_2$ only tracks the Jacobi symbol, and $d \in \Z_{pq}$ is pure per-client identity entropy.
+where $\tz(c) = v_2(c)$ is the 2-adic valuation (trailing-zero count, with $\tz(0) = m$). For uniform $x$, $b$ is uniform on $\Z_B$ and $\tz(c)$ is geometric on $\set{0, \dots, m}$ — exactly the HLL distribution (made rigorous in [Geometric RSA rings](05-hyperloglog-over-rsa.md#Geometric-RSA-rings)). The remaining coordinates are noise to be washed out: $a \in \Z_2$ only tracks the Jacobi symbol, and $d \in \Z_{pq}$ is pure per-client identity entropy.
 
 ## The token, and why it leaks only the sketch
 
@@ -121,7 +121,7 @@ Two cautions on $\alpha$ (detailed in [Malicious Servers](12-malicious-servers.m
 
 | Property | Status | Where |
 |---|---|---|
-| $\hll$ induces the correct HLL distribution | elementary; empirically confirmed | [Geometric RSA Rings](05-hyperloglog-over-rsa.md#Geometric-RSA-Rings) |
+| $\hll$ induces the correct HLL distribution | elementary; empirically confirmed | [Geometric RSA rings](05-hyperloglog-over-rsa.md#Geometric-RSA-rings) |
 | Anonymity: equal-sketch tokens are identically distributed (uniform on the fiber) | **proven** | [Proof of Anonymity](09-proof-of-anonymity.md) |
 | Fingerprint-freedom + a certificate with explicit $(5/8)^n$ soundness | **proven** | [Malicious Servers](12-malicious-servers.md) |
 | Rank-unforgeability by malicious clients | argued, **not reduced** to a standard assumption | [Malicious Clients](11-malicious-clients.md) |
@@ -129,4 +129,4 @@ Two cautions on $\alpha$ (detailed in [Malicious Servers](12-malicious-servers.m
 Feedback is welcome everywhere but especially on these three points:
 1. A more standard presentation of the semigenerator-coordinate argument in [Proof of Anonymity](09-proof-of-anonymity.md);
 2. Any route to a hardness reduction for client-side rank-unforgeability;
-3. Whether the geometric-distribution argument in [Geometric RSA Rings](05-hyperloglog-over-rsa.md#Geometric-RSA-Rings) wants more rigor than it currently has.
+3. Whether the geometric-distribution argument in [Geometric RSA rings](05-hyperloglog-over-rsa.md#Geometric-RSA-rings) wants more rigor than it currently has.

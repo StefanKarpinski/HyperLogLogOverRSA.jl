@@ -2,7 +2,7 @@
 
 What alternative is there to signing HyperLogLog values? In the last section we encrypted HLL values. What if clients could sample encrypted HLL values for themselves? Of course, the way we discussed encrypting them previously, each distinct HLL value would have an equal chance of being chosen, which is entirely the wrong distribution—the whole point is that it’s geometric. But can we encrypt HLL values so that sampling encrypted values has the right distribution? This requires more common HLL values to appear in distinct encrypted forms many times: the most common values would have to appear $2^{m-1}$ times as often as the least common ones, where $m$ is the maximum geometric sample value. This is certainly possible—we can just encrypt a 128-bit unsigned random value and derive the HLL value from it on the server side. But that’s a massive client fingerprint. We need another crucial ingredient: the client needs to be able to randomize what they send so that any client with the same HLL value could have sent that value. This seemingly impossible trick turns out to be possible in the mathematical setting of RSA rings.
 
-## RSA Ring Refresher
+## RSA ring refresher
 
 An RSA ring is a modular integer ring, $\Z_N$, where $N$ is a large, balanced semiprime—*i.e.* a product of two similarly sized primes: $N = P Q$. When $N$ is large enough, this is a hard factoring problem—hard enough that it is currently impossible when $\log_2(N) ≥ 1024$. For good measure, people often use $2048$-bit and $4096$-bit semiprimes these days. Constructing such an $N$, on the other hand, is straightforward and takes no more than a fraction of a second: find two distinct primes, $P$ and $Q$, of appropriate size, and multiply them to get $N = PQ$. The party that generates $N$ can safely publish it and keep $P$ and $Q$ secret. This gives them knowledge of the structure of $\Z_N$ that no one else has, yet everyone can perform computations in $\Z_N$. This was one of the first public-key encryption schemes and is still widely used. If all you want to do is public-key cryptography, the additional structure of $\Z_N$ is actually a liability and has to be carefully tiptoed around. But for us the additional structure is crucial to making what we want to do possible.
 
@@ -23,7 +23,7 @@ s^E = (x^D)^E = x^{DE} = x \bmod N.
 
 We will not actually be using RSA rings for public-key cryptography or signatures. Instead, we’ll encode HyperLogLog values in $\Z_N^*$. Only the server who constructed $N$ and knows the factors $P$ and $Q$ can decode the HLL values. The structure of $\Z_N^*$ also allows the client to randomize what they send so that the HLL value and _only_ the HLL value is preserved by this randomization. This makes two clients with the same HLL value indistinguishable from the server’s perspective—the server learns the client’s HLL value and nothing else. Finally, this can all be done in such a way that the client only needs to generate and store a single “master key” value and can quickly and reproducibly generate resource-class-specific HLL values that are statistically independent from each other.
 
-## Geometric RSA Rings
+## Geometric RSA rings
 
 The first thing we’ll tackle is encoding geometric samples in an RSA ring with the right frequency distribution. To do this, we define a special class of RSA rings with some additional structure. Consider the following special shape of “geometric RSA ring”:
 
@@ -146,7 +146,7 @@ The $C_q$ part of this can be annihilated by raising to the $q$ power:
 
 This gives us a computationally efficient way for someone who knows the factorization of $N$ to turn a random, uniformly sampled element, $x \in \Z_N^*$, into a geometrically distributed sample value, $k = \tz(c)$. Crucially for our purposes, someone who doesn’t know the factorization of $N$ cannot compute this geometric sample value.
 
-## Blurring Fingerprints
+## Blurring fingerprints
 
 We now have a construction where a client can sample a value with a geometric distribution without knowing the value they’ve sampled. We can’t, however, have a client just generate a random $x \in \Z_N^*$ and send that $x$ every time—this would be a massive, uniquely identifying client fingerprint. We need some way of destroying all identifying information about $x$ _except_ for the geometric sample that we want. Fortunately, this turns out to be entirely doable.
 
@@ -220,7 +220,7 @@ Either way, every possible value in the $C_p$ and $C_q$ components can be reache
 
 The final component we need to consider is $C_2$: the value of $a$ in $x$ is unchanged by both $x \mapsto x^t$ and by multiplication by $w^{2^m}$. As it turns out, however, we actually need this parity bit to be preserved in order to prevent clients from artificially inflating their geometric samples.
 
-## Fighting Inflation
+## Fighting inflation
 
 Clients are supposed to raise $x$ to an odd power, $t$. What happens if they raise it to an even $t$ instead? For any values $t$ and ${} c$ we have $\tz(tc) = \tz(t) + \tz(c)$. When $t$ is odd we have $\tz(t) = 0$, so $\tz(tc) = \tz(c)$. But if $t$ is even then $\tz(t) > 0$ and $x^t$ inflates the geometric sample. If a client sends $x^{2^m}$, for example, then it is guaranteed to produce the maximal geometric sample value, which is supposed to be vanishingly rare, occurring with $1/2^m$ probability. If we require that $a = 1 \bmod 2$ in $x$, however, then $ta = t \bmod 2$, which lets us read the parity of $t$ from the first component of $wx^t$. Parity bit to the rescue! So we’d like to require clients to choose $x$ with odd $a$ and then check that $ta = 1$ in the $wx^t$ value that is sent. Any requests not satisfying this should be ignored for client count estimation purposes, since that indicates a malicious or malfunctioning client.
 
@@ -256,7 +256,7 @@ Every row is split evenly between $J_N^+$ and $J_N^-$, so conditioning on $\Jaco
 
 In summary, instead of requiring $x$ with $a = 1 \bmod 2$, which would work but cannot be checked by clients, we require $x$ with $\Jacobi_N(x) = -1$, which they can check. This implies that $\Jacobi_N(wx^t) = -1$ if and only if $t$ is odd. The server can check that this is the case and disregard any requests that don’t satisfy this parity requirement.
 
-## Bucket Brigade
+## Bucket brigade
 
 We now have the ability for clients to blindly sample geometric values, but for full HyperLogLog sampling we also need a uniformly distributed bucket value. Can we modify our RSA ring to include a bucket value too? We certainly can:
 
