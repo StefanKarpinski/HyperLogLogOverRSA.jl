@@ -41,7 +41,7 @@ function Ring{T}(
 ) where {T<:Integer}
     # argument checks
     isodd(B) || throw(ArgumentError("B must be odd"))
-    m > 0 || throw(ArgumentError("m must be positive"))
+    m ≥ 2 || throw(ArgumentError("m must be ≥ 2"))
     L > 0 || throw(ArgumentError("L must be positive"))
 
     # range of N values
@@ -86,8 +86,8 @@ function Ring{T}(
         # check that one of these is usable (unique primes)
         p_min = div(P_min - 1, P_scale)
         p_max = div(P_max - 1, P_scale)
-        q_min = div(Q_min - 1, P_scale)
-        q_max = div(Q_max - 1, P_scale)
+        q_min = div(Q_min - 1, Q_scale)
+        q_max = div(Q_max - 1, Q_scale)
         allunique([B_factors; P_min; Q_max; p_min; q_max]) ||
         allunique([B_factors; P_max; Q_min; p_max; q_min]) ||
             throw(ArgumentError("infeasible ring spec"))

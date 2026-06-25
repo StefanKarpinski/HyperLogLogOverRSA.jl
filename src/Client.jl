@@ -1,7 +1,7 @@
 const B_max = 2^16
 const m_max = 128
 const L_max = 2^20
-const α_min = exp2(50)
+const α_min = exp2(128)
 
 """
     Client(cert::RingCert) -> Client

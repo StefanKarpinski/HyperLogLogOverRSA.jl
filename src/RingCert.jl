@@ -1,4 +1,4 @@
-const log_α = 50
+const log_α = 128
 const SQRT_SAMPLES = ceil(Int, log_α/(log2(8)-log2(5)))
 
 @assert (8/5)^(SQRT_SAMPLES-1) < exp2(log_α) ≤ (8/5)^SQRT_SAMPLES
