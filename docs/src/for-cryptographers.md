@@ -83,7 +83,7 @@ Hence the $(w, t)$-orbit of $x$ is exactly the fiber $\hll^{-1}(\hll(x)) \cap J_
 
 ## Integrity I — malicious clients (unforgeable rank)
 
-A client who could steer $\hll(x)$ toward large $k$ could inflate counts cheaply, so we need clients unable to do better than chance. Without the factorization a client knows neither $b$ nor $c$ for any value it can produce. It can walk an arithmetic progression of exponents, shifting $c$ by a chosen $h$, but it cannot *see* $\tz(c + h)$, so reaching rank $\ge k$ costs $\sim 2^k$ tries — exactly chance. Inflation is therefore linear at $\approx 1/\ln 2 \approx 1.44$ forged requests per unit of count (the unique-ID gold standard is $1$); see [Malicious Clients](11-malicious-clients.md), which also notes that this linear bound assumes the attacker has no per-slice count oracle, and that a published-count interface must therefore floor small slices.
+A client who could steer $\hll(x)$ toward large $k$ could inflate counts cheaply, so we need clients unable to do better than chance. Without the factorization a client knows neither $b$ nor $c$ for any value it can produce. It can walk an arithmetic progression of exponents, shifting $c$ by a chosen $h$, but it cannot *see* $\tz(c + h)$, so reaching rank $\ge k$ costs $\sim 2^k$ tries — exactly chance. Inflation is therefore linear at $\approx 1/\ln 2 \approx 1.44$ forged requests per unit of count (the unique-ID gold standard is $1$); see [Malicious clients](09-proof-of-anonymity.md#Malicious-clients), which also notes that this linear bound assumes the attacker has no per-slice count oracle, and that a published-count interface must therefore floor small slices.
 
 This is the **one acknowledged gap**: there is no reduction from biasing the rank to factoring or another standard RSA assumption. The informal evidence is that recovering the $c$-coordinate of a $J_N^-$ element with respect to $g$ appears as hard as the discrete-log–flavored problems RSA already leans on — the $\Jacobi_N = -1$ requirement is what blocks the obvious bootstrap from known powers of $g$ (which all have $\Jacobi_N = +1$). But this is a conjecture. It is also the *less critical* half of the formalization: a broken integrity bound costs accuracy, while a broken privacy bound costs anonymity; only the latter is proven. A reduction proving that biasing the rank is hard would be the most valuable single addition to this work.
 
@@ -95,7 +95,7 @@ The server chooses $N$, and a maliciously structured $N$ can turn the token into
 N = (2^m B p + 1)(2^m B q + 1)
 ```
 
-this gives $\Z_N^*$ two $C_B$ and two $C_{2^m}$ factors; the same honest token then exposes $2\log_2 B + m \approx 87$ bits — total deanonymization. So a client must verify, without learning the factorization, that $N$ has benign structure. The exact criterion ([Malicious Servers](12-malicious-servers.md)) is
+this gives $\Z_N^*$ two $C_B$ and two $C_{2^m}$ factors; the same honest token then exposes $2\log_2 B + m \approx 87$ bits — total deanonymization. So a client must verify, without learning the factorization, that $N$ has benign structure. The exact criterion ([Malicious servers](09-proof-of-anonymity.md#Malicious-servers)) is
 
 ```math
 \begin{gathered}
@@ -115,7 +115,7 @@ n = \ceil{\frac{\log_2 \alpha}{\log_2(8/5)}}.
 
 Drawing the challenge pairs by hashing $N$ makes this a non-interactive certificate $(B, m, N, g, \text{square roots})$. Verification is one Jacobi symbol, two gcds, and $n$ squarings.
 
-Two cautions on $\alpha$ (detailed in [Malicious Servers](12-malicious-servers.md)): a forger knows its *own* candidate’s factorization, so the QR checks are free for it and it fails fast, meaning $\alpha$ must be sized against attacker wall-clock rather than a bare trial count. Since $n$ grows only as $\log \alpha$, the certificate stays tiny regardless — so use $\alpha \ge 2^\lambda$ for the system security level $\lambda$, never below $2^{80}$, with $\alpha = 2^{128}$ ($n = 189$, ~24 KB) the comfortable default.
+Two cautions on $\alpha$ (detailed in [Malicious servers](09-proof-of-anonymity.md#Malicious-servers)): a forger knows its *own* candidate’s factorization, so the QR checks are free for it and it fails fast, meaning $\alpha$ must be sized against attacker wall-clock rather than a bare trial count. Since $n$ grows only as $\log \alpha$, the certificate stays tiny regardless — so use $\alpha \ge 2^\lambda$ for the system security level $\lambda$, never below $2^{80}$, with $\alpha = 2^{128}$ ($n = 189$, ~24 KB) the comfortable default.
 
 ## What is proven, and what is not
 
@@ -123,8 +123,8 @@ Two cautions on $\alpha$ (detailed in [Malicious Servers](12-malicious-servers.m
 |---|---|---|
 | $\hll$ induces the correct HLL distribution | elementary; empirically confirmed | [Geometric RSA rings](05-hyperloglog-over-rsa.md#Geometric-RSA-rings) |
 | Anonymity: equal-sketch tokens are identically distributed (uniform on the fiber) | **proven** | [Proof of Anonymity](09-proof-of-anonymity.md) |
-| Fingerprint-freedom + a certificate with explicit $(5/8)^n$ soundness | **proven** | [Malicious Servers](12-malicious-servers.md) |
-| Rank-unforgeability by malicious clients | argued, **not reduced** to a standard assumption | [Malicious Clients](11-malicious-clients.md) |
+| Fingerprint-freedom + a certificate with explicit $(5/8)^n$ soundness | **proven** | [Malicious servers](09-proof-of-anonymity.md#Malicious-servers) |
+| Rank-unforgeability by malicious clients | argued, **not reduced** to a standard assumption | [Malicious clients](09-proof-of-anonymity.md#Malicious-clients) |
 
 Feedback is welcome everywhere but especially on these three points:
 1. A more standard presentation of the semigenerator-coordinate argument in [Proof of Anonymity](09-proof-of-anonymity.md);
