@@ -425,7 +425,7 @@ To put numbers on it, take a deliberately attacker-favorable estimate of $10^{11
 | $2^{112}$ | infeasible | infeasible | 166 | ~21 KB |
 | $2^{128}$ | infeasible | infeasible | 189 | ~24 KB |
 
-The alpha value of $\alpha = 2^{50}$ that I used in early test code is *not* “completely infeasible”: at a few hours of attacker-favorable wall-clock it is squarely within reach of a motivated operator—which is exactly the threat we care about, a platform with both the means and an incentive to deanonymize its own users. Because $n$ grows only logarithmically in $\alpha$, buying a gigantic safety margin is nearly free: the certificate stays a few dozen kilobytes and the server’s square-root computation stays sub-second. The recommendation is therefore to set $\alpha \ge 2^\lambda$ for the system’s overall security level $\lambda$, and never below $2^{80}$; the simplest safe choice is $\alpha = 2^{128}$ ($n = 189$, a ~24 KB certificate), at which point the parameter can simply be forgotten about.
+Because $n$ grows only logarithmically in $\alpha$, buying a gigantic safety margin is nearly free: the certificate stays a few dozen kilobytes and the server’s square-root computation stays sub-second. The recommendation is therefore to set $\alpha \ge 2^\lambda$ for the system’s overall security level $\lambda$, and never below $2^{80}$. The simplest safe choice is $\alpha = 2^{128}$, which makes finding a malicious $N$ that passes the test so unlikely that it is no longer a concern.
 
 The non-interactive version of this protocol serves as a certificate of fingerprint-freedom for a published $N$ value. The certificate structure contains:
 
@@ -443,4 +443,4 @@ When downloading a new ring structure, a client checks the following requirement
 - That enough square roots are provided
 - That all the square roots are valid
 
-That’s it. Once the client has done this, it can safely use $N$ and proceed with the protocol for generating and sending $xw^t$ values with each request, confident that it has provable anonymity.
+That’s it. Once the client has done this, it can safely use $N$ and proceed with the protocol for generating and sending $y = xw^t$ values with each request, confident that it has provable anonymity.
