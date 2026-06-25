@@ -307,18 +307,20 @@ Spelling these four components out:
 - Geometric sample: $\tz(tc) = \tz(t) + \tz(c) = \tz(c)$ since $\tz(t) = 0$
 - The rest: $td + e \bmod{pq}$ is freshly random in each request
 
-We now have the complete HyperLogLog Over RSA protocol. The server constructs a ring with the shape $N = PQ = (2Bp+1)(2^m q+1)$, keeping $P$, $Q$, $p$, $q$ secret and publishing $N$ together with a semigenerator $g$. A client generates a persistent secret $x \in \Z_N^*$ with $\Jacobi_N(x) = -1$ and, for each request, sends a freshly randomized token $y = wx^t$ where $t \equiv 1 \bmod{2B}$ and $w$ is chosen from $(\Z_N^*)^{B2^m}$. The server uses its knowledge of $P$ and $Q$ to extract the bucket index from the $C_B$ component and the geometric sample $\tz(c)$ from the $C_{2^m}$ component, and discards any request where $\Jacobi_N(y) \neq -1$, since that indicates an even exponent was used. In the next section we’ll make this work with resource class sharding, without having to store a per-class secret.
+The core HyperLogLog Over RSA construction is now in place. The server constructs a ring with the shape $N = PQ = (2Bp+1)(2^m q+1)$, keeping $P$, $Q$, $p$, $q$ secret and publishing $N$ together with a semigenerator $g$. A client generates a persistent secret $x \in \Z_N^*$ with $\Jacobi_N(x) = -1$ and, for each request, sends a freshly randomized token $y = wx^t$ where $t \equiv 1 \bmod{2B}$ and $w$ is chosen from $(\Z_N^*)^{B2^m}$. The server uses its knowledge of $P$ and $Q$ to extract the bucket index from the $C_B$ component and the geometric sample $\tz(c)$ from the $C_{2^m}$ component, and discards any request where $\Jacobi_N(y) \neq -1$, since that indicates an even exponent was used.
 
-The informal claim is that each token carries exactly one HyperLogLog value—bucket index and geometric sample—and nothing else: two tokens from the same client are indistinguishable from two tokens from different clients with the same HLL value. A client cannot steer its geometric sample towards a more favorable value without knowing the factorization of $N$. If this intuitive picture is convincing enough, you can skip to the [Proof of Anonymity](09-proof-of-anonymity.md); if you want to see these claims proved formally, read on.
+The informal picture is that each token carries exactly one HyperLogLog value—bucket index and geometric sample—and nothing else: two tokens from the same client are indistinguishable from two tokens from different clients with the same HLL value. A client cannot steer its geometric sample towards a more favorable value without knowing the factorization of $N$. The formal proofs of these claims are in the [Proof of Anonymity](09-proof-of-anonymity.md). The next section first completes the protocol with one more essential ingredient.
 
 ## Master keys
 
-At this point we have a clever scheme that allows clients to randomly choose $x \in \Z_N^*$ and have it encode a correctly distributed HyperLogLog value such that:
+The construction so far gives each client a single persistent value $x \in J_N^-$ that encodes their HLL sample. Two key properties hold:
 
 1. The client cannot decode or bias which HyperLogLog value they have sampled.
-2. The client’s identity is perfectly obscured by sending $w x^t$ instead of $x$, where $w$ and $t$ are random values such that ${} w \in W = (\Z_N^*)^{B2^m} {}$ and $t = 1 \bmod{2B}$.
+2. Per-request re-randomization via $wx^t$ makes repeated tokens from the same client unlinkable—the server sees only the HLL value, nothing more.
 
-This is already quite good. Recall, however, that we want to use different, independent values of $x$ for different resource classes. Clients could simply generate and store different independently random $x$ values for each resource class. But as we discussed when considering signed HLLs, this entails a nontrivial amount of storage that looks quite bad: assuming 256 bits per resource class key and 1024 bits per $\Z_N^*$ value, that’s 160 bytes per resource class; if the typical user installs 5k packages over time, that’s 0.8MB of storage. Once again, this is feasible on modern hardware, but it would be great if each client could generate and store just a single reasonably sized secret.
+But one more ingredient is needed for the full anonymity guarantee to hold. The [resource class sharding](01-counting-users.md#Resource-class-sharding) argument requires that a client’s HLL values be *statistically independent across classes*: if a client reused the same $x$ in every resource class, a server could correlate token distributions across classes and undo the sharding protection—clients with rare HLL values would be identifiable even across class boundaries. Clients must therefore use a different, unlinkable value for each resource class.
+
+The naive solution—store a separately generated $x$ per class—works but scales badly: at 1024 bits per $\Z_N^*$ value and perhaps 5k resource classes over a user’s lifetime, that’s nearly a megabyte of persistent storage per ring. We need each client to store a single master key and derive per-class values from it efficiently and reproducibly.
 
 ### Possible approaches
 
