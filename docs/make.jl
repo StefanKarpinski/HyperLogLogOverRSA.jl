@@ -76,9 +76,6 @@ makedocs(
         "For Cryptographers" => "for-cryptographers.md",
         "The Writeup" => [
             "Anonymously Counting Users" => "01-counting-users.md",
-            "HyperLogLog"                => "02-hyperloglog.md",
-            "Resource Class Sharding"    => "03-resource-class-sharding.md",
-            "Signed HLLs?"               => "04-signed-hlls.md",
             "HyperLogLog Over RSA"       => "05-hyperloglog-over-rsa.md",
             "Proof of Anonymity"         => "09-proof-of-anonymity.md",
             "Master Keys"                => "10-master-keys.md",

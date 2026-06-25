@@ -24,7 +24,7 @@ Fix public parameters: an odd bucket count $B$ and a maximum rank $m \ge 2$. Eac
 \hll = (b, k) \in \Z_B \times \set{0, 1, \dots, m},
 ```
 
-with $b$ uniform and $k$ geometric, $\Pr[k = j] = 2^{-(j+1)}$ for $j < m$. The server takes the per-bucket maximum of $k$ over any subset of requests and applies a standard HLL estimator to recover the number of distinct clients in that subset. Everything the server is *supposed* to learn about a client is contained in $(b, k)$; the privacy argument — on-average anonymity within an equal-sketch class, and statistical independence across classes via sharding — is made entirely at this level in [HyperLogLog](02-hyperloglog.md) and [Resource Class Sharding](03-resource-class-sharding.md). The remainder of this page is about encoding $(b, k)$ into an RSA group so that a client can neither read nor forge it, *without changing what it leaks*.
+with $b$ uniform and $k$ geometric, $\Pr[k = j] = 2^{-(j+1)}$ for $j < m$. The server takes the per-bucket maximum of $k$ over any subset of requests and applies a standard HLL estimator to recover the number of distinct clients in that subset. Everything the server is *supposed* to learn about a client is contained in $(b, k)$; the privacy argument — on-average anonymity within an equal-sketch class, and statistical independence across classes via sharding — is made entirely at this level in [Anonymously Counting Users](01-counting-users.md). The remainder of this page is about encoding $(b, k)$ into an RSA group so that a client can neither read nor forge it, *without changing what it leaks*.
 
 ## The ring and its coordinates
 
