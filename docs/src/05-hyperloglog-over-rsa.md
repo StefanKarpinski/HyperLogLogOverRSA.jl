@@ -307,24 +307,17 @@ Spelling these four components out:
 - Geometric sample: $\tz(tc) = \tz(t) + \tz(c) = \tz(c)$ since $\tz(t) = 0$
 - The rest: $td + e \bmod{pq}$ is freshly random in each request
 
-The core HyperLogLog Over RSA construction is now in place. The server constructs a ring with the shape $N = PQ = (2Bp+1)(2^m q+1)$, keeping $P$, $Q$, $p$, $q$ secret and publishing $N$ together with a semigenerator $g$. A client generates a persistent secret $x \in \Z_N^*$ with $\Jacobi_N(x) = -1$ and, for each request, sends a freshly randomized token $y = wx^t$ where $t \equiv 1 \bmod{2B}$ and $w$ is chosen from $(\Z_N^*)^{B2^m}$. The server uses its knowledge of $P$ and $Q$ to extract the bucket index from the $C_B$ component and the geometric sample $\tz(c)$ from the $C_{2^m}$ component, and discards any request where $\Jacobi_N(y) \neq -1$, since that indicates an even exponent was used.
-
-The informal picture is that each token carries exactly one HyperLogLog value—bucket index and geometric sample—and nothing else: two tokens from the same client are indistinguishable from two tokens from different clients with the same HLL value. A client cannot steer its geometric sample towards a more favorable value without knowing the factorization of $N$. The formal proofs of these claims are in the [Proof of Anonymity](09-proof-of-anonymity.md). The next section first completes the protocol with one more essential ingredient.
+The core HyperLogLog Over RSA construction is now in place. The server constructs a ring with the shape $N = PQ = (2Bp+1)(2^m q+1)$, keeping $P$, $Q$, $p$, $q$ secret and publishing $N$ together with a semigenerator $g$. A client generates a persistent secret $x \in \Z_N^*$ with $\Jacobi_N(x) = -1$ and, for each request, sends a freshly randomized token $y = wx^t$ where $t \equiv 1 \bmod{2B}$ and $w$ is chosen from $(\Z_N^*)^{B2^m}$. The server discards any request where $\Jacobi_N(y) \neq -1$, since that indicates a misbehaving client. For the remaining requests, it uses the secret factors, $P$ and $Q$, to extract the bucket index, $b$, from the $C_B$ component and the geometric sample, $k = \tz(c)$, from the $C_{2^m}$ component, yielding a decrypted HLL sample pair, $(b, k)$. Clients cannot steer or bias samples without knowing the factorization of $N$. The next section completes the protocol by making it work nicely with resource class sharding.
 
 ## Master keys
 
-The construction so far gives each client a single persistent value $x \in J_N^-$ that encodes their HLL sample. Two key properties hold:
-
-1. The client cannot decode or bias which HyperLogLog value they have sampled.
-2. Per-request re-randomization via $wx^t$ makes repeated tokens from the same client unlinkable—the server sees only the HLL value, nothing more.
-
-But one more ingredient is needed for the full anonymity guarantee to hold. The [resource class sharding](01-counting-users.md#Resource-class-sharding) argument requires that a client’s HLL values be *statistically independent across classes*: if a client reused the same $x$ in every resource class, a server could correlate token distributions across classes and undo the sharding protection—clients with rare HLL values would be identifiable even across class boundaries. Clients must therefore use a different, unlinkable value for each resource class.
-
-The naive solution—store a separately generated $x$ per class—works but scales badly: at 1024 bits per $\Z_N^*$ value and perhaps 5k resource classes over a user’s lifetime, that’s nearly a megabyte of persistent storage per ring. We need each client to store a single master key and derive per-class values from it efficiently and reproducibly.
+The construction so far assumes that each client chooses a single random $x \in J_N^-$ that encodes a single HLL sample. But one more ingredient is needed for the full protocol. [Resource class sharding](01-counting-users.md#Resource-class-sharding) requires that each client has separate, statistically independent secrets for each one of an unbounded set of resource classes. If a client reused the same $x$ in every resource class, it would have the same HLL value in every class. Clients must use a different, unlinkable $x$ value for each resource class.
 
 ### Possible approaches
 
-In essence, we want a way for each client to generate a random “master key” and derive individual resource-class-specific $x$ values from the master key and resource class. The most obvious way to do this is to hash the master key and the resource class together into $\Z_N$:
+The naive solution is to store a separately generated $x$ per class. This works but involves a distasteful amount of storage: 1KB per $\Z_N^*$ value and perhaps 5k resource classes over a user’s lifetime, so nearly a megabyte of persistent storage (per server that the client talks to, which, for most clients, is only one). Another paranoid reason not to store a secret per class: such a cache provides someone who gets access to the client's storage a complete record of every package they've ever installed. Of course, the attacker can also just look at what packages they have installed, but a cache of resource-class secrets would persist even when all traces of an installed package have been removed. If we provide a way to clear or purge the cache, we are essentially refreshing the client's identity for counting purposes, which we is not catastrophic, but is undesirable.
+
+What we really want is a way for each client to generate a single “master key” and derive individual resource-class-specific $x$ values from the master key and resource class. The most obvious way to do this is to hash the master key and the resource class together into $\Z_N$:
 
 ```math
 \begin{aligned}
@@ -340,11 +333,11 @@ x_i = \hash_N(\text{key}, \text{class}, i)
 \end{aligned}
 ```
 
-and use the first $x_i$ such that $\Jacobi_N(x_i) = -1$. Since about half of the values in $\Z_N$ have Jacobi symbol of $-1$, it shouldn’t take too many attempts to find a usable $x_i$. This works, but is somewhat inelegant and involves computing a variable number of (large) hash values and Jacobi symbols for each. Keep in mind that this work has to be done for each request the Pkg client wants to make to a server. Can we come up with a scheme where the client generates a single pre-validated master key and constructs $x$ for each resource class so that it always has a negative Jacobi symbol? And ideally, every possible value in the negative Jacobi set would be reachable for some potential resource class. As it happens, this is possible.
+and use the first $x_i$ such that $\Jacobi_N(x_i) = -1$. Since about half of the values in $\Z_N$ have a Jacobi symbol of $-1$, it should only take a few attempts to find a usable $x_i$. This works, but is somewhat inelegant and involves computing a variable number of (large) hash values and Jacobi symbols for each counter value. Keep in mind that this work has to be done for *each request* the Pkg client wants to make to a server, so having it be at all expensive or non-deterministic would be best to avoid.
 
 ### What we actually do
 
-The key insight is that our particular shape of RSA ring, while not cyclic, is very nearly cyclic. Recall that it has this multiplicative structure:
+Can we design a scheme where the client generates a single pre-validated master key and constructs $x$ for each resource class so that it always has a negative Jacobi symbol? And ideally, every possible value in the negative Jacobi set would be reachable for some potential resource class. As it happens, this is possible. The key insight is that our particular shape of RSA ring, while not cyclic, is very nearly cyclic. Recall that it has this multiplicative structure:
 
 ```math
 \begin{aligned}
@@ -353,14 +346,14 @@ C_2 \times C_B \times C_{2^m} \times C_{pq}
 \end{aligned}
 ```
 
-The only shared factor among cyclic component orders is a single factor of two shared by $C_2$ and $C_{2^m}$. This means that if $g$ is a semigenerator, then every element in $\Z_N^*$ is either of the form $g^k$ or $x_0 g^k$ where $x_0$ is any fixed element with $\Jacobi_N(x_0) = -1$. Recall that a semigenerator, $g \in \Z_N^*$, has both $\fmod(g,P)$ and $\fmod(g,Q)$ as generators. All semigenerators in this ring have $\Jacobi_N(g) = 1$, so every element of the form $g^k$ has positive Jacobi symbol while every element of the form $x_0 g^k$ has negative Jacobi symbol. This gives us a natural way to generate every negative Jacobi value: fix $x_0$ and $g$ and let $k$ range over exponent values: for every $x \in J_N^-$ there is some $k$ such that $x = x_0 g^k$. The client can easily pick a valid $x_0$ since all they have to check is that $\Jacobi_N(x_0) = -1$. On the other hand, the client cannot check if $g$ is a semigenerator since it doesn’t know the factorization of $N$. The server can do this, however, and publish $g$ along with $N$.
+The only shared factor among cyclic component orders is a single factor of two shared by $C_2$ and $C_{2^m}$. This means that if $g$ is a semigenerator, then every element in $\Z_N^*$ is either of the form $g^k$ or $x_0 g^k$ where $x_0$ is any fixed element with $\Jacobi_N(x_0) = -1$. Recall that for a semigenerator, $g \in \Z_N^*$, both $\fmod(g,P)$ and $\fmod(g,Q)$ are generators in $\Z_P^*$ and $\Z_Q^*$, respectively. All semigenerators in this ring have $\Jacobi_N(g) = 1$, so every element of the form $g^k$ has positive Jacobi symbol while every element of the form $x_0 g^k$ has negative Jacobi symbol. This gives us a natural way to generate every negative Jacobi value: fix $x_0$ and $g$ and let $k$ range over all exponent values: for every $x \in J_N^-$ there is some $k$ such that $x = x_0 g^k$. The client can easily pick a valid $x_0$ since all they have to check is that $\Jacobi_N(x_0) = -1$. The client cannot, on the other hand, check if $g$ is a semigenerator since it doesn’t know the factorization of $N$, but the server can do this and publish a common $g$ value along with $N$. Clients cannot check that $g$ is actually a semigenerator, but there's no real harm done if it isn't.
 
-This, then, is the generation part of our master key scheme:
+Putting it together:
 
 - The server, when generating the ring, also chooses and publishes a common “semigenerator” element, $g \in \Z_N^*$;
-- The client, when downloading the ring parameters for the first time, also chooses and saves a random $x_0 \in \Z_N^*$ with $\Jacobi_N(x_0) = -1$.
+- The client, when downloading the ring parameters for the first time, also chooses and saves a random $x_0 \in \Z_N^*$ with $\Jacobi_N(x_0) = -1$. This $x_0$ is the client's master key.
 
-Since half of the values in $\Z_N$ have negative Jacobi symbol, a viable $x_0$ is quick to find, and it only has to be done once for a new ring. Regardless of which $x_0$ the client chooses, every $x \in \Z_N^*$ with $\Jacobi_N(x) = -1$ has $x = x_0 g^k$ for some $k$. The client’s choice of $x_0$ changes how exponents map to $x$ values in a way that we’ll explore below — this is the client’s master key. We’ll write its logarithm vector as:
+Since half of the values in $\Z_N$ have negative Jacobi symbol, a viable $x_0$ is quick to find, and it only has to be done once for a new ring. Regardless of which $x_0$ the client chooses, every $x \in \Z_N^*$ with $\Jacobi_N(x) = -1$ has $x = x_0 g^k$ for some $k$. The client’s choice of $x_0$ changes how exponents map to $x$ values in a way that we’ll explore below. Write the logarithm vector of the master key as:
 
 ```math
 \begin{aligned}
@@ -368,19 +361,23 @@ Since half of the values in $\Z_N$ have negative Jacobi symbol, a viable $x_0$ i
 \end{aligned}
 ```
 
-Since $\Jacobi_N(x_0) = (-1)^{a + c} = -1$ we know that $a + c = 1 \bmod 2$. In other words, exactly one of $a$ or $c$ is odd. Other than this relation, the values are completely random.
-
-For each resource class, the client derives a class-specific value by multiplying their master key with a hashed power of the semigenerator:
+Since $\Jacobi_N(x_0) = (-1)^{a + c} = -1$ we know that $a + c = 1 \bmod 2$. In other words, exactly one of $a$ or $c$ is odd. Other than this relation, the four values are completely random. For each resource class, the client derives a client- and class-specific hash value, $h$:
 
 ```math
 \begin{aligned}
-x_h = x_0 g^h = x_0 g^{\hash(x_0,\,\text{class})}
+h &= \hash(x_0, \text{class})
 \end{aligned}
 ```
 
-This hash function, $\hash$, is different than the previously proposed $\hash_N$ — this hash value is used as an exponent, rather than a ring element. Later, we’ll see that this requires far fewer output bits. In addition to using $x_0$ to construct values with negative Jacobi symbol, the client also uses $x_0$ as salt when hashing the resource class. This makes the hash value, $h$, client-specific in a highly unpredictable manner. Anything a server might learn about a client’s $h$ value in one resource class—which should be nothing, but let’s be cautious—doesn’t reveal anything about the same client’s $h$ values for other classes since the server cannot compute $x_0$ from $h$ since $\hash$ is a secure one-way function.
+This uses $x_0$ as salt string, rather than as a ring element; we will *also* use $x_0$ as a ring element later. Using $x_0$ as salt makes the hash value, $h$, client-specific in a highly unpredictable manner. The server cannot learn a client's $h$ value, but even if they did, it doesn't reveal anything about $h$ values in other classes. The hash function, $\hash$, used here, is different from the previously proposed $\hash_N$ — this hash's output is used as an exponent, rather than a ring element. This seems like a minor difference, but we’ll see that this usage requires far fewer output bits and makes our derivation significantly faster. Next, we use $x_0$ and $h$ to derive the client's personal resource class secret:
 
-The construction of $x_h$ guarantees that it has negative Jacobi symbol:
+```math
+\begin{aligned}
+x_h &= x_0 g^h
+\end{aligned}
+```
+
+This is the second usage of $x_0$, this time as a ring element. Note that the construction of $x_h$ guarantees that it has negative Jacobi symbol:
 
 ```math
 \begin{aligned}
@@ -417,12 +414,14 @@ The components of $y$ that convey information are:
 - The bucket index: $b + h \in \Z_B$
 - The geometric sample: $\tz(t(c + h)) \in \set{0, \dots, m}$
 
-What information do we want to make sure is _not_ conveyed?
+Here we can see that the real requirement on $h$ is that $(b + h, c + h)$ covers all of $\Z_B \times \Z_{2^m}$ fairly uniformly as $h$ takes on different values. To ensure this it's sufficient to ensure that $h$ is sampled from a modulus, $M$ such that $\fmod(M, B2^m)$ is tiny relative to $M \div B2^m$. We could use an exact multiple of $B2^m$, which makes the modulus zero. But that's inconvenient, since real world hashes have power-of-two outputs. Fortunately, if $M$ is sufficiently large, the bias (ratio) is negligible. For any modern hash function like SHA256, this is the case. In our reference implementation, we actually use the output of SHA256, truncated into a 128-bit integer value, which is still more than large enough to guarantee effectively uniform coverage.
+
+What information do we make sure is **not** conveyed?
 
 - The leading digits of $t(c+h)$ should be fully random
 - The last component, $t(d + h) + e$, should be fully random
 
-To ensure the former, we want $t$ to be able to take every odd residue class in $\Z_{2^m}$ which is accomplished by choosing $i \in [0, 2^{m-1})$ and letting $t = 2Bi + 1$. To ensure the latter, we want $w$ to take every possible value in $W$ which is accomplished by choosing $z \in \Z_N^*$ at random and letting $w = z^{B2^m}$ (we don’t actually care about $t$ for this). What’s really required is that $(b + h, c + h)$ covers all of $\Z_B \times \Z_{2^m}$ as $h$ takes on different values. All we need is for $\hash$ to be a hash function with at least $\log_2(B) + m$ bits of output. In practice, we have $\log_2(B) \approx 12$ and $m = 63$ so we need more than $75$ bits of hash output. In our test implementation, we use the first $128$ bits of the SHA256 hash of $x_0$ with the resource class.
+To ensure the former, we want $t$ to be able to take every odd residue class in $\Z_{2^m}$ which is accomplished by choosing $i \in [0, 2^{m-1})$ and letting $t = 2Bi + 1$. To ensure the latter, we want $w$ to take every possible value in $W$ which is accomplished by choosing $z \in \Z_N^*$ at random and letting $w = z^{B2^m}$ (we don’t actually care about $t$ for this factor).
 
 Putting it all together, for each request a client makes, this scheme requires the client to:
 
