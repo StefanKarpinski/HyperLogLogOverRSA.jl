@@ -601,13 +601,13 @@ d &= 0 \pmod{B_V} \\
 \end{aligned}
 ```
 
-Thus, there exist $b’$, $c’$ and $d’$ such that:
+Thus, there exist $b'$, $c'$ and $d'$ such that:
 
 ```math
 \begin{aligned}
-b &= b’ B_U &
-c &= c’ 2^{\bar{m}} &
-d &= d’ B_V
+b &= b' B_U &
+c &= c' 2^{\bar{m}} &
+d &= d' B_V
 \end{aligned}
 ```
 
@@ -616,9 +616,9 @@ To show that $w \in W$ we need to find $i \in \Z$ such that:
 ```math
 \begin{aligned}
 i B 2^m &= 0 && \pmod 2 \\
-i B 2^m &= b = b’ B_U && \pmod U \\
-i B 2^m &= c = c’ 2^{\bar{m}} && \pmod{2^n} \\
-i B 2^m &= d = d’ B_V && \pmod V \\
+i B 2^m &= b = b' B_U && \pmod U \\
+i B 2^m &= c = c' 2^{\bar{m}} && \pmod{2^n} \\
+i B 2^m &= d = d' B_V && \pmod V \\
 \end{aligned}
 ```
 
@@ -626,9 +626,9 @@ The first equation is automatically satisfied since $m ≥ 1$. The other three e
 
 ```math
 \begin{aligned}
-i (B/B_U) 2^m &= b’ && \pmod{U/B_U} \\
-i B 2^{m-\bar{m}} &= c’ && \pmod{2^{n-\bar{m}}} \\
-i (B/B_V) 2^m &= d’ && \pmod{V/B_V} \\
+i (B/B_U) 2^m &= b' && \pmod{U/B_U} \\
+i B 2^{m-\bar{m}} &= c' && \pmod{2^{n-\bar{m}}} \\
+i (B/B_V) 2^m &= d' && \pmod{V/B_V} \\
 \end{aligned}
 ```
 
@@ -636,9 +636,9 @@ Here we have divided common factors—$B_U$, $2^{\bar{m}}$ and $B_V$, respective
 
 ```math
 \begin{aligned}
-i &= b’ (B/B_U 2^m)^{-1} && \pmod{U/B_U} \\
-i &= c’ B^{-1}     && \pmod{2^{n-\bar{m}}} \\
-i &= d’ (B/B_V 2^m)^{-1} && \pmod{V/B_V} \\
+i &= b' (B/B_U 2^m)^{-1} && \pmod{U/B_U} \\
+i &= c' B^{-1}     && \pmod{2^{n-\bar{m}}} \\
+i &= d' (B/B_V 2^m)^{-1} && \pmod{V/B_V} \\
 \end{aligned}
 ```
 
@@ -649,7 +649,7 @@ This set of equations can be solved via the Chinese Remainder Theorem since the 
 \log_g(x^{B2^m})
 &= \log_g(g^{iB2^m}) \\
 &= (iB2^m, iB2^m, iB2^m, iB2^m) \\
-&= (0, b’ B_U, c’ 2^{\bar{m}}, d’ B_V) \\
+&= (0, b' B_U, c' 2^{\bar{m}}, d' B_V) \\
 &= (0, b, c, d) \\
 &= \log_g(w)
 \end{aligned}
