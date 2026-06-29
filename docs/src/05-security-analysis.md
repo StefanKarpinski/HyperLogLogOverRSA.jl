@@ -4,7 +4,11 @@ This section formalizes the security properties of the protocol. The first part 
 
 The second part analyzes the integrity side from the client’s perspective: how much can a malicious client inflate count estimates, and why is that effort linear rather than exponential? The third part turns to the server side: how can a server prove that its modulus is fingerprint-free without revealing its factorization, and what does it cost an attacker to forge such a proof?
 
-## Definitions
+## Anonymity
+
+We build to the anonymity theorem in three steps: the algebraic definitions it relies on, the theorem and its proof, and an interpretation of what it guarantees.
+
+### Definitions
 
 **Definition.** We write the *“positive Jacobi subgroup”* in $\Z_N^*$ as:
 
@@ -154,7 +158,7 @@ The first value, $b$, implicitly depends on the choice of semigenerator, $\bar{g
 
 The HyperLogLog function for fingerprint-free $N$ on $\Z_N^*$ is defined as $\hll = \bar{\hll}\phi$, *i.e.* the composition of the $\phi$ whose existence is guaranteed by fingerprint-freeness with the essential HyperLogLog function. This depends on the choice of $\bar{g}$ for $\bar\hll$ and on which particular $\phi$ is chosen. For the purposes of the main proof, we can just assume that some fixed $\phi$ is chosen and used. The choice of $\phi$ doesn’t actually introduce any more ambiguity than already introduced by the choice of $\bar{g}$ — both choices merely permute the output bucket indices.
 
-## Proofs
+### The anonymity theorem
 
 **Lemma.** For $\bar{x}, \bar{y} \in C_B \times C_{2^m}$ we have $\bar{\hll}(\bar{x}) = \bar{\hll}(\bar{y})$ if and only if there exists $t \in \Z$ with $t = 1 \bmod{2B}$ such that $\bar{x}^t = \bar{y}$.
 
@@ -266,7 +270,7 @@ This requires $\Jacobi_N(x) = \Jacobi_N(y) \in \set{±1}$ and $t$ odd so that ra
 
 This proves equivalence of (3) and (4). $\square$
 
-## Interpretation
+### Interpretation
 
 How does this result prove that our scheme preserves client anonymity? Suppose there are two clients with $x_1$ and $x_2$ as their respective client secrets and assume that $\hll(x_1) = \hll(x_2)$. We also assume that the clients follow the protocol so that $\Jacobi_N(x_1) = \Jacobi_N(x_2) = -1$. The server receives $w_1x_1^{t_1}$ from the first client. Can the server tell that it got the message from the first client rather than the second? We can apply the theorem twice to show that it cannot. First, the theorem tells us that when the client chooses $w_1 \in W_N$ and $t_1$ with $t_1 = 1 \bmod{2B}$, we always have:
 
@@ -328,7 +332,7 @@ N = P Q = (2 B p + 1)(2^m q + 1)
 
 where $B$ and $m$ are published parameters and $P$, $Q$, $p$ and $q$ are secret primes. If a client knew $P$ and $Q$ they could check the construction of $N$, but the whole point, of course, is that they don’t know the factorization. Otherwise they could easily forge rare HyperLogLog values. What if a server generates $N$ with a different structure? Can that allow them to “fingerprint” and track individual clients? As it turns out, constructing $N$ with different structure than intended *can* allow a server to fingerprint clients. Because of this, our protocol needs a mechanism for servers to convince clients that they have not hidden any fingerprints in the construction of $N$. This only needs to be checked when a client talks to a server initially and downloads new protocol parameters (or when the server issues new protocol parameters).
 
-### The problem
+### The fingerprinting threat
 
 First, let’s get a feel for how a malicious server could fingerprint clients. Here’s an alternative structure that would allow a server to uniquely identify clients:
 
