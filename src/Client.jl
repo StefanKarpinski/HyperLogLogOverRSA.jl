@@ -4,12 +4,13 @@ const L_max = 2^20
 const α_min = exp2(128)
 
 """
-    Client(cert::RingCert) -> Client
+    Client(cert::RingCert; rng=…) -> Client
 
 Verify a published [`RingCert`](@ref) and, if every check passes, construct a
 client holding the public ring parameters together with a freshly chosen random
 secret `x₀` (a Jacobi "twist" element). Throws an `ArgumentError` if the
-certificate fails any check.
+certificate fails any check. `rng` (default a `RandomDevice`) is the source of
+randomness for `x₀`; pass a seeded RNG to get a reproducible client.
 
 Call [`hll_generate`](@ref) to produce the encrypted HyperLogLog token to send
 with a request.
@@ -31,13 +32,14 @@ function Client(
     B :: Int,
     m :: Int,
     N :: T,
-    g :: T,
+    g :: T;
+    rng :: AbstractRNG = DEFAULT_RNG,
 ) where {T<:Integer}
-    x₀ = rand_jacobi_twist(N)
+    x₀ = rand_jacobi_twist(N; rng)
     Client(B, m, N, g, x₀)
 end
 
-function Client(cert::RingCert)
+function Client(cert::RingCert; rng::AbstractRNG = DEFAULT_RNG)
     B, m, N, g = cert.B, cert.m, cert.N, cert.g
 
     # check shape parameters
@@ -82,22 +84,26 @@ function Client(cert::RingCert)
     end
 
     # cert is valid, N is safe
-    Client(B, m, N, g)
+    Client(B, m, N, g; rng)
 end
 
 Base.show(io::IO, c::Client) =
     print(io, "Client(B=$(c.B), m=$(c.m), N=$(c.N), x₀=$(c.x₀))")
 
 """
-    hll_generate(client::Client, class="/registries") -> Integer
+    hll_generate(client::Client, class="/registries"; rng=…) -> Integer
 
 Produce a fresh, randomized encrypted HyperLogLog token `y = w xᵗ` for the given
 resource `class`, to send along with a request. Every call re-randomizes the
 token, so two tokens from the same client are unlinkable; yet they all decode
 (by the ring holder) to that client's single, stable HLL value for the class.
 The client cannot itself decode or bias the value it samples.
+
+`rng` (default a `RandomDevice`) supplies the per-token randomness. It does not
+affect the decoded value — only the token's unlinkable encoding — so seeding it
+makes token output reproducible without changing what the token decodes to.
 """
-function hll_generate(client::Client, class::Any="/registries")
+function hll_generate(client::Client, class::Any="/registries"; rng::AbstractRNG = DEFAULT_RNG)
     B, m, N, g, x₀ = client.B, client.m, client.N, client.g, client.x₀
     h = hash_resource_class(x₀, class)      # h = H(x₀, class)
     x = modmul(x₀, powermod(g, h, N), N)    # x = x₀ g^h

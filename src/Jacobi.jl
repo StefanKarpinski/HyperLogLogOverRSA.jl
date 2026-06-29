@@ -53,7 +53,7 @@ end
 
 Generate random x ∈ ℤ_N with jacobi(x) == -1.
 """
-function rand_jacobi_twist(N::Integer)
+function rand_jacobi_twist(N::Integer; rng::AbstractRNG = DEFAULT_RNG)
     range = 0:N-1
     while true
         x = rand(rng, range)

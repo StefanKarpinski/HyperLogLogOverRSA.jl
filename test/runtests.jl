@@ -155,17 +155,18 @@ end
 
 # false &&
 @testset "HLL estimate" begin
-    # End-to-end cardinality recovery through the whole protocol.
-    # The module rng is a RandomDevice and can't be seeded, so this is stochastic.
-    # HLL's relative error here is ≈ 1.04/√B ≈ 1.6%; the 8% bound is ≈ 5·RSE, so
-    # spurious failures are ~1e-6 while a broken estimator (e.g. one that failed
-    # to collapse repeats, reading ≈ 2n) is still caught.
-    ring = Ring(2^12-1, 16, 63)
+    # End-to-end cardinality recovery through the whole protocol, with a seeded
+    # rng for determinism (most seeds pass; pick a new one if the PRNG changes).
+    # The rand(1:3) repeats collapse — same client+class decodes to one value —
+    # so the estimate counts the n distinct classes, not requests. HLL's relative
+    # error is ≈ 1.04/√B ≈ 1.6%; this seed lands at ~1.2%.
+    rng = Xoshiro(0)
+    ring = Ring(2^12-1, 16, 63; rng)
     check_ring(ring)
-    client = Client(RingCert(ring))
+    client = Client(RingCert(ring; rng); rng)
     n = 5000
-    Y = [hll_generate(client, "/package/$id") for id = 1:n for _ = 1:rand(1:3)]
+    Y = [hll_generate(client, "/package/$id"; rng) for id = 1:n for _ = 1:rand(rng, 1:3)]
     @test allunique(Y)                  # every emitted token is freshly randomized
     n̂ = hll_estimate(ring, Y)
-    @test abs(n̂ - n)/n ≤ 0.08
+    @test abs(n̂ - n)/n ≤ 0.05           # ≈ 3·RSE
 end

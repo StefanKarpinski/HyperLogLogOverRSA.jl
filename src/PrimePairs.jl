@@ -53,7 +53,8 @@ Requires that `scale` is even.
 function gen_prime_pair(
     scale :: Integer,
     P_min :: Integer,
-    P_max :: Integer,
+    P_max :: Integer;
+    rng :: AbstractRNG = DEFAULT_RNG,
 )
     iseven(scale) || throw(ArgumentError("scale factor must be even"))
 

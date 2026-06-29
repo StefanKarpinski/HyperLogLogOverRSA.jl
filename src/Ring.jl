@@ -3,7 +3,7 @@ using Primes
 ## Representing & generating RSA Ring instances
 
 """
-    Ring(B, m, L) -> Ring
+    Ring(B, m, L; rng=…) -> Ring
 
 A HyperLogLog RSA ring: a modulus `N` together with the secret structure that
 lets its holder decode HyperLogLog values while no one else can.
@@ -23,6 +23,9 @@ The primes `P`, `Q`, `p`, `q` are secret — and are deliberately omitted when a
 `Ring` is shown — so only a holder of the `Ring` can decode HLL values via
 [`hll_decode`](@ref). Publish a [`RingCert`](@ref) so that clients can use the
 ring without learning its factorization.
+
+`rng` (any `AbstractRNG`, default a `RandomDevice`) is the source of randomness
+for choosing the primes; pass a seeded RNG for a reproducible ring.
 """
 struct Ring{T<:Integer}
     # general shape
@@ -37,7 +40,8 @@ end
 function Ring{T}(
     B :: Integer, # bucket factor — must be odd
     m :: Integer, # max geometric sample size
-    L :: Integer, # bit length of modulus
+    L :: Integer; # bit length of modulus
+    rng :: AbstractRNG = DEFAULT_RNG,
 ) where {T<:Integer}
     # argument checks
     isodd(B) || throw(ArgumentError("B must be odd"))
@@ -99,7 +103,7 @@ function Ring{T}(
     swap = false
     local P, Q, p, q
     while true
-        if rand(Bool)
+        if rand(rng, Bool)
             swap = !swap
             P_scale, Q_scale = Q_scale, P_scale
             P_min, Q_min = Q_min, P_min
@@ -107,7 +111,7 @@ function Ring{T}(
         end
         # generate (P, p) pair
         while true
-            P, p = gen_prime_pair(P_scale, P_min, P_max)
+            P, p = gen_prime_pair(P_scale, P_min, P_max; rng)
             allunique([B_factors; P; p]) && break
         end
         # range of second prime factor
@@ -117,7 +121,7 @@ function Ring{T}(
             Q_min′, Q_max′ = narrow_prime_range(Q_scale, Q_min′, Q_max′)
         end
         # generate (Q, q) pair
-        Q, q = gen_prime_pair(Q_scale, Q_min′, Q_max′)
+        Q, q = gen_prime_pair(Q_scale, Q_min′, Q_max′; rng)
         allunique([B_factors; P; p; Q; q]) || continue
         break
     end
@@ -136,8 +140,9 @@ function Ring(
     B :: Integer, # bucket factor — must be odd
     m :: Integer, # max geometric sample size
     L :: Integer; # bit length of modulus
+    rng :: AbstractRNG = DEFAULT_RNG,
 )
-    Ring{ring_type(L)}(B, m, L)
+    Ring{ring_type(L)}(B, m, L; rng)
 end
 
 Base.getproperty(ring::Ring, name::Symbol) =
@@ -155,7 +160,7 @@ lambda(ring::Ring) = ring.λ
 Base.show(io::IO, ring::Ring) =
     print(io, "Ring(B=$(ring.B), m=$(ring.m), N=$(ring.N))")
 
-function rand_semigenerator(ring::Ring)
+function rand_semigenerator(ring::Ring; rng::AbstractRNG = DEFAULT_RNG)
     P, Q = factors(ring)
     # find generator for ℤ_P^*
     range_P = 1:P-1
