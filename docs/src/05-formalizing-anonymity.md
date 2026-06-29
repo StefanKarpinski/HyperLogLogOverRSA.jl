@@ -1,6 +1,6 @@
 # Formalizing Anonymity
 
-This section formalizes the security properties of the protocol. The first part proves the central anonymity result: when $N$ is fingerprint-free, two clients with the same HLL value produce indistinguishable token distributions, so the server learns nothing beyond the HLL value. Rather than assuming the specific structure $N = PQ = (2Bp+1)(2^m q+1)$, we work with a general characterization of fingerprint-free moduli — a condition that will also be needed when we analyze how servers can certify their modulus. We assume throughout that $B$ is odd and $m ≥ 2$.
+This section formalizes the security properties of the protocol. The first part proves the central anonymity result: when $N$ is fingerprint-free, two clients with the same HLL value produce indistinguishable token distributions, so the server learns nothing beyond that value. Rather than assuming the specific structure $N = PQ = (2Bp+1)(2^m q+1)$, we work with a general characterization of fingerprint-free moduli — a condition that will also be needed when we analyze how servers can certify their modulus. We assume throughout that $B$ is odd and $m ≥ 2$.
 
 The second part analyzes the integrity side from the client’s perspective: how much can a malicious client inflate count estimates, and why is that effort linear rather than exponential? The third part turns to the server side: how can a server prove that its modulus is fingerprint-free without revealing its factorization, and what does it cost an attacker to forge such a proof?
 
@@ -292,7 +292,7 @@ With the anonymity theorem in hand, we turn to the integrity side of the protoco
 
 ## Malicious clients
 
-Plain-text HyperLogLog counting has a serious inflation problem: an attacker can send one request for each bucket, each carrying the maximum geometric value, and instantly push the unique-client estimate to its ceiling. How does our protocol compare? Our benchmark is the naive unique client ID approach, where an attacker needs one request for every unit of inflation—attack effort is linear with coefficient one.
+Plaintext HyperLogLog counting has a serious inflation problem: an attacker can send one request for each bucket, each carrying the maximum geometric value, and instantly push the unique client estimate to its ceiling. How does our protocol compare? Our gold standard is the naive unique client ID approach, where each forged request inflates the count by exactly one—attack effort is linear with coefficient one.
 
 If a malicious client sends $y$ with $\Jacobi_N(y) ≠ -1$, the server will detect it. So we can focus on a malicious client sending $y$ with $\Jacobi_N(y) = -1$. As discussed in the previous section, every element $y \in J_N^-$ is of the form $y = x_0 g^h$ where $g$ is our chosen semigenerator and $x_0$ is an arbitrary twist element with $\Jacobi_N(x_0) = -1$. Here we use $h$ as just an arbitrary attacker-controlled exponent value, not necessarily the output of a hash function. The question is whether a malicious client can influence $y$ to have large geometric sample values.
 
