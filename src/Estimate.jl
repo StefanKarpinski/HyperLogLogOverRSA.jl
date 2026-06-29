@@ -1,0 +1,80 @@
+## Improved HyperLogLog cardinality estimator
+#
+# Implements the count-estimation step of the protocol (Server step 6 in the
+# writeup). Given the encrypted tokens logged for one resource class, the ring
+# holder decodes each to its (bucket, geometric) value, aggregates the maximum
+# geometric sample per bucket into a HyperLogLog sketch, and estimates the
+# unique client count. Repeated tokens from the same client collapse, since they
+# all decode to that client's single HLL value for the class.
+#
+# The estimator is Otmar Ertl's improved estimator, "New Cardinality Estimation
+# Methods for HyperLogLog Sketches" (2017), arXiv:1706.07290: a closed-form
+# estimator, effectively unbiased across the whole cardinality range with no
+# separate small/large-range corrections. Our decoded geometric sample
+# k ∈ {0,…,m} is Ertl's register value r = k + 1 (so r = 0 marks an empty bucket
+# and r = m + 1 a saturated one), making our B buckets a standard HyperLogLog
+# sketch with saturation level q = m.
+
+# σ(x) = x + Σ_{k≥1} x^(2^k) 2^(k-1) — correction term for empty registers.
+function σ(x::Float64)
+    x ≥ 1 && return Inf
+    y, p, w = x, x, 1.0
+    while true
+        p *= p          # p = x^(2^k)
+        Δ = p*w         # w = 2^(k-1)
+        y + Δ == y && return y
+        y += Δ
+        w *= 2
+    end
+end
+
+# τ(x) = (1/3)[(1-x) - Σ_{k≥1} (1 - x^(2^-k))^2 2^-k] — correction for saturated
+# registers.
+function τ(x::Float64)
+    (x ≤ 0 || x ≥ 1) && return 0.0
+    y, r, w = 1 - x, x, 0.5
+    while true
+        r = sqrt(r)         # r = x^(2^-k)
+        Δ = (1 - r)^2 * w   # w = 2^-k
+        y - Δ == y && return y/3
+        y -= Δ
+        w *= 0.5
+    end
+end
+
+const α_∞ = 1/(2log(2))
+
+"""
+    hll_estimate(ring::Ring, tokens) -> Float64
+
+Estimate the number of unique clients behind a collection of encrypted HLL
+`tokens` — the `y` values logged for a single resource class. Each token is
+decoded with `ring` (sharing one [`bucket_map`](@ref) across the batch) and
+aggregated into a HyperLogLog sketch; repeated tokens from the same client
+collapse automatically, since they all decode to that client's single
+`(bucket, geometric)` value for the class.
+
+Uses the improved estimator of Ertl (2017): unbiased across the whole
+cardinality range, with relative standard error ≈ `1.04/√B`.
+"""
+function hll_estimate(ring::Ring, tokens)
+    B, m = ring.B, ring.m
+    bmap = bucket_map(ring)
+    reg = fill(-1, B)                    # per-bucket max geometric; -1 = empty
+    for y in tokens
+        b, k = hll_decode(ring, y; bmap)
+        reg[b+1] = max(reg[b+1], k)
+    end
+    # histogram over Ertl register values r = k + 1 ∈ {0,…,m+1}, stored at
+    # C[r+1]: C[1] is the empty count (r=0), C[m+2] the saturated count (r=m+1)
+    C = zeros(Int, m+2)
+    for k in reg
+        C[k+2] += 1
+    end
+    d = B*σ(C[1]/B)                       # empty registers (r = 0)
+    for r = 1:m
+        d += C[r+1]*exp2(-r)             # normal registers (r = 1…m)
+    end
+    d += B*τ(1 - C[m+2]/B)*exp2(-m)       # saturated registers (r = m+1)
+    return α_∞ * B^2 / d
+end

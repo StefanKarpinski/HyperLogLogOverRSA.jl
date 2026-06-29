@@ -9,6 +9,7 @@ include("Hashing.jl")
 include("Ring.jl")
 include("RingCert.jl")
 include("Client.jl")
+include("Estimate.jl")
 
 export
     Ring,
@@ -16,6 +17,7 @@ export
     Client,
     bucket_map,
     hll_generate,
-    hll_decode
+    hll_decode,
+    hll_estimate
 
 end # module HyperLogLogOverRSA

@@ -1,5 +1,6 @@
 using Test
 using Primes
+using Random
 using HyperLogLogOverRSA
 using HyperLogLogOverRSA:
     gen_prime_pair, jacobi, modulus, factors, lambda, modsqrt,

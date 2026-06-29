@@ -45,6 +45,21 @@ The server should log the `y` values and only decode them later, offline — the
 factorization of `N` never needs to live on the public-facing servers. See the
 [Protocol Summary](06-protocol-summary.md) for the end-to-end flow.
 
+`hll_estimate` decodes a batch of logged tokens for one resource class and
+estimates the number of unique clients behind them (Ertl’s improved HyperLogLog
+estimator). Repeated tokens from the same client collapse, since they all decode
+to that client’s single value for the class:
+
+```julia-repl
+julia> ys = [hll_generate(client, "/registries") for _ in 1:1000];  # 1 client, many requests
+
+julia> hll_estimate(ring, ys)                                       # ≈ 1 unique client
+1.0...
+```
+
+(One client estimates to ≈ 1 no matter how many requests it sends; a real
+estimate aggregates tokens from many distinct clients.)
+
 ## API
 
 ```@docs
@@ -53,5 +68,6 @@ RingCert
 Client
 hll_generate
 hll_decode
+hll_estimate
 bucket_map
 ```
