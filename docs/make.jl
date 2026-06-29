@@ -77,7 +77,7 @@ makedocs(
         "The Writeup" => [
             "Anonymously Counting Users" => "03-counting-users.md",
             "HyperLogLog Over RSA"       => "04-hyperloglog-over-rsa.md",
-            "Formalizing Anonymity"      => "05-formalizing-anonymity.md",
+            "Security Analysis (Proofs)" => "05-security-analysis.md",
             "Protocol Summary"           => "06-protocol-summary.md",
         ],
         "Reference Implementation" => "reference.md",
