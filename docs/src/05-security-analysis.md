@@ -646,7 +646,7 @@ i &= d' (B/B_V 2^m)^{-1} && \pmod{V/B_V} \\
 \end{aligned}
 ```
 
-This set of equations can be solved via the Chinese Remainder Theorem since the moduli are pairwise coprime. Let $x = g^i$, which gives:
+The middle equation looks like it cancels a $2^{m-\bar{m}}$ that is not invertible modulo a power of two, but $\bar{m} = \min(m, n)$ rules out the problematic case: either $m ≤ n$, so $2^{m-\bar{m}} = 1$ and only the odd factor $B$ is inverted, or $m > n$, so the modulus $2^{n-\bar{m}} = 1$ and the congruence is vacuous. This set of equations can be solved via the Chinese Remainder Theorem since the moduli are pairwise coprime. Let $x = g^i$, which gives:
 
 ```math
 \begin{aligned}
