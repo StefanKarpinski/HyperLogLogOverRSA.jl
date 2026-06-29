@@ -80,7 +80,14 @@ for (const f of files) {
         displayMode: b.display,
         throwOnError: true,
         macros: Object.assign({}, macros), // fresh copy: renderToString mutates it
-        strict: (code, msg) => { blockWarnings.push(`${code}: ${msg}`); return 'ignore'; },
+        // unknownSymbol → failure: catches non-ASCII chars (e.g. U+2019 curly
+        // apostrophes used as primes) that KaTeX cannot render. All other
+        // strict events are collected as non-fatal warnings.
+        strict: (code, msg) => {
+          if (code === 'unknownSymbol') return 'error';
+          blockWarnings.push(`${code}: ${msg}`);
+          return 'ignore';
+        },
       });
     } catch (e) {
       failures.push({ file: f, display: b.display, tex, err: String(e.message || e) });

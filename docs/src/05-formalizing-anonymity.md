@@ -298,7 +298,7 @@ If a malicious client sends $y$ with $\Jacobi_N(y) ≠ -1$, the server will dete
 
 The server doesn’t publish any $x_0$ value, so clients have to generate one for themselves. However, since they don’t know the factorization of $N$, they have no idea what its logarithms are. For our analysis, write $\log(x_0) = (a, b, c, d)$, but keep in mind that the attacker has no idea what these values are. The HyperLogLog sample that $y = x_0 g^h$ encodes is $(b + h, \tz(c + h))$. The attacker controls $h$ but doesn’t know $b$ or $c$. Since they don’t know $c$, they cannot force $\tz(c + h)$ to be large or know how large it is for any particular $h$. In order to hit $k ≥ \tz(c + h)$ the attacker needs to happen to choose $h$ whose last $k$ bits complement $c$ perfectly, which occurs with probability $1/2^k$ — exactly the probability of picking a value that good by chance. What they can do, however, is scan through consecutive $h$ values. If they scan $2^k$ consecutive values, they’re guaranteed to hit $h = -c \bmod{2^k}$ for one of those values and they may happen to hit something better.
 
-In the unique ID scheme, each request with a freshly "forged" client ID inflates the client count by one. How does HLL over RSA compare to this when an attacker tries to inflate its estimates? The expected maximum value of $\tz(c + h)$ is $k+1$ when scanning a consecutive block of $2^k$ values. This is slightly better than sending random values. If an attacker sends $B2^k$ spoofed requests they can push each bucket up to an expected value of $k + 1$, which gives a client count estimate of:
+In the unique ID scheme, each request with a freshly “forged” client ID inflates the client count by one. How does HLL over RSA compare to this when an attacker tries to inflate its estimates? The expected maximum value of $\tz(c + h)$ is $k+1$ when scanning a consecutive block of $2^k$ values. This is slightly better than sending random values. If an attacker sends $B2^k$ spoofed requests they can push each bucket up to an expected value of $k + 1$, which gives a client count estimate of:
 
 ```math
 \begin{aligned}
@@ -326,7 +326,7 @@ N = P Q = (2 B p + 1)(2^m q + 1)
 \end{aligned}
 ```
 
-where $B$ and $m$ are published parameters and $P$, $Q$, $p$ and $q$ are secret primes. If a client knew $P$ and $Q$ they could check the construction of $N$, but the whole point, of course, is that they don’t know the factorization. Otherwise they could easily forge rare HyperLogLog values. What if a server generates $N$ with a different structure? Can that allow them to "fingerprint" and track individual clients? As it turns out, constructing $N$ with different structure than intended *can* allow a server to fingerprint clients. Because of this, our protocol needs a mechanism for servers to convince clients that they have not hidden any fingerprints in the construction of $N$. This only needs to be checked when a client talks to a server initially and downloads new protocol parameters (or when the server issues new protocol parameters).
+where $B$ and $m$ are published parameters and $P$, $Q$, $p$ and $q$ are secret primes. If a client knew $P$ and $Q$ they could check the construction of $N$, but the whole point, of course, is that they don’t know the factorization. Otherwise they could easily forge rare HyperLogLog values. What if a server generates $N$ with a different structure? Can that allow them to “fingerprint” and track individual clients? As it turns out, constructing $N$ with different structure than intended *can* allow a server to fingerprint clients. Because of this, our protocol needs a mechanism for servers to convince clients that they have not hidden any fingerprints in the construction of $N$. This only needs to be checked when a client talks to a server initially and downloads new protocol parameters (or when the server issues new protocol parameters).
 
 ### The problem
 
@@ -386,7 +386,7 @@ W_N
 \end{aligned}
 ```
 
-Our proof in that section justified the term "fingerprint-free" by showing that as long as $N$ satisfies this property, a server cannot distinguish between two correctly behaving clients with the same HyperLogLog values. Our task then, is to come up with a way for the server to convince clients that the value of $N$ it sends them is actually fingerprint-free, without revealing its factorization.
+Our proof in that section justified the term “fingerprint-free” by showing that as long as $N$ satisfies this property, a server cannot distinguish between two correctly behaving clients with the same HyperLogLog values. Our task then, is to come up with a way for the server to convince clients that the value of $N$ it sends them is actually fingerprint-free, without revealing its factorization.
 
 We first present a few supporting results about the arithmetic structure of $N$. For all of the following results, we assume that $N$ is positive and odd with prime factorization given by:
 
@@ -438,7 +438,7 @@ N
 
 This means that $d \divides N-1$ as required. $\square$
 
-**Definition** (standard)**.** An element $x \in \Z_N$ is called a "quadratic residue" if there exists $r \in \Z_N$ such that $r^2 = x \bmod N$. The set of quadratic residues may be denoted as $(\Z_N)^2$.
+**Definition** (standard)**.** An element $x \in \Z_N$ is called a “quadratic residue” if there exists $r \in \Z_N$ such that $r^2 = x \bmod N$. The set of quadratic residues may be denoted as $(\Z_N)^2$.
 
 **Lemma.** Let $N$ be an odd, positive integer. $N$ has at most two distinct prime factors if and only if for all $\set{x, y} \subseteq J_N^+$ at least one of $\set{x, y, xy}$ is a quadratic residue.
 

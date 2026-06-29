@@ -21,6 +21,9 @@ Blocks that are skipped entirely
 - Fenced blocks: anything between opening ``` and closing ``` lines
 - Inline math:   anything between unescaped $ … $ on the same line
 
+In addition, any U+2019 that slipped into a math context (e.g. introduced
+by a smart-quote editor) is reverted to ASCII ' so KaTeX can render it.
+
 Run from the repo root:
     python3 docs/normalize-quotes.py
 or via:
@@ -35,6 +38,7 @@ import re
 # Notably excludes ,  ;  :  .  ?  !  )  ]  }  which precede *closing* quotes
 # in patterns like  "word,"  "word."  "word?"  (trailing punct inside quotes).
 OPENING_BEFORE = set(' \t\n([{*_')
+RSQUOTE = '\u2019'   # U+2019 RIGHT SINGLE QUOTATION MARK
 
 
 def smartify(path: str) -> bool:
@@ -44,18 +48,27 @@ def smartify(path: str) -> bool:
 
     result = []
     in_fence = False
+    in_math_fence = False
 
     for line in lines:
         stripped = line.rstrip('\n')
 
         # Toggle fenced-block state on ``` lines (```math, ```julia, ``` …)
         if re.match(r'^\s*```', stripped):
+            if not in_fence:
+                in_math_fence = bool(re.match(r'^\s*```math\b', stripped))
             in_fence = not in_fence
             result.append(line)
             continue
 
         if in_fence:
-            result.append(line)
+            # Revert U+2019 in math fences back to ASCII '---smart-quote
+            # editors can corrupt prime notation (b', c', d') and KaTeX
+            # rejects U+2019 as an unknown symbol.
+            if in_math_fence:
+                result.append(line.replace(RSQUOTE, "'"))
+            else:
+                result.append(line)
             continue
 
         # Process prose character by character, toggling over inline $…$ math
@@ -70,7 +83,8 @@ def smartify(path: str) -> bool:
                 out.append(ch)
 
             elif in_math:
-                out.append(ch)
+                # Revert any U+2019 that slipped into inline math back to ASCII.
+                out.append("'" if ch == RSQUOTE else ch)
 
             elif ch == '"':
                 prev = s[i - 1] if i > 0 else ' '
@@ -80,7 +94,7 @@ def smartify(path: str) -> bool:
                 prev = s[i - 1] if i > 0 else ''
                 nxt  = s[i + 1] if i < len(s) - 1 else ''
                 if prev.isalpha() and nxt.isalpha():
-                    out.append('’')   # apostrophe / right single quote
+                    out.append(RSQUOTE)   # apostrophe / right single quote
                 else:
                     out.append(ch)
 
