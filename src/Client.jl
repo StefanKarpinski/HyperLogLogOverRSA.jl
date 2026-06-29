@@ -1,5 +1,5 @@
 const B_max = 2^16
-const m_max = 128
+const m_max = 63          # m ≤ 63 keeps per-request exponents within Int64/Int128
 const L_max = 2^20
 const α_min = exp2(128)
 
@@ -13,6 +13,11 @@ certificate fails any check.
 
 Call [`hll_generate`](@ref) to produce the encrypted HyperLogLog token to send
 with a request.
+
+In this reference implementation the `Client` object *is* the client's persisted
+identity: each instance holds its own random `x₀`, so two instances are two
+distinct clients. Persisting a client across sessions would just mean serializing
+the object, which is out of scope here.
 """
 struct Client{T<:Integer}
     B :: Int # bucket factor (odd)

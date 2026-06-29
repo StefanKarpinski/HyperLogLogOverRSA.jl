@@ -449,7 +449,7 @@ h = hash_resource_class(x₀, class)
 x = modmul(x₀, powermod(g, h, N), N)
 z = rand(rng, 1:N-1)
 w = powermod(z, widen(B) << m, N)
-i = rand(rng, 0:(1 << (m-1)) - 1)
+i = rand(rng, 0:(Int64(1) << (m-1))-1)
 t = widemul(2B, i) + 1
 y = modmul(w, powermod(x, t, N), N)
 ```

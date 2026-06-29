@@ -39,8 +39,8 @@ On behalf of clients, the client implementor should choose acceptance criteria f
     - The simplest way to fingerprint clients is just to choose $B = 2^{128}$ and let the bucket be the fingerprint. This limit prevents that kind of “attack”.
     - Example: $B_{\max} = 2^{16}$
 - ``m_{\max}`` — maximum geometric sample
-    - This is mostly a sanity check since extreme geometric samples are so rare as to not matter. We just want to prevent a malicious server from being able to DoS a client by having it compute enormous integer values.
-    - Example: $m_{\max} = 128$
+    - This is mostly a sanity check since extreme geometric samples are so rare as to not matter. Capping it also keeps the client’s per-request exponent arithmetic within fixed-width integers and prevents a malicious server from forcing a client to compute in some absurdly large geometric range. A cap of $63$ already allows cardinality estimates up to around $2^{63}$, astronomically more than any real client population.
+    - Example: $m_{\max} = 63$
 - ``L_{\max}`` — maximum modulus bit-length
     - This is also mostly a sanity check to make sure that clients aren’t DoSed by being made to do arithmetic in some absurdly large modulus.
     - Example: $L_{\max} = 2^{20}$
@@ -101,13 +101,13 @@ n = \ceil{\frac{\log_2(\alpha)}{\log_2(8)-\log_2(5)}}
 \end{aligned}
 ```
 
-The server generates $n$ pairs of values, $\set{x, y} \subseteq \Z_N$, using an agreed-upon hashing scheme that includes the value $N$ as a hash input. For each pair, $\set{x, y}$:
+The server generates $n$ pairs of values, $\set{x, y} \subseteq J_N^+$, using an agreed-upon hashing scheme that includes the value $N$ as a hash input. The hashed values must land in $J_N^+$ (positive Jacobi symbol): since a hash naturally produces values of either Jacobi symbol, the scheme fixes a twist element $\tau$ with $\Jacobi_N(\tau) = -1$ — chosen deterministically, e.g. the smallest such value — and multiplies any hashed value of negative Jacobi symbol by $\tau$, which maps it into $J_N^+$. For each pair, $\set{x, y}$:
 
 - If $x$ is a quadratic residue, add $r$ such that $r^2 = x \bmod N$ to the list of square roots
 - Otherwise, if $y$ is a quadratic residue, add $r$ such that $r^2 = y \bmod N$ to the list of square roots
 - Otherwise, if $xy$ is a quadratic residue, add $r$ such that $r^2 = xy \bmod N$ to the list of square roots
 
-Since $N$ is a semiprime, one of these three checks must succeed, so one square root value is added to the list for each pair generated.
+Since $N$ is a semiprime and $x, y \in J_N^+$, one of these three checks must succeed (see [Malicious servers](05-formalizing-anonymity.md#Malicious-servers)), so one square root value is added to the list for each pair generated.
 
 ## Server step 4: Ring certificate publication
 
@@ -191,7 +191,7 @@ The bucket value is in $\Z_P$ which is huge, but there are only $B$ possible val
 
 ## Server step 6: Count estimation
 
-Once the bucket and geometric count have been decoded, estimating the unique client count within any set of logs for the same resource class is a matter of doing normal HyperLogLog aggregation and estimation: compute the maximum geometric sample size for each bucket and use the histogram of maximum sample counts to estimate the most likely client count. The optimal maximum likelihood estimator was derived in [“New Cardinality Estimation Methods for HyperLogLog Sketches”](https://arxiv.org/abs/1706.07290). This is the recommended estimator—it supersedes the original estimator and the improved estimator that is sometimes called “HyperLogLog++.”
+Once the bucket and geometric count have been decoded, estimating the unique client count within any set of logs for the same resource class is a matter of doing normal HyperLogLog aggregation and estimation: compute the maximum geometric sample size for each bucket and use the histogram of those per-bucket maxima to estimate the client count. Several good estimators exist. The reference implementation uses the *improved estimator* of Otmar Ertl, [“New Cardinality Estimation Methods for HyperLogLog Sketches”](https://arxiv.org/abs/1706.07290): a closed-form estimator that is effectively unbiased across the whole cardinality range—with no separate small- or large-range corrections—and has relative standard error of about $1.04/\sqrt{B}$. The same paper’s *maximum likelihood estimator* is marginally more accurate (it attains the theoretical variance bound) but requires an iterative solve rather than a closed form. Both supersede the original Flajolet *et al.* estimator, and both are more principled than the empirical bias-correction tables of HyperLogLog++ (Heule *et al.*), which is a separate method and not as accurate.
 
 A pleasant feature of this protocol is that once HyperLogLog values are validated and decoded, aggregation and estimation can be done by anyone, so long as they only try to aggregate within resource classes. In other words, the “over RSA” part of the protocol can be forgotten about entirely once HyperLogLog values are decoded. At that point, it’s as if the collection of logs had been recorded with normal HyperLogLog values keyed on client ID and resource class for each record—which is also a reminder of what must *not* be done with them, the subject of the next section.
 
