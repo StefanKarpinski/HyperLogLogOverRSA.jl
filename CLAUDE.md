@@ -24,6 +24,9 @@ docstrings from the exported API.
 # Run the test suite
 julia --project=. -e 'using Pkg; Pkg.test()'
 
+# Normalize smart quotes in docs prose (run after every docs edit)
+python3 docs/normalize-quotes.py
+
 # Build the docs (output → docs/build/, gitignored)
 julia --project=docs -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'  # first time only
 julia --project=docs docs/make.jl
@@ -32,6 +35,12 @@ julia --project=docs docs/make.jl
 node docs/check-math.js
 ```
 
+- **After every docs edit:** run `python3 docs/normalize-quotes.py` before
+  committing. It converts straight ASCII apostrophes/quotes in prose to
+  typographic ("smart") quotes, and — critically — reverts any curly apostrophes
+  that crept into math contexts (inline `$…$` or fenced ` ```math `) back to
+  ASCII, where KaTeX requires them. Skipping this step is how curly-quote
+  corruption in math blocks happens.
 - **`julia` hangs on a juliaup config lock?** Call the binary directly:
   `~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/bin/julia`.
 - **Running a single testset:** `test/runtests.jl` is one file of `@testset`
@@ -102,10 +111,8 @@ across classes are uncorrelated by construction.
 ## Docs structure & conventions (`docs/`)
 
 - **`docs/make.jl` is the source of truth** for page order and titles, not the
-  filenames. Filenames are numbered `01`–`05` then jump to `09`–`13`: a prior
-  restructure merged the old chapters 5–8 into the single
-  `05-hyperloglog-over-rsa.md`, leaving a gap. Don't renumber to "fix" it — edit
-  the `pages` list in `make.jl` if you change ordering.
+  filenames. Filenames are numbered `01`–`06`. Don't renumber files to match
+  a reordering — edit the `pages` list in `make.jl` instead.
 - **LaTeX macros** used across the writeup are registered with KaTeX in the
   `MATH_MACROS` dict in `make.jl` (mirrors the original `preamble.sty`). Add new
   macros there, not per-page.
