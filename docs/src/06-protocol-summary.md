@@ -28,7 +28,7 @@ The system operator chooses HyperLogLog parameters, RSA bit-length, and a certif
     - Example: $L = 1024$
 - ``\alpha`` is the certificate strength
     - Effort to generate a valid-looking malicious $N$ value
-    - Should be at least $2^\lambda$ for the system security level $\lambda$, and never below $2^{80}$ (see [Malicious servers](09-proof-of-anonymity.md#Malicious-servers))
+    - Should be at least $2^\lambda$ for the system security level $\lambda$, and never below $2^{80}$ (see [Malicious servers](05-formalizing-anonymity.md#Malicious-servers))
     - Example: $\alpha = 2^{128}$
 
 ## Client step 0: Parameter acceptance criteria
@@ -203,4 +203,4 @@ It is tempting to think that, because each decoded record is only a small HyperL
 
 What *is* safe to expose is **aggregate** output for large enough slices. Per-slice cardinality can be published, rather than the per-request $(b, k)$ values themselves. This is safe so long as a **minimum-cardinality floor** is also enforced: when publishing roll-ups of requests with counts and cardinality estimates, refuse to report any slice whose estimated cardinality is below a threshold, folding everything beneath that threshold into a single “other” bucket. The cost in utility is small since HyperLogLog is a poor estimator at small cardinalities anyway—the suppressed slices are the ones whose counts were least reliable. Only reporting slices with cardinality $≥ 1024$ would be reasonable.
 
-These rules also close the inflation channel discussed in [Malicious clients](09-proof-of-anonymity.md#Malicious-clients): an attacker who can read fine-grained per-slice counts gains a decoding oracle for their own forged tokens, and denying counts on sub-floor slices removes it. So the cardinality floor pays for itself three times over—anonymity in small populations, safety of published output, and resistance to inflation attacks.
+These rules also close the inflation channel discussed in [Malicious clients](05-formalizing-anonymity.md#Malicious-clients): an attacker who can read fine-grained per-slice counts gains a decoding oracle for their own forged tokens, and denying counts on sub-floor slices removes it. So the cardinality floor pays for itself three times over—anonymity in small populations, safety of published output, and resistance to inflation attacks.

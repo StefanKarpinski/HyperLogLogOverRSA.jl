@@ -311,7 +311,7 @@ The core HyperLogLog Over RSA construction is now in place. The server construct
 
 ## Master keys
 
-The construction so far assumes that each client chooses a single random $x \in J_N^-$ that encodes a single HLL sample. But one more ingredient is needed for the full protocol. [Resource class sharding](01-counting-users.md#Resource-class-sharding) requires that each client has separate, statistically independent secrets for each one of an unbounded set of resource classes. If a client reused the same $x$ in every resource class, it would have the same HLL value in every class. Clients must use a different, unlinkable $x$ value for each resource class.
+The construction so far assumes that each client chooses a single random $x \in J_N^-$ that encodes a single HLL sample. But one more ingredient is needed for the full protocol. [Resource class sharding](03-counting-users.md#Resource-class-sharding) requires that each client has separate, statistically independent secrets for each one of an unbounded set of resource classes. If a client reused the same $x$ in every resource class, it would have the same HLL value in every class. Clients must use a different, unlinkable $x$ value for each resource class.
 
 ### Possible approaches
 

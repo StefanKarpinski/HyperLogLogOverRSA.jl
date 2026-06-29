@@ -11,9 +11,9 @@ This site includes:
 
 For the design and the privacy model:
 
-- [Executive Summary](executive-summary.md) — the short version;
-- [For Cryptographers](for-cryptographers.md) — a condensed, notation-first tour for readers who want to check the math;
-- The full writeup starts [here](01-counting-users.md) and proceeds in short chapters.
+- [Executive Summary](01-executive-summary.md) — the short version;
+- [For Cryptographers](02-for-cryptographers.md) — a condensed, notation-first tour for readers who want to check the math;
+- The full writeup starts [here](03-counting-users.md) and proceeds in short chapters.
 
 ## Using the package
 

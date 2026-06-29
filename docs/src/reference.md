@@ -43,7 +43,7 @@ julia> hll_decode(ring, y)
 
 The server should log the `y` values and only decode them later, offline — the
 factorization of `N` never needs to live on the public-facing servers. See the
-[Protocol Summary](13-protocol-summary.md) for the end-to-end flow.
+[Protocol Summary](06-protocol-summary.md) for the end-to-end flow.
 
 ## API
 
