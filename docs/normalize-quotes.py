@@ -40,6 +40,17 @@ import re
 OPENING_BEFORE = set(' \t\n([{*_')
 RSQUOTE = '\u2019'   # U+2019 RIGHT SINGLE QUOTATION MARK
 
+# Smart quotes are invalid inside math: KaTeX rejects them as unknown
+# Unicode symbols. A smart-quote-aware editor can introduce them into math
+# (most commonly U+2019 as prime notation: b', c', d'). Revert all four to
+# their ASCII equivalents wherever they appear in a math context.
+MATH_QUOTE_FIXUPS = {
+    ord('\u2018'): "'",   # left single  -> '
+    ord('\u2019'): "'",   # right single -> '
+    ord('\u201c'): '"',   # left double  -> "
+    ord('\u201d'): '"',   # right double -> "
+}
+
 
 def smartify(path: str) -> bool:
     """Rewrite *path* in-place with smart quotes. Returns True if changed."""
@@ -62,11 +73,11 @@ def smartify(path: str) -> bool:
             continue
 
         if in_fence:
-            # Revert U+2019 in math fences back to ASCII '---smart-quote
-            # editors can corrupt prime notation (b', c', d') and KaTeX
-            # rejects U+2019 as an unknown symbol.
+            # Revert smart quotes in math fences back to ASCII---a
+            # smart-quote editor can corrupt prime notation (b', c', d')
+            # and KaTeX rejects smart quotes as unknown symbols.
             if in_math_fence:
-                result.append(line.replace(RSQUOTE, "'"))
+                result.append(line.translate(MATH_QUOTE_FIXUPS))
             else:
                 result.append(line)
             continue
@@ -83,8 +94,8 @@ def smartify(path: str) -> bool:
                 out.append(ch)
 
             elif in_math:
-                # Revert any U+2019 that slipped into inline math back to ASCII.
-                out.append("'" if ch == RSQUOTE else ch)
+                # Revert any smart quote that slipped into inline math.
+                out.append(MATH_QUOTE_FIXUPS.get(ord(ch), ch))
 
             elif ch == '"':
                 prev = s[i - 1] if i > 0 else ' '
