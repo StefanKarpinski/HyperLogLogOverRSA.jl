@@ -39,8 +39,8 @@ On behalf of clients, the client implementor should choose acceptance criteria f
     - The simplest way to fingerprint clients is just to choose $B = 2^{128}$ and let the bucket be the fingerprint. This limit prevents that kind of “attack”.
     - Example: $B_{\max} = 2^{16}$
 - ``m_{\max}`` — maximum geometric sample
-    - This is mostly a sanity check since extreme geometric samples are so rare as to not matter. Capping it also keeps the client’s per-request exponent arithmetic within fixed-width integers and prevents a malicious server from forcing a client to compute in some absurdly large geometric range. A cap of $63$ already allows cardinality estimates up to around $2^{63}$, astronomically more than any real client population.
-    - Example: $m_{\max} = 63$
+    - Mostly a sanity check: extreme geometric samples are vanishingly rare, and we don’t want a malicious server forcing a client to work in an absurdly large geometric range. The real ceiling is the width of the hash used to derive per-class values, since the geometric coordinate is uniform only while $m$ is at most that width — $128$ bits in the reference derivation. Within that, a client that does its per-request exponent arithmetic in fixed-width integers should cap near $63$ (to stay in `Int64`/`Int128`), while one using arbitrary-precision integers can accept up to $127$.
+    - Example: $m_{\max} = 127$ (arbitrary-precision client) or $63$ (fixed-width client)
 - ``L_{\max}`` — maximum modulus bit-length
     - This is also mostly a sanity check to make sure that clients aren’t DoSed by being made to do arithmetic in some absurdly large modulus.
     - Example: $L_{\max} = 2^{20}$
@@ -170,7 +170,7 @@ y = \fmod(wx^t, N)
 \end{aligned}
 ```
 
-This is the value it sends along with the request in a header. The request should also include some hash of the ring parameters so that the server can know which ring the value belongs to. This could just be the modulus, or a cryptographic hash of the ring certificate. Note that $N$ will be large enough that a cryptographic hash is actually the more compact option.
+This value $y$ is what the client sends with the request, in a header that also carries a short identifier for the ring — a truncated hash of the ring parameters — so the server knows which modulus $y$ belongs to. A few bytes are enough to tell a server’s rings apart, so the identifier stays far smaller than $y$ itself.
 
 ## Server step 5: Request validation & decoding
 
@@ -204,3 +204,46 @@ It is tempting to think that, because each decoded record is only a small HyperL
 What *is* safe to expose is **aggregate** output for large enough slices: per-slice cardinality, rather than the per-request $(b, k)$ values themselves. This is safe so long as a **minimum-cardinality floor** is enforced—report no slice whose estimated cardinality falls below a threshold $T$, folding everything beneath it into a single “other” bucket. How large $T$ must be has a clean answer: a published estimate keeps a client anonymous exactly when it cannot reveal whether that client is present, and we can measure how close it comes. Adding or removing one client shifts the expected estimate by $1$, against a standard error of about $1.04\,n/\sqrt{B}$, so a single client’s detectability is the ratio $\sqrt{B}/(1.04\,n)$. Once that ratio drops well below $1$, the estimator’s own sampling noise drowns out any individual contribution. Setting $n = \sqrt{B}$ ($\approx 64$ for $B = 2^{12}$) makes that ratio about $1$, so at a cardinality of $\sqrt{B}$ a lone client is still fully visible; bringing it down to a quarter or an eighth takes only a small multiple more, a floor of four to eight times $\sqrt{B}$, a few hundred clients, with a round $T = 1024$ at the conservative end. The bound is for a single published estimate, though; an adversary who differences overlapping slices or repeats queries averages the noise away, and must be limited separately.
 
 These rules also close the inflation channel discussed in [Malicious clients](05-security-analysis.md#Malicious-clients): an attacker who can read fine-grained per-slice counts gains a decoding oracle for their own forged tokens, and denying counts on sub-floor slices removes it. So the cardinality floor pays for itself three times over—anonymity in small populations, safety of published output, and resistance to inflation attacks.
+
+## Deployment in Julia’s Pkg client
+
+The protocol above is general; here we pin down the concrete choices for the Julia Pkg client, the setting these ideas were developed for.
+
+**Acceptance bounds.** A client accepts a ring only within $B_{\max} = 2^{12}$, $m_{\max} = 127$, $L_{\max} = 2^{20}$, and $\alpha_{\min} = 2^{112}$ — so a conforming certificate carries $n = 166$ square roots, all of which the client verifies. The relatively high $m_{\max} = 127$ is possible because the client does its per-request arithmetic in arbitrary-precision integers.
+
+**Certificate endpoint.** The server publishes its certificate as TOML at `$server/hll_rsa.toml`, with $N$, $g$, and the square roots written as decimal strings, since TOML integers are only 64 bits wide:
+
+```toml
+B = 4095
+m = 63
+N = "…"
+g = "…"
+sqrts = ["…", "…"]   # n = 166 of them at α = 2^112
+```
+
+This endpoint is exempt from the HLL-over-RSA header: the header is attached only to requests whose path maps to a resource class (see [Resource class sharding](03-counting-users.md#Resource-class-sharding)), and `hll_rsa.toml` is not one. That avoids a circular dependency and keeps the header off metadata requests.
+
+**Stored ring record.** Once a certificate verifies, the client saves the ring — but not the large, no-longer-needed square roots — together with a freshly generated master key $x_0 \in J_N^-$, to `~/.julia/servers/<host>/hll_rsa.toml`:
+
+```toml
+B = 4095
+m = 63
+N = "…"
+g = "…"
+x0 = "…"
+installed_at = 2026-07-01T16:00:00
+```
+
+The file is written atomically — to a temporary file, then renamed into place — and is rewritten only when the ring actually changes, at which point a fresh $x_0$ is generated.
+
+**Refresh.** The client re-fetches the certificate once at the start of a session and at most once a day thereafter, keeping the last-check time in memory so routine checks never touch the file. It detects a changed ring by comparing a hash of the parameters $(N, B, m, g)$ against the stored record; on a change it re-verifies, regenerates $x_0$, and replaces the record. Any failure — no endpoint, a certificate that fails verification, a network error — is non-fatal: the client falls back to its stored ring if it has one, and otherwise simply sends no header.
+
+**Header.** For a request in a resource class, the client sends
+
+```
+Julia-Pkg-HLL-RSA: <ring-id>,<token>
+```
+
+where `<ring-id>` is the first 32 bits of a SHA-256 hash of the ring parameters $(N, B, m, g)$, in hex — enough for the server to look up the modulus, and kept short so it costs little next to the token — and `<token>` is the base64 encoding of $y$ written as big-endian bytes.
+
+**Opt-out.** The header is sent by default. Setting `JULIA_PKG_SERVER_HLL_RSA` to a false value (`0`, `false`, `no`, `f`, …) disables it entirely.
