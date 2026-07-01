@@ -231,7 +231,6 @@ m = 63
 N = "…"
 g = "…"
 x0 = "…"
-installed_at = 2026-07-01T16:00:00
 ```
 
 The file is written atomically — to a temporary file, then renamed into place — and is rewritten only when the ring actually changes, at which point a fresh $x_0$ is generated.
