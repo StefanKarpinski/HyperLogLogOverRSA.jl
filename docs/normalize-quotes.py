@@ -87,30 +87,45 @@ def smartify(path: str) -> bool:
         in_math = False
         s = stripped
 
-        for i, ch in enumerate(s):
+        i = 0
+        n = len(s)
+        while i < n:
+            ch = s[i]
+            # Inline code span: copy a `…`-delimited run verbatim, so neither
+            # quotes nor a `$` inside it are touched.
+            if ch == '`' and not in_math:
+                k = 1
+                while i + k < n and s[i + k] == '`':
+                    k += 1
+                fence = '`' * k
+                j = s.find(fence, i + k)
+                if j == -1:
+                    out.append(fence)
+                    i += k
+                else:
+                    out.append(s[i:j + k])
+                    i = j + k
+                continue
             # Toggle inline-math state on unescaped $
             if ch == '$' and (i == 0 or s[i - 1] != '\\'):
                 in_math = not in_math
                 out.append(ch)
-
             elif in_math:
                 # Revert any smart quote that slipped into inline math.
                 out.append(MATH_QUOTE_FIXUPS.get(ord(ch), ch))
-
             elif ch == '"':
                 prev = s[i - 1] if i > 0 else ' '
-                out.append('“' if prev in OPENING_BEFORE else '”')
-
+                out.append('\u201c' if prev in OPENING_BEFORE else '\u201d')
             elif ch == "'":
                 prev = s[i - 1] if i > 0 else ''
-                nxt  = s[i + 1] if i < len(s) - 1 else ''
+                nxt = s[i + 1] if i + 1 < n else ''
                 if prev.isalpha() and nxt.isalpha():
                     out.append(RSQUOTE)   # apostrophe / right single quote
                 else:
                     out.append(ch)
-
             else:
                 out.append(ch)
+            i += 1
 
         result.append(''.join(out) + '\n')
 
