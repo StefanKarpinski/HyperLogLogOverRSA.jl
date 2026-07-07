@@ -100,7 +100,7 @@ The pipeline (each stage is one struct + constructor):
 
 Supporting modules: `PrimePairs.jl` (primes of the form `scale·p + 1`),
 `Jacobi.jl` (Jacobi symbol, random twist, `mod4`/`mod8` with BigInt fast paths),
-`Hashing.jl` (`ring_hash` → element of ℤ_N via SHA-512; `hash_resource_class` →
+`Hashing.jl` (`hash_into_ring` → element of ℤ_N via SHA-512; `hash_resource_class` →
 UInt128 via SHA-256). `RingCert.jl` also holds `modsqrt` (Tonelli–Shanks plus
 `p≡3 mod 4` / `p≡5 mod 8` fast paths).
 

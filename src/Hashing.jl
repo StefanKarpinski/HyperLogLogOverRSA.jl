@@ -12,7 +12,7 @@ function shift_add_byte!(x::BigInt, b::UInt8)
     add_ui!(x, b)
 end
 
-function ring_hash(
+function hash_into_ring(
     N :: Integer,
     keys :: Union{Integer,AbstractString,Symbol}...;
     untwist :: Integer = zero(N),

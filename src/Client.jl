@@ -74,9 +74,9 @@ function Client(cert::RingCert; rng::AbstractRNG = DEFAULT_RNG)
     τ = fixed_twist(N)
     for (i, r) in enumerate(cert.sqrts)
         r² = powermod(r, 2, N)
-        x = ring_hash(N, :sqrt_x, i; untwist=τ)
+        x = hash_into_ring(N, :sqrt_x, i; untwist=τ)
         x == r² && continue
-        y = ring_hash(N, :sqrt_y, i; untwist=τ)
+        y = hash_into_ring(N, :sqrt_y, i; untwist=τ)
         y == r² && continue
         z = modmul(x, y, N)
         z == r² && continue

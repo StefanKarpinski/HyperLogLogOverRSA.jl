@@ -63,9 +63,9 @@ function RingCert(ring::Ring{T}; rng::AbstractRNG = DEFAULT_RNG) where {T<:Integ
     sqrts = T[]
     τ = fixed_twist(N)
     for i = 1:SQRT_SAMPLES
-        x = ring_hash(N, :sqrt_x, i; untwist=τ)
+        x = hash_into_ring(N, :sqrt_x, i; untwist=τ)
         push_sqrt_mod_N(x) && continue
-        y = ring_hash(N, :sqrt_y, i; untwist=τ)
+        y = hash_into_ring(N, :sqrt_y, i; untwist=τ)
         push_sqrt_mod_N(y) && continue
         z = modmul(x, y, N)
         push_sqrt_mod_N(z) && continue
