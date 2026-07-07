@@ -235,9 +235,9 @@ x0 = "…"
 
 The file is written atomically — to a temporary file, then renamed into place — and is rewritten only when the ring actually changes, at which point a fresh $x_0$ is generated in the new ring.
 
-**Ring hashing.** The change check and the header identifier both derive from a single canonical hash of the ring parameters. Write $B$, $m$, $N$, and $g$ in decimal — no leading zeros, and, being nonnegative, no signs — and join them in that order with commas (the ASCII string `B,m,N,g`, each letter standing for that parameter’s decimal digits); the SHA-256 of that string is the **ring hash**. Since a comma can never occur within a decimal value, distinct rings always yield distinct strings. The header’s **ring-id** is the first four bytes of the ring hash as lowercase hex (eight characters), while change detection compares the full 32-byte digest. Client and server must build this string identically, since it is what lets the server map a ring-id back to a modulus.
+**Ring hashing.** The change check and the header identifier both derive from a single canonical hash of the ring parameters. Write $B$, $m$, $N$, and $g$ in decimal — no leading zeros, and, being nonnegative, no signs — and join them in that order with commas. In Julia code, this can be gotten as `”$B,$m,$N,$g”`. The SHA-256 of this string is the **ring hash**. The header’s **ring-id** is the first four bytes of the ring hash as lowercase hex (eight characters), while change detection compares the full 32-byte digest.
 
-**Refresh.** The client re-fetches the certificate once at the start of a session and once a day thereafter, keeping the last-check time in memory. Last check time does not need to be saved to a file. The client detects a changed ring by comparing its ring hash against that of the stored ring; on a change it re-verifies, regenerates $x_0$, and replaces the record. Any failure — no endpoint, a certificate that fails verification, a network error — is non-fatal: the client falls back to its stored ring if it has one, and otherwise simply sends no header.
+**Refresh.** The client re-fetches the certificate once at the start of a session and once a day thereafter, keeping the last-check time in memory (this timestamp does not need to be saved to a file, only in memory). The client detects a changed ring by comparing its ring hash against that of the stored ring; on a change it re-verifies, regenerates $x_0$, and replaces the record. Any failure — no endpoint, a certificate that fails verification, a network error — is non-fatal: the client falls back to its stored ring if it has one, and otherwise simply sends no header.
 
 **Header.** For a request in a resource class, the client sends
 
@@ -247,4 +247,6 @@ Julia-Pkg-HLL-RSA: <ring-id>,<token>
 
 where `<ring-id>` is the first four bytes of the ring hash, as lowercase hex — enough for the server to look up the modulus, and kept short so it costs little next to the token — and `<token>` is the base64 encoding of $y$ written as big-endian bytes.
 
-**Opt-out.** The header is sent by default. Setting `JULIA_PKG_SERVER_HLL_RSA` to a false value (`0`, `false`, `no`, `f`, …) disables it entirely.
+**Error reporting.** Anything in the client’s HLL machinery can fail on a request that would otherwise carry a token — the certificate can’t be fetched or parsed, it fails verification, or something unexpected goes wrong. Rather than fall silent, the client then sends `error,<reason>` in place of `<ring-id>,<token>`, with `<reason>` one of `fetch`, `verify`, or `internal`. This never disrupts the request, but it lets the server distinguish a client that hit an error from one that has opted out (which sends no header at all) — useful for spotting a broken certificate or a client-side bug across the fleet.
+
+**Opt-out.** The header is sent by default. Setting `JULIA_PKG_SERVER_HLL_RSA` to a false value (`0`, `false`, `no`, `f`, …) disables it entirely — no header of either kind is sent.
