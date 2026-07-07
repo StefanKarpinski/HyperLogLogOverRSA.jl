@@ -641,7 +641,7 @@ Here we have divided common factors—$B_U$, $2^{\bar{m}}$ and $B_V$, respective
 ```math
 \begin{aligned}
 i &= b' (B/B_U 2^m)^{-1} && \pmod{U/B_U} \\
-i &= c' B^{-1}     && \pmod{2^{n-\bar{m}}} \\
+i &= c' B^{-1}           && \pmod{2^{n-\bar{m}}} \\
 i &= d' (B/B_V 2^m)^{-1} && \pmod{V/B_V} \\
 \end{aligned}
 ```
