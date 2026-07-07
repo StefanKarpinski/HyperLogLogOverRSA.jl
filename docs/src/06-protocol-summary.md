@@ -209,7 +209,7 @@ These rules also close the inflation channel discussed in [Malicious clients](05
 
 The protocol above is general; here we pin down the concrete choices for the Julia Pkg client, the setting these ideas were developed for.
 
-**Acceptance bounds.** A client accepts a ring only within $B_{\max} = 2^{12}$, $m_{\max} = 127$, $L_{\max} = 2^{20}$, and $\alpha_{\min} = 2^{112}$ — so a conforming certificate carries $n = 166$ square roots, all of which the client verifies. The relatively high $m_{\max} = 127$ is possible because the client does its per-request arithmetic in arbitrary-precision integers.
+**Acceptance bounds.** A client accepts a ring only within $B_{\max} = 2^{12}$, $m_{\max} = 127$, $L_{\max} = 2^{20}$, and $\alpha_{\min} = 2^{112}$ — so a conforming certificate carries $n ≥ 166$ square roots, all of which the client verifies. The relatively high $m_{\max} = 127$ is possible because the client does its per-request arithmetic in arbitrary-precision integers; the client doesn’t care what kind of integers the server needs to use for its arithmetic.
 
 **Certificate endpoint.** The server publishes its certificate as TOML at `$server/hll_rsa.toml`, with $N$, $g$, and the square roots written as decimal strings, since TOML integers are only 64 bits wide:
 
@@ -233,9 +233,11 @@ g = "…"
 x0 = "…"
 ```
 
-The file is written atomically — to a temporary file, then renamed into place — and is rewritten only when the ring actually changes, at which point a fresh $x_0$ is generated.
+The file is written atomically — to a temporary file, then renamed into place — and is rewritten only when the ring actually changes, at which point a fresh $x_0$ is generated in the new ring.
 
-**Refresh.** The client re-fetches the certificate once at the start of a session and at most once a day thereafter, keeping the last-check time in memory so routine checks never touch the file. It detects a changed ring by comparing a hash of the parameters $(N, B, m, g)$ against the stored record; on a change it re-verifies, regenerates $x_0$, and replaces the record. Any failure — no endpoint, a certificate that fails verification, a network error — is non-fatal: the client falls back to its stored ring if it has one, and otherwise simply sends no header.
+**Ring hashing.** The change check and the header identifier both derive from one canonical hash of the ring parameters, taken in the fixed order $B$, $m$, $N$, $g$. Each parameter is serialized as its little-endian base-256 byte string — least-significant byte first, minimal length, so $0$ is the empty string — preceded by that string’s length as an 8-byte little-endian integer. The four length-prefixed encodings are concatenated in order and hashed with SHA-256. That 32-byte digest is the **ring hash**, compared in full for change detection; the **ring-id** carried in the header is its first four bytes, written as lowercase hex (eight characters). Client and server must implement this encoding identically, since it is what lets the server map a ring-id back to a modulus.
+
+**Refresh.** The client re-fetches the certificate once at the start of a session and once a day thereafter, keeping the last-check time in memory. Last check time does not need to be saved to a file. The client detects a changed ring by comparing its ring hash against that of the stored ring; on a change it re-verifies, regenerates $x_0$, and replaces the record. Any failure — no endpoint, a certificate that fails verification, a network error — is non-fatal: the client falls back to its stored ring if it has one, and otherwise simply sends no header.
 
 **Header.** For a request in a resource class, the client sends
 
@@ -243,6 +245,6 @@ The file is written atomically — to a temporary file, then renamed into place 
 Julia-Pkg-HLL-RSA: <ring-id>,<token>
 ```
 
-where `<ring-id>` is the first 32 bits of a SHA-256 hash of the ring parameters $(N, B, m, g)$, in hex — enough for the server to look up the modulus, and kept short so it costs little next to the token — and `<token>` is the base64 encoding of $y$ written as big-endian bytes.
+where `<ring-id>` is the first four bytes of the ring hash, as lowercase hex — enough for the server to look up the modulus, and kept short so it costs little next to the token — and `<token>` is the base64 encoding of $y$ written as big-endian bytes.
 
 **Opt-out.** The header is sent by default. Setting `JULIA_PKG_SERVER_HLL_RSA` to a false value (`0`, `false`, `no`, `f`, …) disables it entirely.
