@@ -39,8 +39,14 @@ function hash_into_ring(
     return x
 end
 
-function hash_resource_class(salt::Any, class::Any)
-    bytes = sha256("$salt\0$class\0")
+# Per-class exponent: HMAC-SHA-256 keyed by a hash of the client's secret x₀,
+# with the first 16 bytes read big-endian into a 128-bit integer. Keying by x₀
+# means the client can't bias its own draw and each class is an independent
+# draw. The ring holder never recomputes this — decoding uses the factorization
+# directly — so any keyed hash of the class works; HMAC is a standard keyed MAC.
+function hash_resource_class(x₀::Integer, class::Any)
+    key = sha256(digits(UInt8, x₀; base=256))
+    bytes = hmac_sha2_256(key, codeunits(string(class)))
     h = zero(UInt128)
     for i = 1:sizeof(h)
         h <<= 8

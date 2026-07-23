@@ -29,7 +29,7 @@ The system operator chooses HyperLogLog parameters, RSA bit-length, and a certif
 - ``\alpha`` is the certificate strength
     - Effort to generate a valid-looking malicious $N$ value
     - Should be at least $2^\lambda$ for the system security level $\lambda$, and never below $2^{80}$ (see [Malicious servers](05-security-analysis.md#Malicious-servers))
-    - Example: $\alpha = 2^{128}$
+    - Example: $\alpha = 2^{112}$
 
 ## Client step 0: Parameter acceptance criteria
 
@@ -37,7 +37,7 @@ On behalf of clients, the client implementor should choose acceptance criteria f
 
 - ``B_{\max}`` — maximum bucket count
     - The simplest way to fingerprint clients is just to choose $B = 2^{128}$ and let the bucket be the fingerprint. This limit prevents that kind of “attack”.
-    - Example: $B_{\max} = 2^{16}$
+    - Example: $B_{\max} = 2^{12}$
 - ``m_{\max}`` — maximum geometric sample
     - Mostly a sanity check: extreme geometric samples are vanishingly rare, and we don’t want a malicious server forcing a client to work in an absurdly large geometric range. The real ceiling is the width of the hash used to derive per-class values, since the geometric coordinate is uniform only while $m$ is at most that width — $128$ bits in the reference derivation. Within that, a client that does its per-request exponent arithmetic in fixed-width integers should cap near $63$ (to stay in `Int64`/`Int128`), while one using arbitrary-precision integers can accept up to $127$.
     - Example: $m_{\max} = 127$ (arbitrary-precision client) or $63$ (fixed-width client)
@@ -46,7 +46,7 @@ On behalf of clients, the client implementor should choose acceptance criteria f
     - Example: $L_{\max} = 2^{20}$
 - ``\alpha_{\min}`` — minimum certificate strength
     - This is the least number of modulus values a malicious server would expect to have to try in order to find one that passes certificate checks. The server can provide more square roots than this strength implies, but not fewer.
-    - Example: $\alpha_{\min} = 2^{80}$
+    - Example: $\alpha_{\min} = 2^{112}$
 
 ## Server step 1: Ring generation
 
@@ -236,6 +236,8 @@ x0 = 1055559624789921343…
 The file is written atomically — to a temporary file, then renamed into place — and is rewritten only when the ring actually changes, at which point a fresh $x_0$ is generated in the new ring.
 
 **Ring hashing.** The header carries a compact **ring-id** that identifies the modulus. Write $B$, $m$, $N$, and $g$ in decimal — no leading zeros, and, being nonnegative, no signs — and join them in that order with commas (in Julia, `"$B,$m,$N,$g"`); the ring-id is the first four bytes of the SHA-256 of that string, as lowercase hex (eight characters). Change detection does not use the ring-id, instead comparing parameters directly.
+
+**Class hashing.** The per-class exponent $h = \hash(x_0, \text{class})$ is instantiated as HMAC-SHA-256 keyed by the SHA-256 hash of $x_0$ (its little-endian bytes), applied to the class string’s bytes, with the first 16 bytes of the digest read big-endian into a 128-bit integer. The ring holder decodes with the factorization and never recomputes $h$, so this is purely a client-side choice: any keyed hash of the class works, and keying it by $x_0$ is what makes each client’s per-class draw independent and impossible for the client to bias.
 
 **Refresh.** The client re-fetches the certificate once at the start of a session and once a day thereafter, keeping the last-check time in memory (this timestamp does not need to be saved to a file, only in memory). The client detects a changed ring by comparing its parameters against those of the stored ring; on a change it re-verifies, regenerates $x_0$, and replaces the record. Any failure — no endpoint, a certificate that fails verification, a network error — is non-fatal: the client falls back to its stored ring if it has one, and otherwise simply sends no header.
 

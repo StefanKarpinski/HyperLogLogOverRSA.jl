@@ -115,7 +115,7 @@ n = \ceil{\frac{\log_2 \alpha}{\log_2(8/5)}}.
 
 Drawing the challenge pairs by hashing $N$ makes this a non-interactive certificate $(B, m, N, g, \text{square roots})$. Verification is one Jacobi symbol, two gcds, and $n$ squarings.
 
-Two cautions on $\alpha$ (detailed in [Malicious servers](05-security-analysis.md#Malicious-servers)): a forger knows its *own* candidate’s factorization, so the QR checks are free for it and it fails fast, meaning $\alpha$ must be sized against attacker wall-clock rather than a bare trial count. Since $n$ grows only as $\log \alpha$, the certificate stays tiny regardless — so use $\alpha \ge 2^\lambda$ for the system security level $\lambda$, never below $2^{80}$, with $\alpha = 2^{128}$ ($n = 189$, ~24 KB) the comfortable default.
+Two cautions on $\alpha$ (detailed in [Malicious servers](05-security-analysis.md#Malicious-servers)): a forger knows its *own* candidate’s factorization, so the QR checks are free for it and it fails fast, meaning $\alpha$ must be sized against attacker wall-clock rather than a bare trial count. Since $n$ grows only as $\log \alpha$, the certificate stays tiny regardless — so use $\alpha \ge 2^\lambda$ for the system security level $\lambda$, never below $2^{80}$, with $\alpha = 2^{112}$ ($n = 166$, ~21 KB) the comfortable default.
 
 ## What is proven, and what is not
 

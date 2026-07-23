@@ -414,7 +414,7 @@ The components of $y$ that convey information are:
 - The bucket index: $b + h \in \Z_B$
 - The geometric sample: $\tz(t(c + h)) \in \set{0, \dots, m}$
 
-Here we can see that the real requirement on $h$ is that $(b + h, c + h)$ covers all of $\Z_B \times \Z_{2^m}$ fairly uniformly as $h$ takes on different values. To ensure this it’s sufficient to ensure that $h$ is sampled from a modulus, $M$ such that $\fmod(M, B2^m)$ is tiny relative to $M \div B2^m$. We could use an exact multiple of $B2^m$, which makes the modulus zero. But that’s inconvenient, since real world hashes have power-of-two outputs. Fortunately, if $M$ is sufficiently large, the bias (ratio) is negligible. For any modern hash function like SHA256, this is the case. In our reference implementation, we actually use the output of SHA256, truncated into a 128-bit integer value, which is still more than large enough to guarantee effectively uniform coverage.
+Here we can see that the real requirement on $h$ is that $(b + h, c + h)$ covers all of $\Z_B \times \Z_{2^m}$ fairly uniformly as $h$ takes on different values. To ensure this it’s sufficient to ensure that $h$ is sampled from a modulus, $M$ such that $\fmod(M, B2^m)$ is tiny relative to $M \div B2^m$. We could use an exact multiple of $B2^m$, which makes the modulus zero. But that’s inconvenient, since real world hashes have power-of-two outputs. Fortunately, if $M$ is sufficiently large, the bias (ratio) is negligible. For any modern hash function like SHA-256, this is the case. In our reference implementation, we actually use the output of HMAC-SHA-256 (keyed by the SHA-256 hash of $x_0$), truncated into a 128-bit integer value, which is still more than large enough to guarantee effectively uniform coverage.
 
 What information do we make sure is **not** conveyed?
 
@@ -425,7 +425,7 @@ To ensure the former, we want $t$ to be able to take every odd residue class in 
 
 Putting it all together, for each request a client makes, this scheme requires the client to:
 
-- Compute $h = \hash(x_0, \text{class})$ — one SHA256 hash operation
+- Compute $h = \hash(x_0, \text{class})$ — one HMAC-SHA-256 operation
 - Compute $g^h \bmod N$ — one modular exponentiation
 - Compute $x_h = x_0 g^h \bmod N$ — one modular multiplication
 - Generate random $z \in \Z_N^*$
@@ -448,9 +448,9 @@ Here’s the actual code for this in our test implementation:
 h = hash_resource_class(x₀, class)
 x = modmul(x₀, powermod(g, h, N), N)
 z = rand(rng, 1:N-1)
-w = powermod(z, widen(B) << m, N)
-i = rand(rng, 0:(Int64(1) << (m-1))-1)
-t = widemul(2B, i) + 1
+w = powermod(z, oftype(N, B) << m, N)
+i = rand(rng, zero(N):(oftype(N, 1) << (m-1)) - one(N))
+t = 2 * oftype(N, B) * i + one(N)
 y = modmul(w, powermod(x, t, N), N)
 ```
 As you can see, this is a very literal rendition of the steps described. On my M2 MacBook Air, for $1024$-bit $N$, this takes around $80$ microseconds; for $2048$-bit $N$, it takes $435$ microseconds, less than half a millisecond. In other words, these computations are easily fast enough to perform during each Pkg request — the network request itself will take orders of magnitude more time.

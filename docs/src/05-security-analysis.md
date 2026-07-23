@@ -747,7 +747,7 @@ To put numbers on it, take a deliberately attacker-favorable estimate of $10^{11
 | $2^{112}$ | infeasible | infeasible | 166 | ~21 KB |
 | $2^{128}$ | infeasible | infeasible | 189 | ~24 KB |
 
-Because $n$ grows only logarithmically in $\alpha$, buying a gigantic safety margin is nearly free: the certificate stays a few dozen kilobytes and the server’s square-root computation stays sub-second. The recommendation is therefore to set $\alpha \ge 2^\lambda$ for the system’s overall security level $\lambda$, and never below $2^{80}$. The simplest safe choice is $\alpha = 2^{128}$, which makes finding a malicious $N$ that passes the test so unlikely that it is no longer a concern.
+Because $n$ grows only logarithmically in $\alpha$, buying a gigantic safety margin is nearly free: the certificate stays a few dozen kilobytes and the server’s square-root computation stays sub-second. The recommendation is therefore to set $\alpha \ge 2^\lambda$ for the system’s overall security level $\lambda$, and never below $2^{80}$. The simplest safe choice is $\alpha = 2^{112}$ ($n = 166$), which makes finding a malicious $N$ that passes the test so unlikely that it is no longer a concern.
 
 The non-interactive version of this protocol serves as a certificate of fingerprint-freedom for a published $N$ value. The certificate structure contains:
 
