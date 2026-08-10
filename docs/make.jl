@@ -80,7 +80,9 @@ makedocs(
             "Security Analysis (Proofs)" => "05-security-analysis.md",
             "Protocol Summary"           => "06-protocol-summary.md",
         ],
-        "Reference Implementation" => "reference.md",
+        "Reporting & Retention"        => "07-reporting-and-retention.md",
+        "Deployment in Julia's Pkg"    => "08-deployment.md",
+        "Reference Implementation"     => "reference.md",
     ],
 )
 
