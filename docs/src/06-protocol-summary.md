@@ -172,6 +172,8 @@ y = \fmod(wx^t, N)
 
 This value $y$ is what the client sends with the request, in a header that also carries a short identifier for the ring — a truncated hash of the ring parameters — so the server knows which modulus $y$ belongs to. A few bytes are enough to tell a server’s rings apart, so the identifier stays far smaller than $y$ itself.
 
+To keep a client’s bucket *common* across resource classes rather than independent per class — the *semisharding* variant — the client derives $x$ with $f = g^B$ in place of $g$, so that $x = x_0 f^h = x_0 g^{Bh}$. Because $g^B$ has a trivial $C_B$ component, the bucket becomes the client’s fixed master-key bucket while the geometric sample still varies per class. This defends against the cross-class correlation attack on clients that make consistent request bundles over time ([Request bundles and cross-class correlation](05-security-analysis.md#Request-bundles-and-cross-class-correlation)); it is the variant Julia’s Pkg client ships.
+
 ## Server step 5: Request validation & decoding
 
 The server should not attempt to validate request headers while responding to requests, it should simply serve requests and log the header information for later processing. This also means that the factorization of $N$ does not need to reside on public-facing servers—it only needs to be available for offline log processing. This significantly reduces the chances of the factorization being accidentally leaked or exfiltrated by an attacker.

@@ -454,3 +454,27 @@ t = 2 * oftype(N, B) * i + one(N)
 y = modmul(w, powermod(x, t, N), N)
 ```
 As you can see, this is a very literal rendition of the steps described. On my M2 MacBook Air, for $1024$-bit $N$, this takes around $80$ microseconds; for $2048$-bit $N$, it takes $435$ microseconds, less than half a millisecond. In other words, these computations are easily fast enough to perform during each Pkg request — the network request itself will take orders of magnitude more time.
+
+## Semisharding
+
+The construction above shards *both* HLL coordinates. Because $h = \hash(x_0, \text{class})$ enters the bucket coordinate as $b_0 + h$ and the geometric coordinate as $c_0 + h$, a client lands in an independent bucket *and* draws an independent geometric sample in every resource class. That is the natural thing to do, but it is not the only option. We can instead shard only the geometric sample, keeping a client’s bucket the *same* in every class — a variant we call *semisharding*. The reason one might want this — a malicious observer correlating a client’s per-class values across a bundle of co-requested classes — is developed in [Request bundles and cross-class correlation](05-security-analysis.md#Request-bundles-and-cross-class-correlation); here we show only that the change is a one-line tweak that costs nothing.
+
+Recall that a semigenerator has $\log(g) = (1, 1, 1, 1)$ across $\Z_2 \times \Z_B \times \Z_{2^m} \times \Z_{pq}$. Replace $g$ with $f = g^B$. Raising to the $B$ power multiplies every log-coordinate by $B$, so
+
+```math
+\begin{aligned}
+\log(f) = (B, B, B, B) = (1,\, 0,\, B,\, B),
+\end{aligned}
+```
+
+using that $B$ is odd (so $B \equiv 1 \bmod 2$) and that the $C_B$ coordinate is reduced $\bmod B$ (so $B \equiv 0$). The $C_B$ component is annihilated — for *any* $g$, whatever its own bucket coordinate. Deriving the per-class element with $f$ in place of $g$, and writing the master key’s coordinates as $\log(x_0) = (a_0, b_0, c_0, d_0)$,
+
+```math
+\begin{aligned}
+\log(x_0 f^h) = (a_0 + h,\; b_0,\; c_0 + Bh,\; d_0 + Bh).
+\end{aligned}
+```
+
+The bucket coordinate is now $b_0$ — the client’s own master-key bucket, *fixed across every class* — and it survives to the token unchanged, since the sent value $y = w(x_0 f^h)^t$ has $t \equiv 1 \bmod B$ and $w$ contributes nothing to the $C_B$ part, so the server decodes bucket $b_0$ in every class. The geometric coordinate is $c_0 + Bh$, which still ranges uniformly over $\Z_{2^m}$ as $h$ varies, because $B$ is coprime to $2^m$ and so a unit there. Semisharding thus keeps exactly what HyperLogLog needs and drops only the per-class variation of the bucket.
+
+Nothing about the count changes. Within any single class, clients are still spread uniformly across buckets — now by their master-key bucket $b_0$, uniform because $x_0$ is random — and each contributes a fresh geometric sample, so a per-class sketch is indistinguishable from ordinarily sharded HyperLogLog. The fairness property survives too: a client is conspicuous in a class only when its geometric sample there is unusually high, and that sample is still independent per class, so every client is bland in most classes and rare in a few. The one thing that changes is that a client’s bucket no longer varies from class to class — which is precisely the property the [security analysis](05-security-analysis.md#Request-bundles-and-cross-class-correlation) shows we want. This — $f = g^B$ — is the construction Julia’s Pkg client ships.
