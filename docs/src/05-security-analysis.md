@@ -1,6 +1,6 @@
 # Security Analysis (Proofs)
 
-This section formalizes the security properties of the protocol. The first part proves the central anonymity result: when $N$ is fingerprint-free, two clients with the same HLL value produce indistinguishable token distributions, so the server learns nothing beyond that value. Rather than assuming the specific structure $N = PQ = (2Bp+1)(2^m q+1)$, we work with a general characterization of fingerprint-free moduli — a condition that will also be needed when we analyze how servers can certify their modulus. We assume throughout that $B$ is odd and $m ≥ 2$.
+This section formalizes the security properties of the protocol. The first part proves the central anonymity result: when $N$ is fingerprint-free, two clients with the same HLL value produce indistinguishable token distributions, so the server learns nothing beyond that value. Rather than assuming the specific structure $N = PQ = (2Bp+1)(2^m q+1)$, we work with a general characterization of fingerprint-free moduli — a condition that will also be needed when we analyze how servers can certify their modulus. We assume throughout that $B = 2 \bmod 4$ and $m ≥ 3$.
 
 The second part analyzes the integrity side from the client’s perspective: how much can a malicious client inflate count estimates, and why is that effort linear rather than exponential? The third part turns to the server side: how can a server prove that its modulus is fingerprint-free without revealing its factorization, and what does it cost an attacker to forge such a proof?
 
@@ -36,94 +36,32 @@ Since the Jacobi symbol only takes $±1$ values in $\Z_N^*$, $J_N^- = \Z_N^* \se
 
 ```math
 \begin{aligned}
-W_N &= (\Z_N^*)^{B2^m}
-= \set{\, z^{B2^m} \st z \in \Z_N^* \,} ≤ J_N^+
+W_N &= (\Z_N^*)^{(B/2)2^m}
+= \set{\, z^{(B/2)2^m} \st z \in \Z_N^* \,} ≤ J_N^+
 \end{aligned}
 ```
 
-Since $B2^m$ is even ($m ≥ 2$), every element has positive Jacobi symbol, so this is a subgroup of $J_N^+$. This subgroup is where we sample “noise” values to randomize the parts of $x$ that don’t encode the HyperLogLog value. We previously described deriving individual $w$ values from random $z$ values; here we consider the entire group.
+Since $(B/2)2^m$ is even, every element has positive Jacobi symbol, so this is a subgroup of $J_N^+$. This subgroup is where we sample “noise” values to randomize the parts of $x$ that don’t encode the HyperLogLog value. We previously described deriving individual $w$ values from random $z$ values; here we consider the entire group.
 
-**Definition.**  We call a positive integer, $N$, *“fingerprint-free”* if it is odd and there exists a group homomorphism
+The exponent takes the *odd* part of $B$, and it matters that it does. Raising to a power collapses each cyclic factor only as far as that power’s own $2$-adic valuation reaches. An exponent of $B2^m$ has valuation $m+1$ once $B$ is even, which would leave the $2$-part of the quotient truncated one level too high, and a server could then choose $2^{m+1} \divides Q-1$ to widen what it can distinguish while passing every check a client makes. Since $\nfrac{B}{2}$ is odd, $(B/2)2^m$ has valuation exactly $m$ and no choice of $Q$ reaches past the intended ladder.
+
+**Definition.**  We call a positive integer, $N$, *“fingerprint-free”* if it is odd and the quotient by the white noise subgroup embeds into the HyperLogLog value group:
 
 ```math
 \begin{aligned}
-\phi: \Z_N^* \to C_B \times C_{2^m}
+\Z_N^*/W_N \hookrightarrow C_{2B} \times C_{2^m}
 \end{aligned}
 ```
 
-such that
+We write $\phi: \Z_N^* \to C_{2B} \times C_{2^m}$ for the quotient map followed by such an embedding, so that $\ker(\phi) = W_N$ exactly.
 
-```math
-\begin{aligned}
-\ker(\phi) \cap J_N^+ &= +W_N \\
-\ker(\phi) \cap J_N^- &= -W_N. \\
-\end{aligned}
-```
+The definition bounds the quotient from *above*, and only from above: it asks that dividing out the noise leave no more structure than the protocol means to reveal. A modulus whose quotient is *smaller* than $C_{2B} \times C_{2^m}$ — a degenerate ring that collapses part of the value space — satisfies it. Such a ring counts badly, but it cannot be used to tell two clients apart, which is the property the term names.
 
-**Proposition.**  $N$ is fingerprint-free if and only if $N = 3 \bmod 4$ and there exists $\phi: J_N^+ \to C_B \times C_{2^m}$ such that $\ker(\phi) \subseteq W_N$.
+It may seem strange that a definition about anonymity says nothing about $J_N^±$, since a client’s secret is required to lie in $J_N^-$ and the noise lies in $J_N^+$. One could instead ask for a homomorphism onto $C_B \times C_{2^m}$ whose kernel meets the two Jacobi classes in $+W_N$ and $-W_N$ respectively. That formulation has to name an element of $J_N^-$ to relate the two halves — and the only one available without the factorization is $-1$, which is in $J_N^-$ exactly when $N = 3 \bmod 4$. Since a forger who can name an element of $J_N^-$ can also forge rare HyperLogLog values (see [Malicious clients](05-security-analysis.md#Malicious-clients)), that is the last thing we want the modulus to supply. The $±$ construction turns out to be an artifact of a target group one factor of two too small: keeping the whole $C_{2B}$ coordinate rather than dropping its $2$-part removes the need for it.
 
-**Proof.**  The forward direction is easy: restricting $\phi$ to $J_N^+$ already gives most of what is required, we only need to show that $N = 3 \bmod 4$. It’s a standard identity that
+The quotient is also insensitive to which of the two admissible shapes $N$ has. With $B$ odd, $C_2 \times C_B \cong C_{2B}$; with $B = 2 \bmod 4$, $C_4 \times C_{B/2} \cong C_{2B}$. Only $B \bmod 4$ separates the two, and that is precisely the dial deciding whether $-1$ lands in $J_N^-$.
 
-```math
-\begin{aligned}
-\Jacobi_N(-1) = (-1)^{\frac{N-1}{2}}
-\end{aligned}
-```
-
-which means that $N = 3 \bmod 4$ iff $-1 \in J_N^-$. Since $1 \in W_N$ we know that $-1 \in -W_N \subseteq J_N^-$ which implies that $N = 3 \bmod 4$.
-
-The reverse direction is harder. First, we’ll show that if $\phi$ exists with $\ker(\phi) \subseteq W_N$ then we can also find $\phi'$ with $\ker(\phi') = W_N$. Let $K = \ker(\phi)$. The existence of $\phi: J_N^+ \to C_B \times C_{2^m}$ with $K = \ker(\phi) ≤ W_N$ tells us that $J_N^+/K$ is cyclic with order dividing $B2^m$. It also gives the following subgroup chain:
-
-```math
-\begin{aligned}
-K ≤ W_N ≤ J_N^+
-\end{aligned}
-```
-
-This implies an inclusion of quotient groups:
-
-```math
-\begin{aligned}
-W_N/K ≤ J_N^+/K
-\end{aligned}
-```
-
-Moreover, there is a canonical isomorphism:
-
-```math
-\begin{aligned}
-J_N^+/W_N \cong (J_N^+/K)/(W_N/K)
-\end{aligned}
-```
-
-So $J_N^+/W_N$ is a quotient of a cyclic group with order dividing $B2^m$ which means it must also match that description. This means there exists a homomorphism, $\phi': J_N^+ \to C_B \times C_{2^m}$ with $\ker(\phi') = W_N$ exactly. In what follows, we’ll just assume that we had $\ker(\phi) = W_N$ in the first place.
-
-Recall that $N = 3 \bmod 4$ implies that $-1 \in J_N^-$. This allows us to extend $\phi$ to all of ${} \Z_N^*$ by $\phi(x) = \phi(-x)$ for $x \in J_N^-$. We need to check four identities to verify that this is a homomorphism:
-
-1. ``x \in J_N^-``: $\phi(x) \phi(x^{-1}) = \phi(-x) \phi(-x^{-1}) = \phi(1) = 1$
-2. ``x \in J_N^-, y \in J_N^-``: $\phi(x)\phi(y) = \phi(-x)\phi(-y) = \phi(xy)$
-3. ``x \in J_N^-, y \in J_N^+``: $\phi(x)\phi(y) = \phi(-x)\phi(y) = \phi(-xy) = \phi(xy)$
-4. ``x \in J_N^+, y \in J_N^-``: $\phi(x)\phi(y) = \phi(x)\phi(-y) = \phi(-xy) = \phi(xy)$
-
-We already know that
-
-```math
-\begin{aligned}
-\ker(\phi) \cap J_N^+ = \ker(\phi |_{J_N^+}) = W_N
-\end{aligned}
-```
-
-Suppose $x \in -W_N$. Since $-x \in W_N \subseteq \ker(\phi)$, we have $\phi(x) = \phi(-x) = 1$ so $x$ is in the kernel of $\phi$ as well. This gives $-W_N \subseteq \ker(\phi)$. Now suppose $x \in \ker(\phi) \cap J_N^-$. Since $x \in J_N^-$ we have $\phi(x) = \phi(-x)$ by definition, and $x \in \ker(\phi)$ means $\phi(x) = 1$. Thus, $-x \in \ker(\phi) \cap J_N^+ = W_N$, so $x \in -W_N$. This gives the other inclusion, and together we have:
-
-```math
-\begin{aligned}
-\ker(\phi) \cap J_N^- &= -W_N \\
-\end{aligned}
-```
-
-This shows that our extension’s kernel has the necessary intersections with $±W_N$. $\square$
-
-Our convention when $N$ is fingerprint-free will be that if $x \in \Z_N^*$ we’ll write $\bar{x} = \phi(x) \in C_B \times C_{2^m}$ and if $\bar{f}$ is a function on $C_B \times C_{2^m}$, we’ll write $f = \bar{f}\phi$ for the composition whose domain is $\Z_N^*$. So you can generally think of $\bar{\triangle}$ as the “essential version” of $\triangle$, whether $\triangle$ is an element or a function.
+Our convention when $N$ is fingerprint-free will be that if $x \in \Z_N^*$ we’ll write $\bar{x} = \phi(x) \in C_{2B} \times C_{2^m}$ and if $\bar{f}$ is a function on $C_{2B} \times C_{2^m}$, we’ll write $f = \bar{f}\phi$ for the composition whose domain is $\Z_N^*$. So you can generally think of $\bar{\triangle}$ as the “essential version” of $\triangle$, whether $\triangle$ is an element or a function.
 
 **Definition.** We generalize our earlier definition of a *“semigenerator”* in a multiplicative group. Let $G = \prod_{i=1}^n C_{\alpha_i}$ be a product of cyclic groups and let $\pi_i: G \to C_{\alpha_i}$ be the canonical projection onto the $i$th component. An element $g \in G$ is called a semigenerator if the projection of $g$ onto each cyclic component is a generator for that component:
 
@@ -142,137 +80,104 @@ If the ${} \alpha_i$ are pairwise coprime, then $G$ is cyclic and $g$ is a true 
 \end{aligned}
 ```
 
-In what follows, let $\bar{g} \in C_B \times C_{2^m}$ be a fixed semigenerator.
+In what follows, let $\bar{g} \in C_{2B} \times C_{2^m}$ be a fixed semigenerator.
 
-**Definition.** The *“essential HyperLogLog function”* maps each value in $C_B \times C_{2^m}$ to its HyperLogLog sample value:
+Because the $C_p$ and $C_q$ components of an element leave its Jacobi symbol alone, $\Jacobi_N(x) = (-1)^{a+c}$ where $\log_{\bar{g}}(\phi(x)) = (a, c)$. So $\phi$ carries $J_N^-$ onto the *odd-parity subset* of the value group:
+
+```math
+\begin{aligned}
+S = \set{\, \bar{x} \in C_{2B} \times C_{2^m}
+\st \log_{\bar{g}}(\bar{x}) = (a, c) ~\text{with}~ a + c ~\text{odd} \,}
+\end{aligned}
+```
+
+Client secrets live in $J_N^-$, so $S$ is the only part of the value group the anonymity theorem has to speak about.
+
+**Definition.** The *“essential HyperLogLog function”* maps each value in $S$ to its HyperLogLog sample value. Write $\log_{\bar{g}}(\bar{x}) = (a, c)$; split $a$ by the Chinese Remainder Theorem into $(\alpha, \beta) \in \Z_4 \times \Z_{B/2}$, which is possible because $2B = 4 \cdot \nfrac{B}{2}$ with $\nfrac{B}{2}$ odd; and when $\tz(c) ≤ m-2$ write $c = 2^{\tz(c)}u$ with $u$ odd. Then
 
 ```math
 \begin{gathered}
-\bar{\hll}: C_B \times C_{2^m} \to B \times m \\[0.5em]
-\bar{\hll}(\bar{x}) = (b, \tz(c)) \\[0.8em]
-\text{where}~\log_{\bar{g}}(\bar{x}) = (b, c)
+\bar{\hll}: S \to B \times m \\[0.5em]
+\bar{\hll}(\bar{x}) = \left(\beta + \tfrac{B}{2}s,~ \tz(c)\right) \\[0.8em]
+s = \begin{cases}
+0 & \tz(c) ≥ m-1 \\
+1 & \alpha u = 2, 3 \bmod 4 \\
+0 & \text{otherwise}
+\end{cases}
 \end{gathered}
 ```
 
-The first value, $b$, implicitly depends on the choice of semigenerator, $\bar{g}$, whereas the latter, $\tz(c)$, does not: $\tz(c)$ only depends on the multiplicative order of the $C_{2^m}$ part of $\bar{x}$, which is independent of $\bar{g}$. The higher bits of $c$ do depend on $\bar{g}$, but the position of the last bit does not.
+The bucket index splits into two halves. The first, $\beta$, is the client’s position in the odd part of $C_{2B}$ — the direct descendant of the old bucket coordinate. The second, $s$, is a single bit read off the $2$-part. Neither factor of $s$ means anything alone, since $\alpha$ and $u$ are each pinned only up to an odd scalar; their product mod $4$ is another matter, because an odd $t$ has $t^2 = 1 \bmod 4$. That is what lets $s$ survive re-randomization, and it is why the bit must be *declared* part of the HyperLogLog value: the ring holder can read it whether or not we name it, so naming it is exactly what keeps it from being a fingerprint. The two top geometric levels are the exception — there the two orbits merge, $s$ is pinned to $0$, and only $\nfrac{B}{2}$ buckets occur, which affects a $2^{-(m-1)}$ share of clients.
+
+As before, $\beta$ and $s$ depend on the choice of semigenerator $\bar{g}$ whereas $\tz(c)$ does not, and as before that choice only permutes bucket labels.
 
 The HyperLogLog function for fingerprint-free $N$ on $\Z_N^*$ is defined as $\hll = \bar{\hll}\phi$, *i.e.* the composition of the $\phi$ whose existence is guaranteed by fingerprint-freeness with the essential HyperLogLog function. This depends on the choice of $\bar{g}$ for $\bar\hll$ and on which particular $\phi$ is chosen. For the purposes of the main proof, we can just assume that some fixed $\phi$ is chosen and used. The choice of $\phi$ doesn’t actually introduce any more ambiguity than already introduced by the choice of $\bar{g}$ — both choices merely permute the output bucket indices.
 
 ### The anonymity theorem
 
-**Lemma.** For $\bar{x}, \bar{y} \in C_B \times C_{2^m}$ we have $\bar{\hll}(\bar{x}) = \bar{\hll}(\bar{y})$ if and only if there exists $t \in \Z$ with $t = 1 \bmod{2B}$ such that $\bar{x}^t = \bar{y}$.
+**Lemma.** For $\bar{x}, \bar{y} \in S$ we have $\bar{\hll}(\bar{x}) = \bar{\hll}(\bar{y})$ if and only if there exists $t \in \Z$ with $t = 1 \bmod{B}$ such that $\bar{x}^t = \bar{y}$.
 
-**Proof.**  Denote the logarithms of $\bar{x}$ and $\bar{y}$ as:
+**Proof.**  Write the logarithms of $\bar{x}$ and $\bar{y}$ as $(a_1, c_1)$ and $(a_2, c_2)$, with $a_i$ split into $(\alpha_i, \beta_i) \in \Z_4 \times \Z_{B/2}$ and, where it is defined, $c_i = 2^ku_i$ with $u_i$ odd.
 
-```math
-\begin{aligned}
-\log_{\bar{g}}(\bar{x})
-&= (b_1, c_1) \\
-\log_{\bar{g}}(\bar{y})
-&= (b_2, c_2) \\
-\end{aligned}
-```
-
-Suppose $\bar{\hll}(\bar{x}) = \bar{\hll}(\bar{y})$. This gives us two equalities:
+Suppose first that $\bar{x}^t = \bar{y}$ for some $t = 1 \bmod B$. Since $B$ is even, $t$ is odd; since $\nfrac{B}{2}$ divides $B$, also $t = 1 \bmod \nfrac{B}{2}$. So $\beta_2 = t\beta_1 = \beta_1$, and $\tz(c_2) = \tz(tc_1) = \tz(c_1)$ because $t$ is odd. Write $k$ for that common value. If $k ≤ m-2$ then $\alpha_2 = t\alpha_1$ and $u_2 = tu_1$, so
 
 ```math
 \begin{aligned}
-b_1 &= b_2 \bmod B &
-\tz(c_1) &= \tz(c_2) \\
+\alpha_2u_2 = t^2\alpha_1u_1 = \alpha_1u_1 \pmod 4
 \end{aligned}
 ```
 
-The second equality implies that there exists odd $u \in \Z_{2^m}$ such that
+since $t^2 = 1 \bmod 4$ for odd $t$. Hence $s$ agrees too, and $\bar{\hll}(\bar{x}) = \bar{\hll}(\bar{y})$.
+
+Now suppose instead that $\bar{\hll}(\bar{x}) = \bar{\hll}(\bar{y})$, which gives $\beta_1 = \beta_2$, a common $k = \tz(c_1) = \tz(c_2)$, and $s_1 = s_2$. We build a suitable $t$ in two steps: first an odd $v$ acting correctly on the $2$-part, then $t$ itself by the Chinese Remainder Theorem.
+
+When $k ≤ m-2$, take $v$ to be any odd lift of $u_2u_1^{-1} \bmod{2^{m-k}}$, so that $vc_1 = 2^k(vu_1) = 2^ku_2 = c_2$. Since $m-k ≥ 2$ this also fixes $v = u_2u_1^{-1} \bmod 4$. From $s_1 = s_2$ we have $\alpha_1u_1 = \alpha_2u_2 \bmod 4$, hence $\alpha_2 = \alpha_1u_1u_2^{-1}$, while $v\alpha_1 = \alpha_1u_2u_1^{-1}$. These agree because $u_1^2 = u_2^2 = 1 \bmod 4$ for odd $u_i$, so $v\alpha_1 = \alpha_2 \bmod 4$.
+
+When $k ≥ m-1$ the situation is simpler: the only elements of $\Z_{2^m}$ with $m-1$ or $m$ trailing zeros are $2^{m-1}$ and $0$, so $c_1 = c_2$ outright, and $vc_1 = c_2$ for *any* odd $v$. Both $\alpha_i$ are odd, since $c_i$ is even and $a_i + c_i$ is odd, so $v = \alpha_2\alpha_1^{-1} \bmod 4$ is odd and gives $v\alpha_1 = \alpha_2$.
+
+Either way we have an odd $v$ with $vc_1 = c_2 \bmod{2^m}$ and $v\alpha_1 = \alpha_2 \bmod 4$. Apply the Chinese Remainder Theorem — the moduli are coprime because $\nfrac{B}{2}$ is odd — to find $t$ with:
 
 ```math
 \begin{aligned}
-uc_1 &= c_2 && \pmod{2^m} \\
+t &= 1 && \pmod{\nfrac{B}{2}} \\
+t &= v && \pmod{2^m} \\
 \end{aligned}
 ```
 
-We can apply the Chinese Remainder Theorem to find $t$ with:
+Then $t$ is odd, and being $1$ modulo both $2$ and $\nfrac{B}{2}$ it is $1 \bmod B$ as required. Since $m ≥ 2$ we have $t = v \bmod 4$, so $t\alpha_1 = \alpha_2$; likewise $tc_1 = vc_1 = c_2$ and $t\beta_1 = \beta_1 = \beta_2$. Reassembling $a$ from $(\alpha, \beta)$ gives $\bar{x}^t = \bar{y}$. $\square$
 
-```math
-\begin{aligned}
-t &= 1 && \pmod{B} \\
-t &= u && \pmod{2^m} \\
-\end{aligned}
-```
+**Theorem.** Let $N$ be fingerprint-free. For $x, y \in J_N^-$: $\hll(x) = \hll(y)$ if and only if there exists $w \in W_N$ and $t \in \Z$ with $t = 1 \bmod{B}$ such that $wx^t = y \bmod N$.
 
-Since $u$ is odd and ${} m ≥ 1$ we know that $t$ is odd as well. This means that $t = 1 \bmod{2B}$ as required. Now check that $\bar{x}^t = \bar{y}$:
-
-```math
-\begin{aligned}
-\log_{\bar{g}}(\bar{x}^t)
-&= (t b_1, t c_1) \\
-&= (b_1, u c_1) \\
-&= (b_2, c_2)
-= \log_{\bar{g}}(\bar{y})
-\end{aligned}
-```
-
-Thus we have found $t = 1 \bmod{2B}$ such that $\bar{x}^t = \bar{y}$.
-
-In the other direction, suppose we have $t = 1 \bmod{2B}$ such that $\bar{x}^t = \bar{y}$. This gives us two equalities:
-
-```math
-\begin{aligned}
-b_1 =
-t b_1 &= b_2 && \pmod B \\
-t c_1 &= c_2 && \pmod{2^m} \\
-\end{aligned}
-```
-
-Since $t$ is odd, the second equality implies that $\tz(c_1) = \tz(c_2)$ which means we’ve shown that $\bar{\hll}(\bar{x}) = \bar{\hll}(\bar{y})$. $\square$
-
-**Theorem.** Let $N$ be fingerprint-free. For $x, y \in \Z_N^*$ with the same Jacobi symbol: $\hll(x) = \hll(y)$ if and only if there exists $w \in W_N$ and $t \in \Z$ with $t = 1 \bmod{2B}$ such that $wx^t = y \bmod N$.
-
-**Proof.**  Since $N$ is fingerprint-free there exists $\phi: \Z_N^* \to C_B \times C_{2^m}$ with $\ker(\phi) = ±W_N$. The following conditions are equivalent for $x$ and $y$ with $\Jacobi_N(x) = \Jacobi_N(y)$:
+**Proof.**  Since $N$ is fingerprint-free there exists $\phi: \Z_N^* \to C_{2B} \times C_{2^m}$ with $\ker(\phi) = W_N$, and $\phi$ carries $J_N^-$ into $S$. The following conditions are equivalent:
 
 1. ``\hll(x) = \hll(y)``
 2. ``\bar{\hll}(\phi(x)) = \bar{\hll}(\phi(y))``
-3. ``\E\, t = 1 \bmod{2B}`` such that $\phi(x)^t = \phi(y)$
-4. ``{} \E\, t = 1 \bmod{2B},\, w \in W_N {}`` such that $wx^t = y$
+3. ``\E\, t = 1 \bmod{B}`` such that $\phi(x)^t = \phi(y)$
+4. ``{} \E\, t = 1 \bmod{B},\, w \in W_N {}`` such that $wx^t = y$
 
-Equivalence of (1) and (2) is just the definition of $\hll = \bar{\hll}\phi$. The lemma we just proved gives equivalence of (2) and (3). That leaves us to prove equivalence of (3) and (4). We will show that for any odd exponent, $t$, we have:
+Equivalence of (1) and (2) is just the definition of $\hll = \bar{\hll}\phi$. The lemma we just proved gives equivalence of (2) and (3), and applies because $\phi(x)$ and $\phi(y)$ both lie in $S$. For (3) implying (4), set $w = yx^{-t}$ and observe
 
 ```math
 \begin{aligned}
-\phi(x)^t = \phi(y) ~\iff~
-\E\, w \in W_N\!:~ wx^t = y
+\phi(w) = \phi(y x^{-t}) = \phi(y)\phi(x)^{-t} = 1
 \end{aligned}
 ```
 
-which means (3) and (4) are logically equivalent. Suppose that $\phi(x)^t = \phi(y)$. Let $w = y x^{-t}$ and check that $w \in \ker(\phi) \cap J_N^+ = W_N$:
+so that $w \in \ker(\phi) = W_N$. For (4) implying (3), any $w \in W_N = \ker(\phi)$ gives
 
 ```math
 \begin{aligned}
-\phi(w)
-= \phi(y x^{-t})
-= \phi(y) \phi(x)^{-t}
-&= 1 \\
-\Jacobi_N(w)
-= \Jacobi_N(y) \Jacobi_N(x)^{-t}
-&= 1
-\end{aligned}
-```
-
-This requires $\Jacobi_N(x) = \Jacobi_N(y) \in \set{±1}$ and $t$ odd so that raising to $-t$ doesn’t change the sign. In the other direction, suppose $w \in W_N \subseteq \ker(\phi)$ with $wx^t = y$. Check the required equality:
-
-```math
-\begin{aligned}
-\phi(y)
-= \phi(wx^t)
-= \phi(w) \phi(x)^t
-= \phi(x)^t
+\phi(y) = \phi(wx^t) = \phi(w)\phi(x)^t = \phi(x)^t
 \end{aligned}
 ```
 
 This proves equivalence of (3) and (4). $\square$
 
+Because $\ker(\phi)$ is $W_N$ on the nose, rather than $W_N$ only after intersecting with $J_N^+$, the last step needs no bookkeeping about Jacobi symbols: membership in the kernel *is* membership in the noise subgroup. That is the concrete dividend of defining fingerprint-freedom on $\Z_N^*$ rather than on $J_N^+$.
+
 ### Interpretation
 
-How does this result prove that our scheme preserves client anonymity? Suppose there are two clients with $x_1$ and $x_2$ as their respective client secrets and assume that $\hll(x_1) = \hll(x_2)$. We also assume that the clients follow the protocol so that $\Jacobi_N(x_1) = \Jacobi_N(x_2) = -1$. The server receives $w_1x_1^{t_1}$ from the first client. Can the server tell that it got the message from the first client rather than the second? We can apply the theorem twice to show that it cannot. First, the theorem tells us that when the client chooses $w_1 \in W_N$ and $t_1$ with $t_1 = 1 \bmod{2B}$, we always have:
+How does this result prove that our scheme preserves client anonymity? Suppose there are two clients with $x_1$ and $x_2$ as their respective client secrets and assume that $\hll(x_1) = \hll(x_2)$. We also assume that the clients follow the protocol so that $\Jacobi_N(x_1) = \Jacobi_N(x_2) = -1$. The server receives $w_1x_1^{t_1}$ from the first client. Can the server tell that it got the message from the first client rather than the second? We can apply the theorem twice to show that it cannot. First, the theorem tells us that when the client chooses $w_1 \in W_N$ and $t_1$ with $t_1 = 1 \bmod{B}$, we always have:
 
 ```math
 \begin{aligned}
@@ -280,7 +185,7 @@ How does this result prove that our scheme preserves client anonymity? Suppose t
 \end{aligned}
 ```
 
-In other words, the value the client sends has the same $\hll$-value as its secret. Next, since $\hll(w_1 x_1^{t_1}) = \hll(x_1) = \hll(x_2)$, the theorem tells us that there exists ${} w_2 \in W_N$ and $t_2 \in \Z$ with $t_2 = 1 \bmod{2B}$ such that
+In other words, the value the client sends has the same $\hll$-value as its secret. Next, since $\hll(w_1 x_1^{t_1}) = \hll(x_1) = \hll(x_2)$, the theorem tells us that there exists ${} w_2 \in W_N$ and $t_2 \in \Z$ with $t_2 = 1 \bmod{B}$ such that
 
 ```math
 \begin{aligned}
@@ -300,7 +205,7 @@ Plaintext HyperLogLog counting has a serious inflation problem: an attacker can 
 
 If a malicious client sends $y$ with $\Jacobi_N(y) ≠ -1$, the server will detect it. So we can focus on a malicious client sending $y$ with $\Jacobi_N(y) = -1$. As discussed in the previous section, every element $y \in J_N^-$ is of the form $y = x_0 g^h$ where $g$ is our chosen semigenerator and $x_0$ is an arbitrary twist element with $\Jacobi_N(x_0) = -1$. Here we use $h$ as just an arbitrary attacker-controlled exponent value, not necessarily the output of a hash function. The question is whether a malicious client can influence $y$ to have large geometric sample values.
 
-The server doesn’t publish any $x_0$ value, so clients have to generate one for themselves. However, since they don’t know the factorization of $N$, they have no idea what its logarithms are. For our analysis, write $\log(x_0) = (a, b, c, d)$, but keep in mind that the attacker has no idea what these values are. The HyperLogLog sample that $y = x_0 g^h$ encodes is $(b + h, \tz(c + h))$. The attacker controls $h$ but doesn’t know $b$ or $c$. Since they don’t know $c$, they cannot force $\tz(c + h)$ to be large or know how large it is for any particular $h$. In order to hit $k ≥ \tz(c + h)$ the attacker needs to happen to choose $h$ whose last $k$ bits complement $c$ perfectly, which occurs with probability $1/2^k$ — exactly the probability of picking a value that good by chance. What they can do, however, is scan through consecutive $h$ values. If they scan $2^k$ consecutive values, they’re guaranteed to hit $h = -c \bmod{2^k}$ for one of those values and they may happen to hit something better.
+The server doesn’t publish any $x_0$ value, so clients have to generate one for themselves. However, since they don’t know the factorization of $N$, they have no idea what its logarithms are. That last claim is doing a great deal of work, and it is a property the shape of $N$ has to earn rather than one that comes for free; we return to it at the end of this section. For our analysis, write $\log(x_0) = (a, b, c, d)$, but keep in mind that the attacker has no idea what these values are. The HyperLogLog sample that $y = x_0 g^h$ encodes is $(b + h, \tz(c + h))$. The attacker controls $h$ but doesn’t know $b$ or $c$. Since they don’t know $c$, they cannot force $\tz(c + h)$ to be large or know how large it is for any particular $h$. In order to hit $k ≥ \tz(c + h)$ the attacker needs to happen to choose $h$ whose last $k$ bits complement $c$ perfectly, which occurs with probability $1/2^k$ — exactly the probability of picking a value that good by chance. What they can do, however, is scan through consecutive $h$ values. If they scan $2^k$ consecutive values, they’re guaranteed to hit $h = -c \bmod{2^k}$ for one of those values and they may happen to hit something better.
 
 In the unique ID scheme, each request with a freshly “forged” client ID inflates the client count by one. How does HLL over RSA compare to this when an attacker tries to inflate its estimates? The expected maximum value of $\tz(c + h)$ is $k+1$ when scanning a consecutive block of $2^k$ values. This is slightly better than sending random values. If an attacker sends $B2^k$ spoofed requests they can push each bucket up to an expected value of $k + 1$, which gives a client count estimate of:
 
@@ -316,9 +221,27 @@ There is an important assumption hiding inside this linear bound: that the attac
 
 It’s worth flagging a stronger mitigation that we have deliberately *not* adopted, since it’s a natural question. One could try to *bind each token to its request*—mixing something request-specific (a server-issued nonce, or the full request path) into the value the client sends—so that a single high-value forgery can’t be reused across many requests. The difficulty is that honest counting needs the opposite: a client’s value must be *stable* across its requests within a class, or we’d be counting requests instead of unique clients. A binding that preserved per-(client, class) stability while denying an attacker reuse of a curated value is not obviously achievable, and in any case the cardinality floor already removes the count oracle that the curated-set attack depends on. So we rely on the floor and leave token-request binding as an open question—to revisit only if some deployment leaks count feedback through a channel the floor can’t cover.
 
-While this is quite a good result, our analysis of resistance to malicious clients is somewhat weak. If an attacker can learn the $c$ coordinate of any $x_0$ value with respect to any semigenerator, $g$, then they can forge arbitrarily rare $x_0 g^h$ values by choosing $h = -c \bmod 2^k$ for whatever $k$ they want. They can also cover all the buckets by covering all $h \bmod B$ residue classes. A proof of attack resistance would use knowledge of such a tuple, $(x_0, g, c)$, to factor $N$ or perform some other computation that is believed to be hard in RSA rings. We do not have such a proof. The best we have is an argument that this seems hard since the exponent coordinates in $\Z_N^*$ are secret in a way that many protocols rely on, and deciphering even one is widely believed to be hard. Without the requirement that $\Jacobi_N(x_0) = -1$ it would be quite easy to find values with known coordinates with respect to $g$: just take powers of $g$. Since $\Jacobi_N(g) = 1$, however, any power of $g$ also has positive Jacobi symbol. To get to a value with negative Jacobi symbol, one needs an element with negative Jacobi symbol, which presents would-be attackers with a seemingly unsolvable bootstrapping problem. There’s no apparent way to make that leap without introducing an unknown $c$ coordinate.
+While this is quite a good result, the whole bound rests on a single structural assumption, and it is worth stating that assumption sharply because the shape of $N$ has to earn it.
 
-This is a vaguer argument than I would like to make in a write up full of rigorous proofs. Fortunately, proving that client anonymity is preserved is the much more important result, and for that we do have a solid proof. Inability to provably guarantee resistance to malicious client attacks is more acceptable: that’s a risk that we, as the operators of the system, can choose to take on. If our estimates suddenly start looking ridiculously large, we can begin to wonder if someone has cracked the protocol.
+Everything above depends on the attacker not being able to *name* an element of $J_N^-$ — to exhibit some $z$ with $\Jacobi_N(z) = -1$ together with its $C_{2^m}$ logarithm relative to $g$. Given such a $z$ with logarithm $c$, forging is immediate rather than lucky: send $zg^h$ with $h$ chosen to cancel $c$ to whatever depth is wanted, and sweep $h$ across residues mod $\nfrac{B}{2}$ to cover every bucket. So the integrity of the scheme is exactly the claim that $J_N^-$ contains nothing anyone can name.
+
+With $N = 3 \bmod 4$ that claim is false, and it is false for the most public element there is. It is a standard identity that $\Jacobi_N(-1) = (-1)^{(N-1)/2}$, so $N = 3 \bmod 4$ puts $-1$ in $J_N^-$; and the logarithms of $-1$ are not merely learnable but structural, since $-1$ is the unique element of order two: trivial in the bucket component and $2^{m-1}$ in $C_{2^m}$. Worse, exploiting it requires knowing nothing about $g$. Because $2^{m-1}u = 2^{m-1} \bmod{2^m}$ for every odd $u$, taking $h = 2^{m-1} \bmod{2^m}$ zeroes the geometric coordinate of $-g^h$ whatever $g$'s own logarithm happens to be. Each forgery costs one modular exponentiation, and a few thousand of them peg every bucket at the maximum geometric value. Nor does the cardinality floor help: the attacker needs no oracle, because the value is chosen open-loop rather than discovered by probing. That is the full plaintext-HyperLogLog attack, and it means the linear bound above holds only against an attacker who declines to use $-1$.
+
+This is why $B$ is required to be $2 \bmod 4$ rather than odd. It makes $P = 2Bp+1 = 5 \bmod 8$ and hence $N = 5 \bmod 8$, so $\Jacobi_N(-1) = +1$. The elements whose logarithms are public are exactly $±\gen{g}$ — generated by the two things everybody has, the semigenerator and $-1$ — and since $\Jacobi_N(-1) = \Jacobi_N(g) = +1$, every one of them lands in $J_N^+$, where the server’s existing Jacobi check already refuses it. The bootstrapping problem the attacker faces is then real rather than assumed.
+
+It is not, however, a proof, and the residual assumption should be named. Since $N = 5 \bmod 8$ makes both $P$ and $Q$ congruent to $1 \bmod 4$, $-1$ is a quadratic residue mod $N$ and fourth roots of unity exist. Such an $i$ has logarithms that are known outright — trivial in the bucket component and $2^{m-2}$ in $C_{2^m}$ — and $\Jacobi_N(i) = -1$ whenever $m ≥ 3$. So $i$ *is* a nameable element of $J_N^-$, and anyone who can compute one has broken the scheme. No method better than factoring $N$ is known for computing it. But finding a square root of $-1$ modulo $N$ is not known to be *equivalent* to factoring: an oracle handing back one of the four roots does not obviously yield a second, and it is the difference of two roots that factors. The honest statement is therefore a chain,
+
+```math
+\begin{aligned}
+\text{factor}~N
+\implies \text{compute}~i
+\implies \text{forge arbitrary HyperLogLog values}
+\end{aligned}
+```
+
+with no reduction known in either reverse direction, leaving the protocol’s integrity somewhere below both. Two consequences are worth drawing out. First, a single $i$, once found, works forever and for every client of that ring, which is an argument for rotating $N$ on a schedule rather than treating a modulus as permanent. Second, the certificate publishes square roots of hash-derived elements of $J_N^+$, and $-1$ now lies in $J_N^+$; if two rooted challenges were ever negatives of one another, dividing their published roots would hand out $i$. Finding such a relation among random challenges means computing the relation lattice of the rooted values, which is a discrete logarithm problem mod $N$ — the same barrier as before, and the reason the challenges must be hash-derived rather than chosen.
+
+This is a vaguer argument than I would like to make in a write up full of rigorous proofs, and it is worth being precise about what improved and what did not. What improved is not the *form* of the argument — it is still an unproven hardness assumption — but its content: the object an attacker needs has gone from one every client already possesses to one nobody knows how to compute. Fortunately, proving that client anonymity is preserved is the much more important result, and for that we do have a solid proof. Inability to provably guarantee resistance to malicious client attacks is more acceptable: that’s a risk that we, as the operators of the system, can choose to take on. If our estimates suddenly start looking ridiculously large, we can begin to wonder if someone has cracked the protocol.
 
 ## Malicious servers
 
@@ -354,7 +277,7 @@ C_{2^m} \times C_B \times C_q
 
 When the client follows the protocol and picks a random $x_0 \in J_N^-$, it has two random $C_B$ components and two random $C_{2^m}$ components instead of one of each. How much extra identifying information about each client does the malicious server get from this?
 
-First, consider the two $C_B$ components. When the client raises their $x$ value to $t = 1 \bmod{2B}$ both $C_B$ components are preserved. Instead of getting $\log_2(B)$ bits of identifying information from them, the server gets $2 \log_2(B)$ bits. When $B \approx 2^{12}$ that’s 24 bits of fingerprint. Multiplying $x^t$ by a white noise value, $w \in W = (\Z_N^*)^{B2^m}$, also doesn’t touch either of the two $C_B$ and $C_{2^m}$ components—the definition of $W_N$ is specifically crafted to leave those components intact while randomizing everything else.
+First, consider the two $C_B$ components. When the client raises their $x$ value to $t = 1 \bmod{B}$ both $C_B$ components are preserved. Instead of getting $\log_2(B)$ bits of identifying information from them, the server gets $2 \log_2(B)$ bits. When $B \approx 2^{12}$ that’s 24 bits of fingerprint. Multiplying $x^t$ by a white noise value, $w \in W = (\Z_N^*)^{(B/2)2^m}$, also doesn’t touch either of the two $C_B$ and $C_{2^m}$ components—the definition of $W_N$ is specifically crafted to leave those components intact while randomizing everything else.
 
 Next, consider the two $C_{2^m}$ components. When there is only one $C_{2^m}$ component, taking $x^t$ with random odd $t$ destroys all information in it except for the position of the last bit, which is only $\log_2(m)$ bits of information. When there are two $C_{2^m}$ components, however, the information provided doesn’t just double: since the two $C_{2^m}$ components are scaled in lock-step, their _ratio_ remains fixed, which carries significantly more information. It’s not hard to see that two $C_{2^m}$ components raised to random $t$, convey a full $m$ bits of client fingerprint. Again, multiplying by $w$ doesn’t affect this, by design. So the malicious server gets an additional $m$ bits of fingerprint from the two $C_{2^m}$ components.
 
@@ -363,13 +286,13 @@ With this structure of $N$ then, the malicious server gets a total of $2 \log_2(
 Can we convince a client that we aren’t smuggling fingerprint bits in the structure of $N$ without giving away its factorization? In this particular case, the unusual structure of $N$ is actually quite easy to detect:
 
 - The correct structure has
-  - ``P = 3 \bmod 4 \and Q = 1 \bmod 4 \implies N = PQ = 3 \bmod 4``
-  - ``P = 1 \bmod B \and Q ≠ 1 \bmod B \implies N = PQ ≠ 1 \bmod B``
+  - ``P = 5 \bmod 8 \and Q = 1 \bmod 8 \implies N = PQ = 5 \bmod 8``
+  - ``P = 1 \bmod B \and \gcd(\nfrac{B}{2}, Q-1) = 1 \implies \gcd(B, N-1) = 2``
 - This incorrect structure has
-  - ``N = P = Q = 1 \bmod 4``
-  - ``N = P = Q = 1 \bmod B``
+  - ``N = P = Q = 1 \bmod 8``
+  - ``\gcd(B, N-1) = B``
 
-Unfortunately, not all possible malicious structures are so easy to detect. For example, if $N = PQR$ where $P = Q = 1 \bmod 4$ and $P = Q = 1 \bmod B$ and $R = 3 \bmod 4$ and $R ≠ 1 \bmod B$, then you’d have $N = PQR = 3 \bmod 4$ and $N = PQR ≠ 1 \bmod B$ so $N$ looks normal from simple modular criteria, yet $PQ$ carries the $2 \log_2(B) + m$ bits of client fingerprint from before. To guarantee that a server cannot fingerprint clients, more evidence about the structure of $N$ needs to be provided.
+Unfortunately, not all possible malicious structures are so easy to detect. For example, if $N = PQR$ where $P = Q = 1 \bmod 8$ and $P = Q = 1 \bmod B$ and $R = 5 \bmod 8$ and $\gcd(B, R-1) = 2$, then you’d have $N = PQR = 5 \bmod 8$ and $\gcd(B, N-1) = \gcd(B, R-1) = 2$ so $N$ looks normal from simple modular criteria, yet $PQ$ carries the $2 \log_2(B) + m$ bits of client fingerprint from before. To guarantee that a server cannot fingerprint clients, more evidence about the structure of $N$ needs to be provided.
 
 Zero-knowledge proofs (ZKPs) are a popular solution to this kind of problem. I spent a good bit of time going down this rabbit hole. It’s definitely doable. However, every time I sat down to implement zero-knowledge proofs of semiprimality, I found myself getting bogged down in complex and fussy details. This isn’t just a matter of laziness—if the code is that hard to implement, I find it hard to convince myself that it’s fully correct. And if we’re not confident in the correctness of the code that checks whether $N$ has the right structure, then we haven’t really proven anything.
 
@@ -377,7 +300,7 @@ I found myself really wishing for a simpler way to demonstrate the structure of 
 
 ### Criteria for fingerprint-freedom
 
-Recall from the section with the formal anonymity proof that an odd integer, $N$, is shown to be fingerprint-free if $N = 3 \bmod 4$ and $J_N^+/W_N$ is cyclic with order dividing $B2^m$. These subgroups of $\Z_N^*$ have the following definitions:
+Recall from the section with the formal anonymity proof that an odd integer, $N$, is fingerprint-free when the quotient $\Z_N^*/W_N$ embeds into $C_{2B} \times C_{2^m}$. The subgroups of $\Z_N^*$ involved have the following definitions:
 
 ```math
 \begin{aligned}
@@ -385,8 +308,8 @@ J_N^+
 &= \set{\, x \in \Z_N^* \st \Jacobi_N(x) = 1 \,}
 \\[0.5em]
 W_N
-&= (\Z_N^*)^{B2^m}
-= \set{\, x^{B2^m} \st x \in \Z_N^* \,}
+&= (\Z_N^*)^{(B/2)2^m}
+= \set{\, x^{(B/2)2^m} \st x \in \Z_N^* \,}
 \end{aligned}
 ```
 
@@ -499,167 +422,65 @@ Combining these results, we get the following claim.
 
 **Claim.** If the following conditions are satisfied:
 
-- ``N = 3 \bmod 4``
-- ``\gcd(B, N) = \gcd(B, N-1) = 1``
+- ``N = 5 \bmod 8``
+- ``\gcd(B, N) = 1 \and \gcd(B, N-1) = 2``
 - For all $x, y \in J_N^+$ one of $\set{x, y, xy}$ is a quadratic residue
 
 then $N$ is fingerprint-free.
 
-**Proof.**  From the prior lemma we know that the last condition is equivalent to $N$ having at most two distinct prime factors.
-
-First we’ll consider the case of a single prime factor: $N = P^j$ where $P$ is an odd prime and ${} j ≥ 1 {}$. If $P = 1 \bmod 4$ then we’d have $N = 1 \bmod 4$ as well, so we know that $P = 3 \bmod 4$. Let $d = \gcd(B, P-1)$. Since $d \divides P-1$ we have $d \divides N-1$ and therefore $d \divides \gcd(B, N-1) = 1$. So $B$ and $P-1$ must be coprime. Thus, the structure of $\Z_N^*$ is:
+**Proof.**  From the prior lemma we know that the last condition is equivalent to $N$ having at most two distinct prime factors. Write $N = P^jQ^k$ with $P$ and $Q$ distinct odd primes, $j ≥ 1$ and $k ≥ 0$, where $k = 0$ covers the single-prime case by making the second factor below trivial. Put
 
 ```math
 \begin{aligned}
-\Z_N^* \cong C_2 \times C_U
-~~\text{where}~~
-U = \frac{P-1}{2} \, P^{j-1}
-\end{aligned}
-```
-
-We know that $U$ is odd and coprime to $B$ since $(P-1)/2$ and $P$ are. To prove that $N$ is fingerprint-free we need a homomorphism from $J_N^+$ to a subset of $C_B \times C_{2^m}$ whose kernel is a subset of $W_N ≤ J_N^+$. In this case, however, $W_N = J_N^+$ so the constant homomorphism, which has all of $J_N^+$ as its kernel, works. To see this, consider generic $x \in \Z_N^*$:
-
-```math
-\begin{aligned}
-\log_g(x) = (a, b) \in \Z_2 \times \Z_U
-\end{aligned}
-```
-
-``\Jacobi_N(x) = (-1)^a`` since $U$ is odd, so $x \in J_N^+$ if and only if $a = 0$. On the other hand, $w \in W$ if and only if $w = z^{B2^m}$ for some $z \in \Z_N^*$ or:
-
-```math
-\begin{aligned}
-\log_g(w)
-= (a_w, b_w)
-= (a_z B2^m, b_z B2^m)
-= B2^m \log_2(z)
-\end{aligned}
-```
-
-This forces $a_w = 0$ since $m ≥ 2$. Does it impose any restriction on $b_w$? No, since for any $b_w$ we can let
-
-```math
-\begin{aligned}
-b_z = b_w(B2^m)^{-1} \pmod U
-\end{aligned}
-```
-
-This inverse exists since $B2^m$ is coprime to $U$. This shows that both $J_N^+$ and $W_N$ are precisely the subset where $a = 0 \bmod 2$ and that they are equal, and therefore the constant homomorphism witnesses that $N$ is fingerprint-free.
-
-Next, consider the case of two distinct prime factors: $N = P^j Q^k$ where $P$ and $Q$ are distinct odd primes and $j ≥ 1$ and $k ≥ 1$. Since $N = 3 \bmod 4$, we can assume without loss of generality that $P^j = P = 3 \bmod 4$, which implies that $1 = \tz(P-1)$. Let $n = \tz(Q-1)$. Then the structure of $\Z_N^*$ is:
-
-```math
-\begin{gathered}
-\Z_N^* \cong C_2 \times C_U \times C_{2^n} \times C_V \\[0.5em]
-\text{where} \\
-U = \frac{P-1}{2} \, P^{j-1}
+d_P = (P-1)P^{j-1}
 \hspace{4em}
-V = \frac{Q-1}{2^n} \, Q^{k-1}
-\end{gathered}
-```
-
-``U`` and $V$ are both odd and coprime to $B$. They are odd since $P$, $Q$, $(P-1)/2$ and $(Q-1)/2^n$ are all odd. We know that $P$ and $Q$ are coprime to $B$ since $\gcd(B, PQ) = 1$. Let $d = \gcd(B, P-1, Q-1)$. Since $d$ divides both $P-1$ and $Q-1$ it must also divide $N-1$, but since $\gcd(B, N-1) = 1$ the only option is $d = 1$. Thus, $U$ and $V$ are also coprime to $B$.
-
-Let $B_U = \gcd(B, U)$ and $B_V = \gcd(B, V)$. These are coprime since $\gcd(B, U, V) = 1$. Let $\bar{m} = \min(m, n) ≥ 1$ and pick a semigenerator $\bar{g} \in C_{B_U} \times C_{2^{\bar{m}}} \times C_{B_V}$. For $x \in \Z_N^*$ with $\log_g(x) = (a, b, c, d)$ define
-
-```math
-\begin{aligned}
-\phi: \Z_N^* \to
-C_{B_U} \times C_{2^{\bar{m}}} \times
-C_{B_V}
+d_Q = (Q-1)Q^{k-1}
 \end{aligned}
 ```
 
-```math
-\begin{aligned}
-\log_{\bar{g}}(\phi(x)) = (b, c, d)
-\in \Z_{B_U}
-\times \Z_{2^{\bar{m}}}
-\times \Z_{B_V}
-\end{aligned}
-```
-
-Note that in addition to dropping the first coordinate, the remaining three coordinates are modularly reduced. In order to show that $\phi$ witnesses that $N$ is fingerprint-free, we need to show that $\ker(\phi|_{J_N^+}) \subseteq W_N$. Let
+so that $\Z_N^* \cong C_{d_P} \times C_{d_Q}$, each factor cyclic because $P$ and $Q$ are odd primes. Raising a cyclic group to a power leaves a cyclic quotient whose order is a greatest common divisor:
 
 ```math
 \begin{aligned}
-w \in \ker(\phi|_{J_N^+}) = J_N^+ \cap \ker(\phi)
+C_M/(C_M)^E \cong C_{\gcd(M, E)}
 \end{aligned}
 ```
 
-Since $w \in J_N^+$ we have:
+Applying this componentwise with $E = (B/2)2^m$ gives
 
 ```math
 \begin{aligned}
-a &= c \pmod 2 \\
+\Z_N^*/W_N \cong C_{\gcd(d_P, E)} \times C_{\gcd(d_Q, E)}
 \end{aligned}
 ```
 
-Since $w \in \ker(\phi)$ we have:
+and it remains to show that this embeds into $C_{2B} \times C_{2^m}$. Take the $2$-parts and the odd parts in turn.
+
+For the $2$-parts, write $e_P = \tz(P-1)$ and $e_Q = \tz(Q-1)$; these are the $2$-adic valuations of $d_P$ and $d_Q$, since $P^{j-1}$ and $Q^{k-1}$ are odd. As $\nfrac{B}{2}$ is odd, $E$ has $2$-adic valuation exactly $m$, so the $2$-part of the quotient is
 
 ```math
 \begin{aligned}
-b &= 0 \pmod{B_U} \\
-c &= 0 \pmod{2^{\bar{m}}} \\
-d &= 0 \pmod{B_V} \\
+C_{2^{\min(e_P,\, m)}} \times C_{2^{\min(e_Q,\, m)}}
 \end{aligned}
 ```
 
-Thus, there exist $b'$, $c'$ and $d'$ such that:
+If $e_P ≥ 3$ and $e_Q ≥ 3$ both held, then $P = Q = 1 \bmod 8$ and hence $N = 1 \bmod 8$, contradicting $N = 5 \bmod 8$. So at least one of them — say $e_P$, without loss of generality — is at most $2$. Then $C_{2^{\min(e_P, m)}}$ embeds into $C_4$ and $C_{2^{\min(e_Q, m)}}$ embeds into $C_{2^m}$, so the $2$-part embeds into $C_4 \times C_{2^m}$.
+
+This is the step that the modular condition on $N$ exists to supply, and it is worth noting how little has changed from the version of this protocol with odd $B$. There, $N = 3 \bmod 4$ forced one prime to be $3 \bmod 4$ and so pinned its $2$-part to exactly $C_2$. Here $N = 5 \bmod 8$ forces one prime to be $5$ or $3$ or $7 \bmod 8$ and so pins its $2$-part to $C_4$ or smaller. Either way a single congruence on $N$, free for a client to check, is what prevents two tall $2$-parts from coexisting.
+
+For the odd parts, let $U$ and $V$ be the odd parts of $d_P$ and $d_Q$; since the odd part of $E$ is $\nfrac{B}{2}$, the odd part of the quotient is $C_{\gcd(U,\, B/2)} \times C_{\gcd(V,\, B/2)}$. Suppose some odd prime $r$ divided both gcds. Then $r$ divides $\nfrac{B}{2}$ and also both $U$ and $V$; since $\gcd(B, N) = 1$ keeps $r$ from dividing $P$ or $Q$, it must divide both $P-1$ and $Q-1$, and hence $N-1$ by the Fact above. But then $r$ divides $\gcd(B, N-1) = 2$, which no odd prime does. So the two gcds are coprime, their product divides $\nfrac{B}{2}$, and the odd part embeds into $C_{B/2}$.
+
+A finite abelian group is the direct product of its $2$-part and its odd part, so putting the two halves together:
 
 ```math
 \begin{aligned}
-b &= b' B_U &
-c &= c' 2^{\bar{m}} &
-d &= d' B_V
+\Z_N^*/W_N
+\hookrightarrow C_4 \times C_{2^m} \times C_{B/2}
+\cong C_{2B} \times C_{2^m}
 \end{aligned}
 ```
 
-To show that $w \in W$ we need to find $i \in \Z$ such that:
-
-```math
-\begin{aligned}
-i B 2^m &= 0 && \pmod 2 \\
-i B 2^m &= b = b' B_U && \pmod U \\
-i B 2^m &= c = c' 2^{\bar{m}} && \pmod{2^n} \\
-i B 2^m &= d = d' B_V && \pmod V \\
-\end{aligned}
-```
-
-The first equation is automatically satisfied since $m ≥ 1$. The other three equations are equivalent to:
-
-```math
-\begin{aligned}
-i (B/B_U) 2^m &= b' && \pmod{U/B_U} \\
-i B 2^{m-\bar{m}} &= c' && \pmod{2^{n-\bar{m}}} \\
-i (B/B_V) 2^m &= d' && \pmod{V/B_V} \\
-\end{aligned}
-```
-
-Here we have divided common factors—$B_U$, $2^{\bar{m}}$ and $B_V$, respectively—out of each equation and modulus. These equations are in turn equivalent to:
-
-```math
-\begin{aligned}
-i &= b' (B/B_U 2^m)^{-1} && \pmod{U/B_U} \\
-i &= c' B^{-1}           && \pmod{2^{n-\bar{m}}} \\
-i &= d' (B/B_V 2^m)^{-1} && \pmod{V/B_V} \\
-\end{aligned}
-```
-
-The middle equation looks like it cancels a $2^{m-\bar{m}}$ that is not invertible modulo a power of two, but $\bar{m} = \min(m, n)$ rules out the problematic case: either $m ≤ n$, so $2^{m-\bar{m}} = 1$ and only the odd factor $B$ is inverted, or $m > n$, so the modulus $2^{n-\bar{m}} = 1$ and the congruence is vacuous. This set of equations can be solved via the Chinese Remainder Theorem since the moduli are pairwise coprime. Let $x = g^i$, which gives:
-
-```math
-\begin{aligned}
-\log_g(x^{B2^m})
-&= \log_g(g^{iB2^m}) \\
-&= (iB2^m, iB2^m, iB2^m, iB2^m) \\
-&= (0, b' B_U, c' 2^{\bar{m}}, d' B_V) \\
-&= (0, b, c, d) \\
-&= \log_g(w)
-\end{aligned}
-```
-
-This shows that $w \in W_N$ as claimed, so $\ker(\phi|_{J_N^+}) \subseteq W_N$ and thus $\phi$ witnesses that $N$ is fingerprint-free in the two prime factor case. $\square$
+where the last isomorphism is $C_4 \times C_{B/2} \cong C_{4 \cdot B/2} = C_{2B}$, valid because $\nfrac{B}{2}$ is odd. Thus $N$ is fingerprint-free. $\square$
 
 This gives us a concrete set of criteria on $N$, which, taken together, imply that $N$ is fingerprint-free. Of course, the obvious question is how can a client be convinced that for *every* pair $\set{x, y} \subseteq J_N^+$ one of $\set{x, y, xy}$ has a square root? This obviously cannot be checked exhaustively by client or server, since $J_N^+$ is huge for realistic $N$. The next section gives results that allow us to design a protocol that lets a server convince clients that ${} N$ is overwhelmingly likely to be fingerprint-free.
 
@@ -719,7 +540,7 @@ This bound allows a protocol whereby a server can convince a client that $N$ is 
 
 ### Certifying a good modulus
 
-Based on these results, we can design a protocol for a server to convince clients that $N$ is fingerprint-free. First, the client checks that $N = 3 \bmod 4$, that $\gcd(B, N) = 1$, and that $\gcd(B, N-1) = 1$. These are simple numerical checks. The client is then ready to be convinced that $N$ has at most two prime divisors. The interactive version is:
+Based on these results, we can design a protocol for a server to convince clients that $N$ is fingerprint-free. First, the client checks that $N = 5 \bmod 8$, that $\gcd(B, N) = 1$, and that $\gcd(B, N-1) = 2$ — the last being $\gcd(\nfrac{B}{2}, N-1) = 1$ written without the halving, since $N-1$ is even and $\nfrac{B}{2}$ is odd. These are simple numerical checks. The client is then ready to be convinced that $N$ has at most two prime divisors. The interactive version is:
 
 > The client picks $n$ random pairs $\set{x, y} \subseteq J_N^+$ and challenges the server to produce $r \in \Z_N^*$ for each pair such that $r^2 \in \set{x, y, xy} \bmod N$.
 
@@ -759,9 +580,9 @@ The non-interactive version of this protocol serves as a certificate of fingerpr
 
 When downloading a new ring structure, a client checks the following requirements based on the data in this certificate:
 
-- ``N = 3 \bmod 4``
+- ``N = 5 \bmod 8``
 - ``\gcd(B, N) = 1``
-- ``\gcd(B, N-1) = 1``
+- ``\gcd(B, N-1) = 2``
 - That enough square roots are provided
 - That all the square roots are valid
 
@@ -799,7 +620,7 @@ Narrowing within a cohort means stacking other stable attributes. Operating syst
 
 We have assumed the server’s semigenerator $g$ is honest. A client cannot verify that it is — checking that $g$ generates $\Z_P^*$ and $\Z_Q^*$ needs the factorization — so we should ask what a malicious $g$ buys. Under semisharding the answer is: essentially nothing, for the same reason $f = g^B$ fixes the bucket.
 
-The decoded token exposes only two coordinates, the bucket and the geometric sample. With $f = g^B$ the bucket is $b_0$ for *any* $g$ — the $C_B$ component is annihilated by the $B$-th power whatever $g$ was — so the server cannot touch it. The only lever left is the geometric coordinate, $c_0 + B\,g_{2^m} h$: it covers $\Z_{2^m}$ uniformly exactly when $g_{2^m}$ is odd, and a malicious server can only make coverage *worse* (a $g$ with even $g_{2^m}$ shrinks it, degrading the geometric distribution). But degrading the geometric collapses it toward a constant, which *reduces* the per-client fingerprint while corrupting the count — it helps no attacker, and a server has no reason to sabotage the very counts it wants. And since a single published $g$ is common to all clients, it cannot target anyone. So a malicious common $g$ gains nothing against a semisharded client. As a bonus, the same $f = g^B$ neutralizes an attack that *does* work in the plain-sharded construction: a $g$ whose bucket component fails to generate $C_B$ would confine a client’s buckets to a coset, exposing a cross-class-stable residue — a real fingerprint that fixing the bucket removes.
+The decoded token exposes only two coordinates, the bucket and the geometric sample. With $f = g^{B/2}$ the odd part of the bucket is $b_0$ for *any* $g$ — that component is annihilated by the $\nfrac{B}{2}$-th power whatever $g$ was — so the server cannot touch it. The only lever left is the geometric coordinate, $c_0 + B\,g_{2^m} h$: it covers $\Z_{2^m}$ uniformly exactly when $g_{2^m}$ is odd, and a malicious server can only make coverage *worse* (a $g$ with even $g_{2^m}$ shrinks it, degrading the geometric distribution). But degrading the geometric collapses it toward a constant, which *reduces* the per-client fingerprint while corrupting the count — it helps no attacker, and a server has no reason to sabotage the very counts it wants. And since a single published $g$ is common to all clients, it cannot target anyone. So a malicious common $g$ gains nothing against a semisharded client. As a bonus, the same $f = g^B$ neutralizes an attack that *does* work in the plain-sharded construction: a $g$ whose bucket component fails to generate $C_B$ would confine a client’s buckets to a coset, exposing a cross-class-stable residue — a real fingerprint that fixing the bucket removes.
 
 The one thing $g$ can still do is act as a *tag*, if the server hands out a *different* $g$ to each client: the ring-id in the header is a hash of $(B, m, N, g)$, so a per-client $g$ yields a per-client ring-id. But this is parasitic. To serve a chosen $g$ to a chosen client, the server must already identify that client at certificate-fetch time — and if it can do that, it already holds an identifier at least as good as the tag it would plant. The tag adds real power in exactly one case: an active server that identifies clients live at fetch time and *then* strips addresses from its stored logs, using the persistent ring-id to re-link the de-identified token stream back to the fetch identity.
 
