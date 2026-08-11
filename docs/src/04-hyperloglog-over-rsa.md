@@ -266,48 +266,60 @@ N = P Q = (2 B p + 1)(2^m q + 1)
 \end{aligned}
 ```
 
-This is the full RSA ring shape for encrypted HyperLogLog sampling. As before, $P$, $Q$, $p$, and $q$ are distinct, odd primes, $m$ is the maximum geometric sample value, and $B$ is the number of HyperLogLog buckets, which must be odd and coprime to everything else. The multiplicative structure of a HyperLogLog RSA ring is:
+This is the full RSA ring shape for encrypted HyperLogLog sampling. As before, $P$, $Q$, $p$, and $q$ are distinct, odd primes, $m ≥ 3$ is the maximum geometric sample value, and $B$ is the number of HyperLogLog buckets, which must be $2 \bmod 4$ and otherwise coprime to everything else. The multiplicative structure of a HyperLogLog RSA ring is:
 
 ```math
 \begin{aligned}
-\Z_N^* \cong (C_2 \times C_B \times C_p) \times (C_{2^m} \times C_q)
+\Z_N^* \cong (C_{2B} \times C_p) \times (C_{2^m} \times C_q)
 \end{aligned}
 ```
 
-The $C_B$ component encodes the encrypted bucket value, the order of the $C_{2^m}$ component encodes the geometric sample value, and the $C_2$ component is used to ensure that clients don’t inflate geometric samples by raising values to even powers. The $C_p$ and $C_q$ components are what make values hard to decode—we don’t actually care about the values in these components. Since this is starting to be a lot of components and we don’t actually care about $C_p$ and $C_q$, we’ll combine these two into a single cyclic component with order $pq$:
+The $C_{2B}$ component encodes the encrypted bucket value together with a parity bit; the order of the $C_{2^m}$ component encodes the geometric sample value. Splitting $C_{2B}$ by the Chinese Remainder Theorem into $C_4 \times C_{B/2}$ — legitimate because $\nfrac{B}{2}$ is odd — the odd factor carries most of the bucket index and the $C_4$ factor supplies both the parity bit, which keeps clients from inflating geometric samples by raising values to even powers, and one further bit of bucket index. The $C_p$ and $C_q$ components are what make values hard to decode—we don’t actually care about the values in these components. Since this is starting to be a lot of components and we don’t actually care about $C_p$ and $C_q$, we’ll combine these two into a single cyclic component with order $pq$:
 
 ```math
 \begin{aligned}
-\Z_N^* \cong C_2 \times C_B \times C_{2^m} \times C_{pq}
+\Z_N^* \cong C_{2B} \times C_{2^m} \times C_{pq}
 \end{aligned}
 ```
 
 Note that $C_a \times C_b \cong C_{ab}$ only holds if $a$ and $b$ are coprime, which is the case here since $p$ and $q$ are distinct primes.
 
-The client randomly chooses and saves a persistent $x \in \Z_N^*$ value. For each new request, it randomly chooses $w \in (\Z_N^*)^{B2^m}$ and $t = 1 \bmod{2B}$ and sends $y = wx^t$. It’s not too hard to intuitively see that the only meaningful pieces of information conveyed about $x$ are:
+Requiring $B = 2 \bmod 4$ rather than merely odd is what makes $P = 2Bp+1$ congruent to $5 \bmod 8$, and hence $N$ congruent to $5 \bmod 8$. That in turn makes $\Jacobi_N(-1) = +1$, which keeps $-1$ — the one element of the ring whose logarithms everybody knows — out of $J_N^-$, where it would otherwise be a ready-made forgery. [Malicious clients](05-security-analysis.md#Malicious-clients) works through why that matters.
+
+The client randomly chooses and saves a persistent $x \in \Z_N^*$ value. For each new request, it randomly chooses $w \in (\Z_N^*)^{(B/2)2^m}$ and $t = 1 \bmod{B}$ and sends $y = wx^t$. It’s not too hard to intuitively see that the only meaningful pieces of information conveyed about $x$ are:
 
 1. The parity bit
 2. The bucket value
 3. The geometric sample
 
-We can analyze it in terms of generator exponents. Choose a semigenerator, $g$, in this new ring and write $\log_g(x) = (a, b, c, d)$ and $\log_g(w) = (0, 0, 0, e)$. Then:
+We can analyze it in terms of generator exponents. Choose a semigenerator, $g$, in this new ring and split the $C_{2B}$ component by the Chinese Remainder Theorem, writing
+
+```math
+\begin{aligned}
+\log_g(x) = (a, b, c, d) \in \Z_4 \times \Z_{B/2} \times \Z_{2^m} \times \Z_{pq}
+\end{aligned}
+```
+
+together with $\log_g(w) = (0, 0, 0, e)$. Then:
 
 ```math
 \begin{aligned}
 \log_g(wx^t)
 &= (ta, tb, tc, td + e) \\
-&= (a, b, tc, td + e) \\
+&= (ta, b, tc, td + e) \\
 \end{aligned}
 ```
 
 Spelling these four components out:
 
 - Parity bit: $ta = a \bmod 2$ since $t = 1 \bmod 2$
-- Bucket index: $tb = b$ since $t = 1 \bmod B$
+- Bucket index: $tb = b$ since $t = 1 \bmod{\nfrac{B}{2}}$
 - Geometric sample: $\tz(tc) = \tz(t) + \tz(c) = \tz(c)$ since $\tz(t) = 0$
 - The rest: $td + e \bmod{pq}$ is freshly random in each request
 
-The core HyperLogLog Over RSA construction is now in place. The server constructs a ring with the shape $N = PQ = (2Bp+1)(2^m q+1)$, keeping $P$, $Q$, $p$, $q$ secret and publishing $N$ together with a semigenerator $g$. A client generates a persistent secret $x \in \Z_N^*$ with $\Jacobi_N(x) = -1$ and, for each request, sends a freshly randomized token $y = wx^t$ where $t \equiv 1 \bmod{2B}$ and $w$ is chosen from $(\Z_N^*)^{B2^m}$. The server discards any request where $\Jacobi_N(y) \neq -1$, since that indicates a misbehaving client. For the remaining requests, it uses the secret factors, $P$ and $Q$, to extract the bucket index, $b$, from the $C_B$ component and the geometric sample, $k = \tz(c)$, from the $C_{2^m}$ component, yielding a decrypted HLL sample pair, $(b, k)$. Clients cannot steer or bias samples without knowing the factorization of $N$. The next section completes the protocol by making it work nicely with resource class sharding.
+The $C_4$ component carries one bit beyond the parity, and it is worth pinning down why. Neither $ta$ nor the leading odd factor of $tc$ is stable on its own, since both are scaled by an unknown $t$; their *product* modulo 4 is stable, because $t^2 = 1 \bmod 4$ for every odd $t$. So one further bit survives re-randomization no matter how $w$ and $t$ are drawn. Since nothing can erase it, the protocol counts it rather than fighting it: the bucket index is $b$ together with that bit, which is why the ring has $B$ buckets and not $\nfrac{B}{2}$. Declaring the bit is also what keeps it from being a fingerprint, as [the anonymity theorem](05-security-analysis.md#The-anonymity-theorem) makes precise.
+
+The core HyperLogLog Over RSA construction is now in place. The server constructs a ring with the shape $N = PQ = (2Bp+1)(2^m q+1)$, keeping $P$, $Q$, $p$, $q$ secret and publishing $N$ together with a semigenerator $g$. A client generates a persistent secret $x \in \Z_N^*$ with $\Jacobi_N(x) = -1$ and, for each request, sends a freshly randomized token $y = wx^t$ where $t \equiv 1 \bmod{B}$ and $w$ is chosen from $(\Z_N^*)^{(B/2)2^m}$. The server discards any request where $\Jacobi_N(y) \neq -1$, since that indicates a misbehaving client. For the remaining requests, it uses the secret factors, $P$ and $Q$, to extract the bucket index, $b$, from the $C_{2B}$ component and the geometric sample, $k = \tz(c)$, from the $C_{2^m}$ component, yielding a decrypted HLL sample pair, $(b, k)$. Clients cannot steer or bias samples without knowing the factorization of $N$. The next section completes the protocol by making it work nicely with resource class sharding.
 
 ## Master keys
 
@@ -337,23 +349,23 @@ and use the first $x_i$ such that $\Jacobi_N(x_i) = -1$. Since about half of the
 
 ### What we actually do
 
-Can we design a scheme where the client generates a single pre-validated master key and constructs $x$ for each resource class so that it always has a negative Jacobi symbol? And ideally, every possible value in the negative Jacobi set would be reachable for some potential resource class. As it happens, this is possible. The key insight is that our particular shape of RSA ring, while not cyclic, is very nearly cyclic. Recall that it has this multiplicative structure:
+Can we design a scheme where the client generates a single pre-validated master key and constructs $x$ for each resource class so that it always has a negative Jacobi symbol, and so that the values it produces are spread across the HyperLogLog value space the way independently chosen secrets would be? As it happens, this is possible. The key insight is that our particular shape of RSA ring, while not cyclic, is very nearly cyclic. Recall that it has this multiplicative structure:
 
 ```math
 \begin{aligned}
 \Z_N^* \cong
-C_2 \times C_B \times C_{2^m} \times C_{pq}
+C_{2B} \times C_{2^m} \times C_{pq}
 \end{aligned}
 ```
 
-The only shared factor among cyclic component orders is a single factor of two shared by $C_2$ and $C_{2^m}$. This means that if $g$ is a semigenerator, then every element in $\Z_N^*$ is either of the form $g^k$ or $x_0 g^k$ where $x_0$ is any fixed element with $\Jacobi_N(x_0) = -1$. Recall that for a semigenerator, $g \in \Z_N^*$, both $\fmod(g,P)$ and $\fmod(g,Q)$ are generators in $\Z_P^*$ and $\Z_Q^*$, respectively. All semigenerators in this ring have $\Jacobi_N(g) = 1$, so every element of the form $g^k$ has positive Jacobi symbol while every element of the form $x_0 g^k$ has negative Jacobi symbol. This gives us a natural way to generate every negative Jacobi value: fix $x_0$ and $g$ and let $k$ range over all exponent values: for every $x \in J_N^-$ there is some $k$ such that $x = x_0 g^k$. The client can easily pick a valid $x_0$ since all they have to check is that $\Jacobi_N(x_0) = -1$. The client cannot, on the other hand, check if $g$ is a semigenerator since it doesn’t know the factorization of $N$, but the server can do this and publish a common $g$ value along with $N$. Clients cannot check that $g$ is actually a semigenerator, but there’s no real harm done if it isn’t.
+The orders of the cyclic components share a factor of four, between $C_{2B}$ and $C_{2^m}$. A semigenerator $g$ therefore generates a subgroup of index four in $\Z_N^*$ — index two inside each Jacobi class — so fixing an $x_0$ with $\Jacobi_N(x_0) = -1$ and letting $k$ range over exponents reaches half of $J_N^-$. (With the odd-$B$ shape, the shared factor was two and $x_0\gen{g}$ was all of $J_N^-$; requiring $B = 2 \bmod 4$ costs us that.) Exhaustive coverage is not what the construction needs, though — what it needs is that the reachable values be well distributed across bucket and geometric values, which we verify below. Recall that for a semigenerator, $g \in \Z_N^*$, both $\fmod(g,P)$ and $\fmod(g,Q)$ are generators in $\Z_P^*$ and $\Z_Q^*$, respectively. All semigenerators in this ring have $\Jacobi_N(g) = 1$, so every element of the form $g^k$ has positive Jacobi symbol while every element of the form $x_0 g^k$ has negative Jacobi symbol. This gives us a natural way to generate negative-Jacobi values in bulk: fix $x_0$ and $g$ and let $k$ range over all exponent values, sweeping out the coset $x_0\gen{g}$. The client can easily pick a valid $x_0$ since all they have to check is that $\Jacobi_N(x_0) = -1$. The client cannot, on the other hand, check if $g$ is a semigenerator since it doesn’t know the factorization of $N$, but the server can do this and publish a common $g$ value along with $N$. Clients cannot check that $g$ is actually a semigenerator, but there’s no real harm done if it isn’t.
 
 Putting it together:
 
 - The server, when generating the ring, also chooses and publishes a common “semigenerator” element, $g \in \Z_N^*$;
 - The client, when downloading the ring parameters for the first time, also chooses and saves a random $x_0 \in \Z_N^*$ with $\Jacobi_N(x_0) = -1$. This $x_0$ is the client’s master key.
 
-Since half of the values in $\Z_N$ have negative Jacobi symbol, a viable $x_0$ is quick to find, and it only has to be done once for a new ring. Regardless of which $x_0$ the client chooses, every $x \in \Z_N^*$ with $\Jacobi_N(x) = -1$ has $x = x_0 g^k$ for some $k$. The client’s choice of $x_0$ changes how exponents map to $x$ values in a way that we’ll explore below. Write the logarithm vector of the master key as:
+Since half of the values in $\Z_N$ have negative Jacobi symbol, a viable $x_0$ is quick to find, and it only has to be done once for a new ring. Whichever $x_0$ the client picks, the values it can reach are the coset $x_0\gen{g}$ — half of $J_N^-$, and a different half for different choices of $x_0$. The client’s choice of $x_0$ changes how exponents map to $x$ values in a way that we’ll explore below. Write the logarithm vector of the master key as:
 
 ```math
 \begin{aligned}
@@ -385,18 +397,17 @@ This is the second usage of $x_0$, this time as a ring element. Note that the co
 \end{aligned}
 ```
 
-This $x_h$ plays the role of $x$ in previous sections, where we presumed it to be a random value with negative Jacobi symbol. As long as the hash values cover a sufficiently large range, $x_h$ is an arbitrary value in $J_N^-$:
+This $x_h$ plays the role of $x$ in previous sections, where we presumed it to be a random value with negative Jacobi symbol. As long as the hash values cover a sufficiently large range, $x_h$ sweeps out the whole coset $x_0\gen{g}$:
 
 ```math
 \ord(g)
-= \norm{J_N^+}
-= \tfrac{1}{2}\norm{\Z_N^*}
-%= \tfrac{1}{2}\varphi(N)
-= 2^m B p q
+= \tfrac{1}{2}\norm{J_N^+}
+= \tfrac{1}{4}\norm{\Z_N^*}
+= 2^m \tfrac{B}{2} p q
 = \lambda(N)
 ```
 
-If $h$ can take on every value in $\Z_{\lambda(N)}$ then $x_h$ takes on every possible value in $J_N^-$. Naively, this presents a problem: $\lambda(N)$ is large and unknown to the client. Fortunately, $h$ does not actually need to cover this entire range because the client doesn’t send $x_h$ as is: it actually sends $y = wx_h^t$ where $w \in W$ is random “white noise” and $t$ is a random exponent with $t = 1 \bmod 2B$. If $\log_g(x_0) = (a, b, c, d)$ and $\log_g(w) = (0, 0, 0, e)$ then we have:
+If $h$ can take on every value in $\Z_{\lambda(N)}$ then $x_h$ takes on every value in $x_0\gen{g}$. Naively, this presents a problem: $\lambda(N)$ is large and unknown to the client. Fortunately, $h$ does not actually need to cover this entire range because the client doesn’t send $x_h$ as is: it actually sends $y = wx_h^t$ where $w \in W$ is random “white noise” and $t$ is a random exponent with $t = 1 \bmod B$. If $\log_g(x_0) = (a, b, c, d)$ and $\log_g(w) = (0, 0, 0, e)$ then we have:
 
 ```math
 \begin{aligned}
@@ -404,24 +415,24 @@ If $h$ can take on every value in $\Z_{\lambda(N)}$ then $x_h$ takes on every po
 &= \log(w x_h^t)
 = \log(w (x_0 g^h)^t) \\
 &= t \, (a + h, b + h, c + h, d + h) + (0, 0, 0, e) \\
-&= (a + h, b + h, t(c + h), t(d + h) + e) \\
+&= (t(a + h), b + h, t(c + h), t(d + h) + e) \\
 \end{aligned}
 ```
 
-The components of $y$ that convey information are:
+with the coordinates again taken in $\Z_4 \times \Z_{B/2} \times \Z_{2^m} \times \Z_{pq}$. The components of $y$ that convey information are:
 
-- The parity bit: $a + h \in \Z_2$
-- The bucket index: $b + h \in \Z_B$
+- The parity bit: $t(a + h) = a + h \bmod 2$
+- The bucket index: $b + h \in \Z_{B/2}$, together with the invariant bit carried by $t(a+h)$ against $t(c+h)$
 - The geometric sample: $\tz(t(c + h)) \in \set{0, \dots, m}$
 
-Here we can see that the real requirement on $h$ is that $(b + h, c + h)$ covers all of $\Z_B \times \Z_{2^m}$ fairly uniformly as $h$ takes on different values. To ensure this it’s sufficient to ensure that $h$ is sampled from a modulus, $M$ such that $\fmod(M, B2^m)$ is tiny relative to $M \div B2^m$. We could use an exact multiple of $B2^m$, which makes the modulus zero. But that’s inconvenient, since real world hashes have power-of-two outputs. Fortunately, if $M$ is sufficiently large, the bias (ratio) is negligible. For any modern hash function like SHA-256, this is the case. In our reference implementation, we actually use the output of HMAC-SHA-256 (keyed by the SHA-256 hash of $x_0$), truncated into a 128-bit integer value, which is still more than large enough to guarantee effectively uniform coverage.
+Here we can see that the real requirement on $h$ is that $(a + h, b + h, c + h)$ covers $\Z_4 \times \Z_{B/2} \times \Z_{2^m}$ fairly uniformly as $h$ takes on different values. Note that $h$ drives all three coordinates at once, so the coverage is of a cyclic subgroup rather than the full product — but the induced distribution on what is actually decoded is still the right one. The bucket index $b + h$ is uniform on $\Z_{B/2}$; the geometric sample has its intended geometric distribution because $c + h$ is uniform on $\Z_{2^m}$; and the extra bucket bit is balanced, because within each geometric level the leading odd factor of $c+h$ ranges over both residues mod 4 while $a+h$ is either fixed or moves in lockstep with it. To ensure this it’s sufficient to ensure that $h$ is sampled from a modulus, $M$ such that $\fmod(M, B2^{m-1})$ is tiny relative to $M \div B2^{m-1}$. We could use an exact multiple of $B2^m$, which makes the modulus zero. But that’s inconvenient, since real world hashes have power-of-two outputs. Fortunately, if $M$ is sufficiently large, the bias (ratio) is negligible. For any modern hash function like SHA-256, this is the case. In our reference implementation, we actually use the output of HMAC-SHA-256 (keyed by the SHA-256 hash of $x_0$), truncated into a 128-bit integer value, which is still more than large enough to guarantee effectively uniform coverage.
 
 What information do we make sure is **not** conveyed?
 
 - The leading digits of $t(c+h)$ should be fully random
 - The last component, $t(d + h) + e$, should be fully random
 
-To ensure the former, we want $t$ to be able to take every odd residue class in $\Z_{2^m}$ which is accomplished by choosing $i \in [0, 2^{m-1})$ and letting $t = 2Bi + 1$. To ensure the latter, we want $w$ to take every possible value in $W$ which is accomplished by choosing $z \in \Z_N^*$ at random and letting $w = z^{B2^m}$ (we don’t actually care about $t$ for this factor).
+To ensure the former, we want $t$ to be able to take every odd residue class in $\Z_{2^m}$ which is accomplished by choosing $i \in [0, 2^{m-1})$ and letting $t = Bi + 1$; since $B$ is even this is automatically odd, and $B$ rather than $2B$ is used precisely so that $t$ is *not* pinned to $1 \bmod 4$, which would freeze the $C_4$ coordinate. To ensure the latter, we want $w$ to take every possible value in $W$ which is accomplished by choosing $z \in \Z_N^*$ at random and letting $w = z^{(B/2)2^m}$ (we don’t actually care about $t$ for this factor).
 
 Putting it all together, for each request a client makes, this scheme requires the client to:
 
@@ -429,9 +440,9 @@ Putting it all together, for each request a client makes, this scheme requires t
 - Compute $g^h \bmod N$ — one modular exponentiation
 - Compute $x_h = x_0 g^h \bmod N$ — one modular multiplication
 - Generate random $z \in \Z_N^*$
-- Compute $w = z^{B2^m}$ — one modular exponentiation
+- Compute $w = z^{(B/2)2^m}$ — one modular exponentiation
 - Generate random $i \in \Z_{2^{m-1}}$
-- Compute $t = 2Bi + 1$ — a few small arithmetic operations
+- Compute $t = Bi + 1$ — a few small arithmetic operations
 - Compute $x_h^t \bmod N$ — one modular exponentiation
 - Compute $y = w x_h^t$ — one modular multiplication
 
@@ -459,22 +470,25 @@ As you can see, this is a very literal rendition of the steps described. On my M
 
 The construction above shards *both* HLL coordinates. Because $h = \hash(x_0, \text{class})$ enters the bucket coordinate as $b_0 + h$ and the geometric coordinate as $c_0 + h$, a client lands in an independent bucket *and* draws an independent geometric sample in every resource class. That is the natural thing to do, but it is not the only option. We can instead shard only the geometric sample, keeping a client’s bucket the *same* in every class — a variant we call *semisharding*. The reason one might want this — a malicious observer correlating a client’s per-class values across a bundle of co-requested classes — is developed in [Request bundles and cross-class correlation](05-security-analysis.md#Request-bundles-and-cross-class-correlation); here we show only that the change is a one-line tweak that costs nothing.
 
-Recall that a semigenerator has $\log(g) = (1, 1, 1, 1)$ across $\Z_2 \times \Z_B \times \Z_{2^m} \times \Z_{pq}$. Replace $g$ with $f = g^B$. Raising to the $B$ power multiplies every log-coordinate by $B$, so
+Recall that a semigenerator has $\log(g) = (1, 1, 1, 1)$ across $\Z_4 \times \Z_{B/2} \times \Z_{2^m} \times \Z_{pq}$. Replace $g$ with $f = g^{B/2}$. Raising to the $\nfrac{B}{2}$ power multiplies every log-coordinate by $\nfrac{B}{2}$, so
 
 ```math
 \begin{aligned}
-\log(f) = (B, B, B, B) = (1,\, 0,\, B,\, B),
+\log(f) = \left(\tfrac{B}{2}, \tfrac{B}{2}, \tfrac{B}{2}, \tfrac{B}{2}\right)
+= \left(\tfrac{B}{2},\, 0,\, \tfrac{B}{2},\, \tfrac{B}{2}\right),
 \end{aligned}
 ```
 
-using that $B$ is odd (so $B \equiv 1 \bmod 2$) and that the $C_B$ coordinate is reduced $\bmod B$ (so $B \equiv 0$). The $C_B$ component is annihilated — for *any* $g$, whatever its own bucket coordinate. Deriving the per-class element with $f$ in place of $g$, and writing the master key’s coordinates as $\log(x_0) = (a_0, b_0, c_0, d_0)$,
+using that the $C_{B/2}$ coordinate is reduced $\bmod \nfrac{B}{2}$ (so $\nfrac{B}{2} \equiv 0$). Note that the exponent is $\nfrac{B}{2}$ rather than $B$: it has to be odd, or it would annihilate half the geometric ladder along with the bucket coordinate, leaving $c_0 + \nfrac{B}{2}h$ unable to reach odd residues. The odd part of the bucket coordinate is annihilated — for *any* $g$, whatever its own bucket coordinate. Deriving the per-class element with $f$ in place of $g$, and writing the master key’s coordinates as $\log(x_0) = (a_0, b_0, c_0, d_0)$,
 
 ```math
 \begin{aligned}
-\log(x_0 f^h) = (a_0 + h,\; b_0,\; c_0 + Bh,\; d_0 + Bh).
+\log(x_0 f^h) = \left(a_0 + \tfrac{B}{2}h,\; b_0,\; c_0 + \tfrac{B}{2}h,\; d_0 + \tfrac{B}{2}h\right).
 \end{aligned}
 ```
 
-The bucket coordinate is now $b_0$ — the client’s own master-key bucket, *fixed across every class* — and it survives to the token unchanged, since the sent value $y = w(x_0 f^h)^t$ has $t \equiv 1 \bmod B$ and $w$ contributes nothing to the $C_B$ part, so the server decodes bucket $b_0$ in every class. The geometric coordinate is $c_0 + Bh$, which still ranges uniformly over $\Z_{2^m}$ as $h$ varies, because $B$ is coprime to $2^m$ and so a unit there. Semisharding thus keeps exactly what HyperLogLog needs and drops only the per-class variation of the bucket.
+The odd part of the bucket coordinate is now $b_0$ — the client’s own master-key bucket, *fixed across every class* — and it survives to the token unchanged, since the sent value $y = w(x_0 f^h)^t$ has $t \equiv 1 \bmod B$ and $w$ contributes nothing to that part. The geometric coordinate is $c_0 + \nfrac{B}{2}h$, which still ranges uniformly over $\Z_{2^m}$ as $h$ varies, because $\nfrac{B}{2}$ is odd and so a unit there.
 
-Nothing about the count changes. Within any single class, clients are still spread uniformly across buckets — now by their master-key bucket $b_0$, uniform because $x_0$ is random — and each contributes a fresh geometric sample, so a per-class sketch is indistinguishable from ordinarily sharded HyperLogLog. The fairness property survives too: a client is conspicuous in a class only when its geometric sample there is unusually high, and that sample is still independent per class, so every client is bland in most classes and rare in a few. The one thing that changes is that a client’s bucket no longer varies from class to class — which is precisely the property the [security analysis](05-security-analysis.md#Request-bundles-and-cross-class-correlation) shows we want. This — $f = g^B$ — is the construction Julia’s Pkg client ships.
+The bucket’s low bit is the exception. It is read off the $C_4$ coordinate against the leading odd factor of the $C_{2^m}$ coordinate, and $h$ moves both, so it varies from class to class along with the geometric sample. A semisharded client therefore occupies not one bucket but one of a fixed *pair* — $b_0$ and $b_0 + \nfrac{B}{2}$ — chosen per class. This weakens the construction by exactly one bit relative to the odd-$B$ shape: instead of pinning a client to $1$ of $B$ buckets across all classes, it pins it to $2$ of $B$. Everything the property is used for is a statement about how *few* buckets a client’s classes can span, and two is still a constant rather than a fresh draw each time, so the argument in the [security analysis](05-security-analysis.md#Request-bundles-and-cross-class-correlation) goes through with that constant doubled. Semisharding thus keeps what HyperLogLog needs and drops nearly all of the per-class variation of the bucket.
+
+Nothing about the count changes. Within any single class, clients are still spread uniformly across buckets — now by their master-key bucket $b_0$, uniform because $x_0$ is random — and each contributes a fresh geometric sample, so a per-class sketch is indistinguishable from ordinarily sharded HyperLogLog. The fairness property survives too: a client is conspicuous in a class only when its geometric sample there is unusually high, and that sample is still independent per class, so every client is bland in most classes and rare in a few. The one thing that changes is that a client’s bucket is confined to a fixed pair rather than varying freely from class to class — which is precisely the property the [security analysis](05-security-analysis.md#Request-bundles-and-cross-class-correlation) shows we want. This — $f = g^{B/2}$ — is the construction Julia’s Pkg client ships.
