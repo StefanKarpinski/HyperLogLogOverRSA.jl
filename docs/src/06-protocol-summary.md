@@ -18,7 +18,7 @@ A test implementation of the entire HyperLogLog Over RSA protocol in Julia can b
 The system operator chooses HyperLogLog parameters, RSA bit-length, and a certificate strength:
 
 - ``B`` is the bucket count
-    - It must be an odd number
+    - It must be congruent to $2 \bmod 4$
     - Example: $B = 2^{12} - 1$
 - ``m`` is the maximum geometric sample value
     - Maximum client estimate is around $2^m$
@@ -58,7 +58,7 @@ N = PQ = (2 B p + 1)(2^m q + 1)
 \end{aligned}
 ```
 
-such that $P$, $Q$, $p$, $q$, are all distinct odd primes coprime to $B$.
+such that $P$, $Q$, $p$, $q$, are all distinct odd primes coprime to $\nfrac{B}{2}$.
 
 The server generates $N$ such that:
 
@@ -126,12 +126,12 @@ The client downloads the latest ring certificate at an agreed upon location. It 
 To check a ring certificate, the client should:
 
 - Check that $B ≤ B_{\max}$
-- Check that $B$ is odd
+- Check that $B = 2 \bmod 4$
 - Check that $2 ≤ m ≤ m_{\max}$
 - Check that $\log_2(N) ≤ L_{\max}$
-- Check that $N = 3 \bmod 4$
+- Check that $N = 5 \bmod 8$
 - Check that $\gcd(B, N) = 1$
-- Check that $\gcd(B, N-1) = 1$
+- Check that $\gcd(B, N-1) = 2$
 - Check that $\Jacobi_N(g) = 1$
 - Check that $\alpha_{\min} ≤ (8/5)^n$ where $n$ is the length of $\text{sqrts}$
 - Check that each square root is valid
@@ -159,8 +159,8 @@ x = x_0 g^h = x_0 g^{\hash(x_0,\,\text{class})}
 
 It then generates a random white noise element and a random exponent value:
 
-- Choose $z \in \set{1, 2, \dots, N-1}$ and let $w = z^{B2^m} \bmod N$
-- Choose $i \in \set{0, 1, \dots, 2^{m-1}-1}$ and let $t = 2Bi + 1$
+- Choose $z \in \set{1, 2, \dots, N-1}$ and let $w = z^{(B/2)2^m} \bmod N$
+- Choose $i \in \set{0, 1, \dots, 2^{m-1}-1}$ and let $t = Bi + 1$
 
 Finally, the client computes:
 
@@ -172,7 +172,7 @@ y = \fmod(wx^t, N)
 
 This value $y$ is what the client sends with the request, in a header that also carries a short identifier for the ring — a truncated hash of the ring parameters — so the server knows which modulus $y$ belongs to. A few bytes are enough to tell a server’s rings apart, so the identifier stays far smaller than $y$ itself.
 
-To keep a client’s bucket *common* across resource classes rather than independent per class — the *semisharding* variant — the client derives $x$ with $f = g^B$ in place of $g$, so that $x = x_0 f^h = x_0 g^{Bh}$. Because $g^B$ has a trivial $C_B$ component, the bucket becomes the client’s fixed master-key bucket while the geometric sample still varies per class. This defends against the cross-class correlation attack on clients that make consistent request bundles over time ([Request bundles and cross-class correlation](05-security-analysis.md#Request-bundles-and-cross-class-correlation)); it is the variant Julia’s Pkg client ships.
+To keep a client’s bucket *common* across resource classes rather than independent per class — the *semisharding* variant — the client derives $x$ with $f = g^{B/2}$ in place of $g$, so that $x = x_0 f^h = x_0 g^{(B/2)h}$. Because $g^{B/2}$ has a trivial $C_{B/2}$ component, the bucket becomes the client’s fixed master-key bucket while the geometric sample still varies per class. This defends against the cross-class correlation attack on clients that make consistent request bundles over time ([Request bundles and cross-class correlation](05-security-analysis.md#Request-bundles-and-cross-class-correlation)); it is the variant Julia’s Pkg client ships.
 
 ## Server step 5: Request validation & decoding
 

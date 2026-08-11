@@ -7,7 +7,7 @@ The protocol above is general; here we pin down the concrete choices for the Jul
 **Certificate endpoint.** The server publishes its certificate as TOML at `$server/hll_rsa.toml`. Client and server both use Julia’s TOML implementation, which reads and writes arbitrary-precision integers, so $N$, $g$, and the square roots are bare integer literals — no quoting is needed even though they far exceed 64 bits:
 
 ```toml
-B = 4095
+B = 4094
 m = 63
 N = 1152665851984795538…
 g = 2154516298683041933…
@@ -19,7 +19,7 @@ The client fetches this endpoint with a plain download that does not pass throug
 **Stored ring record.** Once a certificate verifies, the client saves the ring — but not the large, no-longer-needed square roots — together with a freshly generated master key $x_0 \in J_N^-$, to `~/.julia/servers/<host>/hll_rsa.toml` (again as bare integers):
 
 ```toml
-B = 4095
+B = 4094
 m = 63
 N = 1152665851984795538…
 g = 2154516298683041933…
@@ -33,7 +33,7 @@ The file is written atomically — to a temporary file, then renamed into place 
 
 **Class hashing.** The per-class exponent $h = \hash(x_0, \text{class})$ is instantiated as HMAC-SHA-256 keyed by the SHA-256 hash of $x_0$ (its little-endian bytes), applied to the class string’s bytes, with the first 16 bytes of the digest read big-endian into a 128-bit integer. The ring holder decodes with the factorization and never recomputes $h$, so this is purely a client-side choice: any keyed hash of the class works, and keying it by $x_0$ is what makes each client’s per-class draw independent and impossible for the client to bias.
 
-**Semisharding.** The Pkg client uses the [semisharded](04-hyperloglog-over-rsa.md#Semisharding) construction, deriving each class’s element with $f = g^B$ so a client keeps one common bucket across all resource classes. Pkg requests are the case the variant exists for: a project’s dependency tree is fetched as a bundle and then re-fetched, resolved, and CI-tested repeatedly, so a client’s request bundles recur with overlap over time. The [request-bundle analysis](05-security-analysis.md#Request-bundles-and-cross-class-correlation) explains why that turns the plain-sharded bucket into a cross-class fingerprint, and why fixing it is the safe default.
+**Semisharding.** The Pkg client uses the [semisharded](04-hyperloglog-over-rsa.md#Semisharding) construction, deriving each class’s element with $f = g^{B/2}$ so a client keeps a common bucket pair across all resource classes. Pkg requests are the case the variant exists for: a project’s dependency tree is fetched as a bundle and then re-fetched, resolved, and CI-tested repeatedly, so a client’s request bundles recur with overlap over time. The [request-bundle analysis](05-security-analysis.md#Request-bundles-and-cross-class-correlation) explains why that turns the plain-sharded bucket into a cross-class fingerprint, and why fixing it is the safe default.
 
 **Deterministic semigenerator.** The certificate’s $g$ is not a free server choice but a deterministic function of $N$ — the hash of $N$ mapped into $J_N^+$ by the ring’s fixed twist — so the client recomputes it and rejects any certificate whose $g$ differs. This denies a malicious server the use of $g$ as a per-client tag; half of candidate moduli admit a usable $g$ at the first hash index, so a server regenerates $N$ in the rare case its first candidate fails, and the client’s local check remains the same $\Jacobi_N(g) = 1$ it already performs (see [Malicious semigenerators](05-security-analysis.md#Malicious-semigenerators)).
 
