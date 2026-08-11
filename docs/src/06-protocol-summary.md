@@ -19,9 +19,10 @@ The system operator chooses HyperLogLog parameters, RSA bit-length, and a certif
 
 - ``B`` is the bucket count
     - It must be congruent to $2 \bmod 4$
-    - Example: $B = 2^{12} - 1$
-- ``m`` is the maximum geometric sample value
-    - Maximum client estimate is around $2^m$
+    - Example: $B = 2^{12} - 2$
+- ``m`` is the height of the geometric ladder
+    - Reported geometric samples are capped at $m-1$
+    - Maximum client estimate is around $2^{m-1}$
     - Example: $m = 63$
 - ``L`` is the bit-length of $N$ values
     - Controls cryptographic strength of the RSA ring
@@ -184,12 +185,21 @@ The server decodes the HLL value by computing:
 
 ```math
 \begin{aligned}
-\text{bucket} &= \fmod(y^{2p}, P) \\
-\text{geometric} &= m - \log_2(\ord(\fmod(y^q, Q))) \\
+a &= \log(\fmod(y^p, P)) \\
+k &= m - \log_2(\ord(\fmod(y^q, Q))) \\
 \end{aligned}
 ```
 
-The bucket value is in $\Z_P$ which is huge, but there are only $B$ possible values it takes which can be mapped back to $\set{0, \dots, B-1}$ by any consistent mapping scheme. The geometric values are already in $\set{0, \dots, m}$ and the value can be computed efficiently by repeatedly squaring $\fmod(y^q,Q)$ until reaching one.
+Raising to $p$ annihilates the $C_p$ component and leaves the $C_{2B}$ one, whose logarithm $a$ is recovered by table lookup: the value is in $\Z_P$, which is huge, but it takes only $2B$ possible values, which any consistent mapping scheme sends to $\set{0, \dots, 2B-1}$. The order in the second line is computed efficiently by repeatedly squaring $\fmod(y^q,Q)$ until reaching one. The reported pair is then
+
+```math
+\begin{aligned}
+\text{geometric} &= \min(k,\, m-1) &&\in \set{0, \dots, m-1} \\
+\text{bucket} &= \left(a \bmod \tfrac{B}{2}\right) + \tfrac{B}{2}s &&\in \set{0, \dots, B-1}
+\end{aligned}
+```
+
+where $s$ is the one bit of $2$-torsion that survives re-randomization. For $k ≤ m-2$ it is $1$ exactly when $(a \bmod 4)\,u = 2, 3 \bmod 4$, with $u$ read off the order-$4$ element the squaring chain passes through on its way to one; at the capped level it is $1$ exactly when $k = m$. Capping at $m-1$ is what makes the decoded pair range over an exact $B \times m$ rectangle — see [the anonymity theorem](05-security-analysis.md#The-anonymity-theorem).
 
 ## Server step 6: Count estimation
 
