@@ -14,10 +14,14 @@ The ring has the form
 
 so that, multiplicatively,
 
-    ℤ_N^* ≅ C_2 × C_B × C_(2^m) × C_(p q)
+    ℤ_N^* ≅ C_(2B) × C_(2^m) × C_(p q)
 
-where `B` (which must be odd) is the number of HyperLogLog buckets and `m` is the
-maximum geometric sample value; `L` is the target bit-length of `N`.
+where `B` (which must be ≡ 2 mod 4) is the number of HyperLogLog buckets and `m`
+is the maximum geometric sample value; `L` is the target bit-length of `N`.
+
+`B ≡ 2 mod 4` makes `P ≡ 5 mod 8`, hence `N ≡ 5 mod 8`, hence `jacobi(-1, N) = 1`
+— which keeps `-1` out of `J_N^-` and so denies a forger a public element with
+known logarithms. See the security analysis for why that matters.
 
 The primes `P`, `Q`, `p`, `q` are secret — and are deliberately omitted when a
 `Ring` is shown — so only a holder of the `Ring` can decode HLL values via
@@ -29,7 +33,7 @@ for choosing the primes; pass a seeded RNG for a reproducible ring.
 """
 struct Ring{T<:Integer}
     # general shape
-    B :: Int # bucket factor (odd)
+    B :: Int # bucket count (≡ 2 mod 4)
     m :: Int # max geometric sample size
 
     # specific values
@@ -38,14 +42,14 @@ struct Ring{T<:Integer}
 end
 
 function Ring{T}(
-    B :: Integer, # bucket factor — must be odd
+    B :: Integer, # bucket count — must be ≡ 2 mod 4
     m :: Integer, # max geometric sample size
     L :: Integer; # bit length of modulus
     rng :: AbstractRNG = DEFAULT_RNG,
 ) where {T<:Integer}
     # argument checks
-    isodd(B) || throw(ArgumentError("B must be odd"))
-    m ≥ 2 || throw(ArgumentError("m must be ≥ 2"))
+    mod(B, 4) == 2 || throw(ArgumentError("B must be ≡ 2 mod 4"))
+    m ≥ 3 || throw(ArgumentError("m must be ≥ 3"))
     L > 0 || throw(ArgumentError("L must be positive"))
 
     # range of N values
@@ -137,7 +141,7 @@ end
 ring_type(L::Integer) = L < 64 ? Int64 : L < 128 ? Int128 : BigInt
 
 function Ring(
-    B :: Integer, # bucket factor — must be odd
+    B :: Integer, # bucket count — must be ≡ 2 mod 4
     m :: Integer, # max geometric sample size
     L :: Integer; # bit length of modulus
     rng :: AbstractRNG = DEFAULT_RNG,
@@ -149,7 +153,7 @@ Base.getproperty(ring::Ring, name::Symbol) =
     name === :N ? ring.P*ring.Q :
     name === :P ? 2*ring.p*ring.B + 1 :
     name === :Q ? ring.q << ring.m + 1 :
-    name === :λ ? ring.B*ring.p*(ring.q << ring.m) :
+    name === :λ ? (ring.B >> 1)*ring.p*(ring.q << ring.m) :
         getfield(ring, name)
 
 modulus(ring::Ring) = ring.N
@@ -162,18 +166,18 @@ Base.show(io::IO, ring::Ring) =
 
 function rand_semigenerator(ring::Ring; rng::AbstractRNG = DEFAULT_RNG)
     P, Q = factors(ring)
-    # find generator for ℤ_P^*
+    # find generator for ℤ_P^*: its C_2B part must generate (checked prime by
+    # prime of 2B, which for B ≡ 2 mod 4 covers the 2-part and the odd part
+    # alike) and its C_p part must be nontrivial
     range_P = 1:P-1
-    Bp = ring.B*ring.p
     𝟚B = 2*ring.B
-    λ_P = 2*ring.B*ring.p
-    λ_P_rs = [λ_P ÷ r for r in keys(factor(ring.B))]
+    P_1 = 𝟚B*ring.p # P - 1
+    P_1_rs = [P_1 ÷ r for r in keys(factor(𝟚B))]
     local g_P
     while true
         g_P = rand(rng, range_P)
-        powermod(g_P, Bp, P) ≠ 1 &&
         powermod(g_P, 𝟚B, P) ≠ 1 &&
-        all(powermod(g_P, λ_P_r, P) ≠ 1 for λ_P_r in λ_P_rs) && break
+        all(powermod(g_P, P_1_r, P) ≠ 1 for P_1_r in P_1_rs) && break
     end
     @assert jacobi(g_P, P) == -1
     # find generator for ℤ_Q^*
@@ -202,40 +206,51 @@ end
 """
     bucket_map(ring::Ring) -> Dict
 
-Precompute the map from `C_B` representatives in `ℤ_P^*` to bucket indices
-`0:B-1`, so that repeated [`hll_decode`](@ref) calls need not recompute it.
+Precompute the map from `C_(2B)` representatives in `ℤ_P^*` to their logarithms
+`0:2B-1`, so that repeated [`hll_decode`](@ref) calls need not recompute it.
 """
 function bucket_map(ring::Ring{T}) where {T<:Integer}
-    # find first g_B that generates the C_B part of ℤ_P^*
+    # find first g that generates the C_2B part of ℤ_P^*
     P = ring.P
-    B = ring.B
+    𝟚B = 2*ring.B
     P_1 = P-1
-    g_B = 2
-    while g_B < P
-        all(powermod(g_B, P_1 ÷ p, P) ≠ 1 for p in keys(factor(B))) && break
-        g_B += 1
+    rs = collect(keys(factor(𝟚B)))
+    g = 2
+    while g < P
+        all(powermod(g, P_1 ÷ r, P) ≠ 1 for r in rs) && break
+        g += 1
     end
-    𝟚p = 2ring.p
-    Dict(powermod(g_B, 𝟚p*b, P) => b for b = 0:B-1)
+    γ = powermod(oftype(P, g), ring.p, P) # kills C_p, generates C_2B
+    Dict(powermod(γ, a, P) => a for a = 0:𝟚B-1)
 end
 
-function hll_bucket(
+# The C_2B logarithm of `x`, up to a fixed odd scalar fixed by `bmap`'s choice of
+# generator — which only permutes bucket labels.
+function hll_log(
     ring :: Ring{T},
     x    :: Integer;
     bmap :: Dict{T,Int} = bucket_map(ring),
 ) where {T<:Integer}
-    bmap[powermod(x, 2ring.p, ring.P)]
+    bmap[powermod(x, ring.p, ring.P)]
 end
 
+# Returns the geometric sample `k` together with the order-4 element of ⟨x^q⟩,
+# or zero when `x` has no such element (`k ≥ m-1`). Squaring down to 1 counts the
+# order of the C_2^m part, and the second-to-last value it passes through is
+# ι^u, where u is the leading unit of that part's logarithm and ι is one of the
+# two order-4 elements mod Q — so the walk hands us `u` for free.
 function hll_geometric(ring::Ring, x::Integer)
-    y = powermod(x, ring.q, ring.Q) # y = x^q mod Q
+    Q = ring.Q
+    y = powermod(x, ring.q, Q) # y = x^q mod Q
     iszero(y) && throw(ArgumentError("invalid x ∉ ℤ_N^*"))
     k = ring.m
+    o2 = o4 = zero(y)
     while !isone(y)
-        y = powermod(y, 2, ring.Q) # y <- y^2 mod Q
+        o4, o2 = o2, y
+        y = powermod(y, 2, Q) # y <- y^2 mod Q
         k -= 1
     end
-    return k
+    return k, o4
 end
 
 """
@@ -244,13 +259,30 @@ end
 Decode an encrypted HyperLogLog token `y` to its `(bucket, geometric)` value,
 using the secret factorization carried by `ring`. Pass a precomputed `bmap`
 (from [`bucket_map`](@ref)) to amortize bucket decoding across many tokens.
+
+The bucket index splits as `β + (B/2)·s`: `β` is the token's logarithm in the
+odd part of `C_(2B)`, and `s` is the one bit of the 2-part that survives token
+re-randomization. Neither `w` nor an odd `t` can touch 2-torsion, so `s` is
+information the ring holder can read either way; it is part of the HyperLogLog
+value rather than a fingerprint precisely because it is declared here. It is
+pinned to `0` for `k ≥ m-1`, where the two orbits merge and only `B/2` buckets
+are reachable — a `2^-(m-1)` share of tokens.
 """
 function hll_decode(
     ring :: Ring{T},
     x    :: Integer;
     bmap :: Dict{T,Int} = bucket_map(ring),
 ) where {T<:Integer}
-    b = hll_bucket(ring, x; bmap)
-    k = hll_geometric(ring, x)
-    return b, k
+    a = hll_log(ring, x; bmap)
+    k, o4 = hll_geometric(ring, x)
+    # α = a mod 4 and the leading unit u of the C_2^m logarithm are each defined
+    # only up to an odd scalar, but t is odd so t^2 = 1 mod 4: the product αu is
+    # invariant under re-randomization even though neither factor is.
+    s = 0
+    if !iszero(o4)
+        u = 2*o4 < ring.Q ? 1 : 3 # canonical order-4 element gets u = 1
+        s = (a % 4)*u % 4 ≥ 2 ? 1 : 0
+    end
+    B′ = ring.B >> 1
+    return a % B′ + B′*s, k
 end

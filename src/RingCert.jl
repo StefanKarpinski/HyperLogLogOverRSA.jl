@@ -17,7 +17,7 @@ semigenerator `g`; the square roots are derived deterministically by hashing.
 """
 struct RingCert{T<:Integer}
     # general shape
-    B :: Int # bucket factor (odd)
+    B :: Int # bucket count (≡ 2 mod 4)
     m :: Int # max geometric sample size
 
     # ring-specific info
@@ -34,12 +34,12 @@ function RingCert(ring::Ring{T}; rng::AbstractRNG = DEFAULT_RNG) where {T<:Integ
     N = P*Q
 
     # test modulus
-    mod4(N) == 3 ||
-        throw(ArgumentError("modulus: N ≠ 3 mod 4 (N=$N)"))
+    mod8(N) == 5 ||
+        throw(ArgumentError("modulus: N ≠ 5 mod 8 (N=$N)"))
     gcd(B, N) == 1 ||
         throw(ArgumentError("modulus: gcd(B, N) ≠ 1 (N=$N)"))
-    gcd(B, N-1) == 1 ||
-        throw(ArgumentError("modulus: gcd(B, N-1) ≠ 1 (N=$N)"))
+    gcd(B, N-1) == 2 ||
+        throw(ArgumentError("modulus: gcd(B, N-1) ≠ 2 (N=$N)"))
 
     # generate a semigenerator element
     g = rand_semigenerator(ring; rng)

@@ -13,14 +13,14 @@ pkg> add https://github.com/StefanKarpinski/HyperLogLogOverRSA.jl
 ```julia-repl
 julia> using HyperLogLogOverRSA
 
-julia> ring = Ring(2^12-1, 63, 1024)   # generate a HyperLogLog RSA ring
-Ring(B=4095, m=63, N=…)
+julia> ring = Ring(2*(2^11-1), 63, 1024) # generate a HyperLogLog RSA ring
+Ring(B=4094, m=63, N=…)
 
 julia> cert = RingCert(ring)           # certificate that the ring is fingerprint-free
-RingCert(B=4095, m=63, N=…)
+RingCert(B=4094, m=63, N=…)
 
 julia> client = Client(cert)           # check the certificate, pick a random secret x₀
-Client(B=4095, m=63, N=…, x₀=…)
+Client(B=4094, m=63, N=…, x₀=…)
 
 julia> y = hll_generate(client)        # encrypted HLL token, default resource class
 …

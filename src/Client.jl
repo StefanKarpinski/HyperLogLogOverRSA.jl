@@ -21,7 +21,7 @@ distinct clients. Persisting a client across sessions would just mean serializin
 the object, which is out of scope here.
 """
 struct Client{T<:Integer}
-    B :: Int # bucket factor (odd)
+    B :: Int # bucket count (≡ 2 mod 4)
     m :: Int # max geometric sample size
     N :: T   # ring modulus
     g :: T   # server-provided, common ring semigenerator
@@ -45,22 +45,22 @@ function Client(cert::RingCert; rng::AbstractRNG = DEFAULT_RNG)
     # check shape parameters
     B ≤ B_max ||
         throw(ArgumentError("cert: B too large: $B"))
-    isodd(B) ||
-        throw(ArgumentError("cert: B even: $B"))
+    mod(B, 4) == 2 ||
+        throw(ArgumentError("cert: B ≢ 2 mod 4: $B"))
     m ≤ m_max ||
         throw(ArgumentError("cert: m too large: $m"))
-    m ≥ 2 ||
-        throw(ArgumentError("cert: m < 2: $m"))
+    m ≥ 3 ||
+        throw(ArgumentError("cert: m < 3: $m"))
 
     # check modulus properties
     Base.top_set_bit(N) ≤ L_max ||
         throw(ArgumentError("cert: N too large: $N"))
-    mod4(N) == 3 ||
-        throw(ArgumentError("cert: N ≠ 3 mod 4: $N"))
+    mod8(N) == 5 ||
+        throw(ArgumentError("cert: N ≠ 5 mod 8: $N"))
     gcd(B, N) == 1 ||
         throw(ArgumentError("cert: gcd(B, N) ≠ 1: $N"))
-    gcd(B, N-1) == 1 ||
-        throw(ArgumentError("cert: gcd(B, N-1) ≠ 1: $N"))
+    gcd(B, N-1) == 2 ||
+        throw(ArgumentError("cert: gcd(B, N-1) ≠ 2: $N"))
 
     # check semigenerator Jacobi symbol
     jacobi(g, N) == 1 ||
@@ -108,8 +108,8 @@ function hll_generate(client::Client, class::Any="/registries"; rng::AbstractRNG
     h = hash_resource_class(x₀, class)         # h = H(x₀, class)
     x = modmul(x₀, powermod(g, h, N), N)       # x = x₀ g^h
     z = rand(rng, 1:N-1)                       # z ∈ [1, N)
-    w = powermod(z, oftype(N, B) << m, N)      # w = z^(B 2^m)
+    w = powermod(z, oftype(N, B) << (m-1), N)  # w = z^((B/2) 2^m)
     i = rand(rng, zero(N):(oftype(N, 1) << (m-1)) - one(N))  # i ∈ [0, 2^(m-1))
-    t = 2 * oftype(N, B) * i + one(N)          # t ≡ 1 mod 2B
+    t = oftype(N, B) * i + one(N)              # t ≡ 1 mod B
     y = modmul(w, powermod(x, t, N), N)        # y = w x^t
 end

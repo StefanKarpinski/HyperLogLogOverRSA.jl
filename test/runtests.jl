@@ -67,42 +67,46 @@ end
 @testset "Ring sructure" begin
     @testset "basics" begin
         for bits in [55, 63, 64]
-            ring = Ring{UInt64}(2^5+1, 8, bits)
+            ring = Ring{UInt64}(2*(2^5+1), 8, bits)
             check_ring(ring)
             @test leading_zeros(modulus(ring)) == 64-bits
         end
-        ring = Ring(2^5+1, 8, 63)
+        ring = Ring(2*(2^5+1), 8, 63)
         @test ring isa Ring{Int64}
         check_ring(ring)
-        ring = Ring(2^5+1, 8, 64)
+        ring = Ring(2*(2^5+1), 8, 64)
         @test ring isa Ring{Int128}
         check_ring(ring)
-        ring = Ring(2^5+1, 8, 127)
+        ring = Ring(2*(2^5+1), 8, 127)
         @test ring isa Ring{Int128}
         check_ring(ring)
-        ring = Ring(2^5+1, 8, 128)
+        ring = Ring(2*(2^5+1), 8, 128)
         @test ring isa Ring{BigInt}
         check_ring(ring)
     end
     # generate some small rings for comprehensive testing
     rings = Ring{Int}[]
-    for log_B = 2:5, m = 2:5
-        B = 2^log_B + 1
+    for B = (6, 10, 18, 22), m = 3:5
         ring = Ring(B, m, 20)
         check_ring(ring)
         push!(rings, ring)
     end
     @testset "Jacobi classification" for ring in rings
         # jacobi(x) ==  0 <=> not invertible
-        # jacobi(x) == +1 <=> x = g^k for some k
-        # jacobi(x) == -1 <=> x = x₀*g^k for some k
+        # jacobi(x) == +1 <=> x = ±g^k for some k
+        # jacobi(x) == -1 <=> x = ±x₀*g^k for some k
+        # ⟨g⟩ has index 2 in J_N^+, not index 1: J_N^+/W_N picks up a C_2 that no
+        # semigenerator reaches, and -1 is exactly the element outside ⟨g⟩
         N, λ = ring.N, ring.λ
         g = rand_semigenerator(ring)
         x₀ = rand_jacobi_twist(N)
         @test jacobi(g, N) == +1
         @test jacobi(x₀, N) == -1
         J₀ = [x for x in 0:N-1 if gcd(x, N) ≠ 1]
-        J₊ = sort!([powermod(g, k, N) for k in 0:λ-1])
+        G = [powermod(g, k, N) for k in 0:λ-1]
+        @test allunique(G)
+        @test !(N-1 in G)
+        J₊ = sort!([G; mod.(N .- G, N)])
         J₋ = sort!(mod.(x₀ .* J₊, N))
         @test all(jacobi(x, N) ==  0 for x in J₀)
         @test all(jacobi(x, N) == +1 for x in J₊)
@@ -122,8 +126,13 @@ end
             b, k = hll_decode(ring, x; bmap)
             counts[b+1,k+1] += 1
         end
+        # every (bucket, k) cell is equally populated, except that the two top
+        # geometric levels reach only the lower half of the bucket range: their
+        # orbits merge, so the bucket's low bit is pinned to zero there
+        B′ = B >> 1
         @test counts == [
-            pq << max(0, m-k-1)
+            k ≤ m-2 ? pq << (m-k-1) :
+            b < B′  ? pq << 1       : 0
             for b = 0:B-1, k = 0:m
         ]
     end
@@ -132,9 +141,9 @@ end
 # false &&
 @testset "HLL gen & decode" begin
     rings = [
-        Int64  => Ring(2^5+1, 8, 63)
-        Int128 => Ring(2^9+1, 16, 127)
-        BigInt => Ring(2^12-1, 32, 512)
+        Int64  => Ring(2*(2^5+1), 8, 63)
+        Int128 => Ring(2*(2^9+1), 16, 127)
+        BigInt => Ring(2*(2^11-1), 32, 512)
     ]
     for (T, ring) in rings
         check_ring(ring)
@@ -161,7 +170,7 @@ end
     # so the estimate counts the n distinct classes, not requests. HLL's relative
     # error is ≈ 1.04/√B ≈ 1.6%; this seed lands at ~1.2%.
     rng = Xoshiro(0)
-    ring = Ring(2^12-1, 16, 63; rng)
+    ring = Ring(2*(2^11-1), 16, 63; rng)
     check_ring(ring)
     client = Client(RingCert(ring; rng); rng)
     n = 5000
