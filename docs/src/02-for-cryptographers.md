@@ -21,7 +21,7 @@ Properties (1) and (2) are what make it private; (3) is what makes the counts tr
 Fix public parameters: a bucket count $B \equiv 2 \pmod 4$ and a maximum rank $m \ge 3$. Each client holds a persistent per-class sketch
 
 ```math
-\hll = (b, k) \in \Z_B \times \set{0, 1, \dots, m},
+\hll = (b, k) \in \Z_B \times \set{0, 1, \dots, m-1},
 ```
 
 with $b$ uniform and $k$ geometric, $\Pr[k = j] = 2^{-(j+1)}$ for $j < m$. The server takes the per-bucket maximum of $k$ over any subset of requests and applies a standard HLL estimator to recover the number of distinct clients in that subset. Everything the server is *supposed* to learn about a client is contained in $(b, k)$; the privacy argument — on-average anonymity within an equal-sketch class, and statistical independence across classes via sharding — is made entirely at this level in [Anonymously Counting Users](03-counting-users.md). The remainder of this page is about encoding $(b, k)$ into an RSA group so that a client can neither read nor forge it, *without changing what it leaks*.
@@ -52,7 +52,7 @@ multiplication adds coordinates, and exponentiation by $t$ scales them by $t$. T
 \hll(x) = \big(b,\; \tz(c)\big),
 ```
 
-where $\tz(c) = v_2(c)$ is the 2-adic valuation (trailing-zero count, with $\tz(0) = m$). For uniform $x$, $b$ is uniform on $\Z_B$ and $\tz(c)$ is geometric on $\set{0, \dots, m}$ — exactly the HLL distribution (made rigorous in [Geometric RSA rings](04-hyperloglog-over-rsa.md#Geometric-RSA-rings)). The remaining coordinates are noise to be washed out: $a \in \Z_2$ only tracks the Jacobi symbol, and $d \in \Z_{pq}$ is pure per-client identity entropy.
+where $\tz(c) = v_2(c)$ is the 2-adic valuation (trailing-zero count, with $\tz(0) = m$), capped at $m-1$. For uniform $x$, $b$ is uniform on $\Z_B$ and the capped $\tz(c)$ is geometric on $\set{0, \dots, m-1}$ — exactly the HLL distribution (made rigorous in [Geometric RSA rings](04-hyperloglog-over-rsa.md#Geometric-RSA-rings)). The remaining coordinates are noise to be washed out: $a \in \Z_2$ only tracks the Jacobi symbol, and $d \in \Z_{pq}$ is pure per-client identity entropy.
 
 ## The token, and why it leaks only the sketch
 

@@ -260,13 +260,19 @@ Decode an encrypted HyperLogLog token `y` to its `(bucket, geometric)` value,
 using the secret factorization carried by `ring`. Pass a precomputed `bmap`
 (from [`bucket_map`](@ref)) to amortize bucket decoding across many tokens.
 
-The bucket index splits as `β + (B/2)·s`: `β` is the token's logarithm in the
-odd part of `C_(2B)`, and `s` is the one bit of the 2-part that survives token
-re-randomization. Neither `w` nor an odd `t` can touch 2-torsion, so `s` is
-information the ring holder can read either way; it is part of the HyperLogLog
-value rather than a fingerprint precisely because it is declared here. It is
-pinned to `0` for `k ≥ m-1`, where the two orbits merge and only `B/2` buckets
-are reachable — a `2^-(m-1)` share of tokens.
+The geometric value is capped at `m-1`, so it runs over `m` levels rather than
+`m+1`. That is not a rounding-off: the 2-part of the value group has exactly `2m`
+orbits per odd bucket index, so `m` levels times the one surviving bit of
+2-torsion uses every orbit exactly once, and the value space is a clean
+`B × m` rectangle with every cell a single orbit.
+
+The bucket index splits as `β + (B/2)·s`: `β` is the token's logarithm in the odd
+part of `C_(2B)`, and `s` is that surviving bit. Neither `w` nor an odd `t` can
+touch 2-torsion, so `s` is information the ring holder can read either way; it is
+part of the HyperLogLog value rather than a fingerprint precisely because it is
+declared here. Below the cap `s` compares the `C_4` logarithm against the leading
+unit of the `C_(2^m)` logarithm; at the capped level it records which of the two
+top rungs — order 2 or order 1 — the token actually sits on.
 """
 function hll_decode(
     ring :: Ring{T},
@@ -275,13 +281,16 @@ function hll_decode(
 ) where {T<:Integer}
     a = hll_log(ring, x; bmap)
     k, o4 = hll_geometric(ring, x)
-    # α = a mod 4 and the leading unit u of the C_2^m logarithm are each defined
-    # only up to an odd scalar, but t is odd so t^2 = 1 mod 4: the product αu is
-    # invariant under re-randomization even though neither factor is.
-    s = 0
-    if !iszero(o4)
+    local s :: Int
+    if !iszero(o4) # k ≤ m-2
+        # α = a mod 4 and the leading unit u of the C_2^m logarithm are each
+        # defined only up to an odd scalar, but t is odd so t^2 = 1 mod 4: the
+        # product αu is invariant under re-randomization though neither factor is
         u = 2*o4 < ring.Q ? 1 : 3 # canonical order-4 element gets u = 1
         s = (a % 4)*u % 4 ≥ 2 ? 1 : 0
+    else           # the two top rungs collapse onto the capped level m-1, and
+        s = k == ring.m # which rung it was is precisely the bit we need there
+        k = ring.m - 1
     end
     B′ = ring.B >> 1
     return a % B′ + B′*s, k

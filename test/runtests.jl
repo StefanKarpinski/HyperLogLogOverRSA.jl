@@ -119,22 +119,22 @@ end
     @testset "HyperLogLog frequencies" for ring in rings
         B, m, N, = ring.B, ring.m, ring.N
         pq = ring.p * ring.q
-        counts = fill(0, B, m+1)
+        counts = fill(0, B, m)
         bmap = bucket_map(ring)
         for x in 0:N-1
             jacobi(x, N) == -1 || continue
             b, k = hll_decode(ring, x; bmap)
             counts[b+1,k+1] += 1
         end
-        # every (bucket, k) cell is equally populated, except that the two top
-        # geometric levels reach only the lower half of the bucket range: their
-        # orbits merge, so the bucket's low bit is pinned to zero there
-        B′ = B >> 1
+        # the value space is an exact B × m rectangle: the 2-part of Z_N^*/W_N
+        # has precisely 2m orbits per odd bucket index, so capping the geometric
+        # sample at m-1 and spending the surviving bit of 2-torsion on the
+        # bucket's low bit uses every orbit once, with no cell left ragged
         @test counts == [
-            k ≤ m-2 ? pq << (m-k-1) :
-            b < B′  ? pq << 1       : 0
-            for b = 0:B-1, k = 0:m
+            pq << max(1, m-k-1)
+            for b = 0:B-1, k = 0:m-1
         ]
+        @test sum(counts) == count(x -> jacobi(x, N) == -1, 0:N-1)
     end
 end
 

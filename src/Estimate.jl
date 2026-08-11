@@ -11,9 +11,9 @@
 # Methods for HyperLogLog Sketches" (2017), arXiv:1706.07290: a closed-form
 # estimator, effectively unbiased across the whole cardinality range with no
 # separate small/large-range corrections. Our decoded geometric sample
-# k ∈ {0,…,m} is Ertl's register value r = k + 1 (so r = 0 marks an empty bucket
-# and r = m + 1 a saturated one), making our B buckets a standard HyperLogLog
-# sketch with saturation level q = m.
+# k ∈ {0,…,m-1} is Ertl's register value r = k + 1 (so r = 0 marks an empty
+# bucket and r = m a saturated one), making our B buckets a standard HyperLogLog
+# sketch with saturation level q = m - 1.
 
 # σ(x) = x + Σ_{k≥1} x^(2^k) 2^(k-1) — correction term for empty registers.
 function σ(x::Float64)
@@ -65,16 +65,16 @@ function hll_estimate(ring::Ring, tokens)
         b, k = hll_decode(ring, y; bmap)
         reg[b+1] = max(reg[b+1], k)
     end
-    # histogram over Ertl register values r = k + 1 ∈ {0,…,m+1}, stored at
-    # C[r+1]: C[1] is the empty count (r=0), C[m+2] the saturated count (r=m+1)
-    C = zeros(Int, m+2)
+    # histogram over Ertl register values r = k + 1 ∈ {0,…,m}, stored at
+    # C[r+1]: C[1] is the empty count (r=0), C[m+1] the saturated count (r=m)
+    C = zeros(Int, m+1)
     for k in reg
         C[k+2] += 1
     end
     d = B*σ(C[1]/B)                       # empty registers (r = 0)
-    for r = 1:m
-        d += C[r+1]*exp2(-r)             # normal registers (r = 1…m)
+    for r = 1:m-1
+        d += C[r+1]*exp2(-r)             # normal registers (r = 1…m-1)
     end
-    d += B*τ(1 - C[m+2]/B)*exp2(-m)       # saturated registers (r = m+1)
+    d += B*τ(1 - C[m+1]/B)*exp2(1-m)      # saturated registers (r = m)
     return α_∞ * B^2 / d
 end

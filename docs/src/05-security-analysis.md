@@ -98,18 +98,22 @@ Client secrets live in $J_N^-$, so $S$ is the only part of the value group the a
 ```math
 \begin{gathered}
 \bar{\hll}: S \to B \times m \\[0.5em]
-\bar{\hll}(\bar{x}) = \left(\beta + \tfrac{B}{2}s,~ \tz(c)\right) \\[0.8em]
+\bar{\hll}(\bar{x}) = \left(\beta + \tfrac{B}{2}s,~ \min(\tz(c),\, m-1)\right) \\[0.8em]
 s = \begin{cases}
-0 & \tz(c) ≥ m-1 \\
-1 & \alpha u = 2, 3 \bmod 4 \\
+1 & \tz(c) ≤ m-2 \and \alpha u = 2, 3 \bmod 4 \\
+1 & \tz(c) = m \\
 0 & \text{otherwise}
 \end{cases}
 \end{gathered}
 ```
 
-The bucket index splits into two halves. The first, $\beta$, is the client’s position in the odd part of $C_{2B}$ — the direct descendant of the old bucket coordinate. The second, $s$, is a single bit read off the $2$-part. Neither factor of $s$ means anything alone, since $\alpha$ and $u$ are each pinned only up to an odd scalar; their product mod $4$ is another matter, because an odd $t$ has $t^2 = 1 \bmod 4$. That is what lets $s$ survive re-randomization, and it is why the bit must be *declared* part of the HyperLogLog value: the ring holder can read it whether or not we name it, so naming it is exactly what keeps it from being a fingerprint. The two top geometric levels are the exception — there the two orbits merge, $s$ is pinned to $0$, and only $\nfrac{B}{2}$ buckets occur, which affects a $2^{-(m-1)}$ share of clients.
+Two things are happening here, and they fit together exactly.
 
-As before, $\beta$ and $s$ depend on the choice of semigenerator $\bar{g}$ whereas $\tz(c)$ does not, and as before that choice only permutes bucket labels.
+The bucket index splits into halves. The first, $\beta$, is the client’s position in the odd part of $C_{2B}$ — the direct descendant of the old bucket coordinate. The second, $s$, is a single bit read off the $2$-part. Neither factor of $s$ means anything alone, since $\alpha$ and $u$ are each pinned only up to an odd scalar; their product mod $4$ is another matter, because an odd $t$ has $t^2 = 1 \bmod 4$. That is what lets $s$ survive re-randomization, and it is why the bit must be *declared* part of the HyperLogLog value: the ring holder can read it whether or not we name it, so naming it is exactly what keeps it from being a fingerprint.
+
+The geometric sample, meanwhile, is capped: it runs over $m$ levels, $0$ through $m-1$, rather than the $m+1$ values $\tz(c)$ could take. The cap is not a rounding-off — it is what makes the accounting come out even. Over each odd bucket index, the $2$-part of the value group has exactly $2m$ orbits under the action of $t$: two for each of the $m-1$ levels below the cap, and two more shared by the top two rungs of the ladder, where $\alpha$ and $u$ pin nothing because $u$ is forced to $1$. Spending those last two orbits on the capped level’s own $s$ bit — which records which rung the token actually sits on — uses every orbit exactly once. The value space is then a clean $B \times m$ rectangle in which every cell is a single orbit: no cell half empty, no bucket unreachable. Keeping $m+1$ levels would have made the rectangle one level too tall, leaving the top two rows with only $\nfrac{B}{2}$ reachable buckets between them.
+
+As before, $\beta$ and $s$ depend on the choice of semigenerator $\bar{g}$ whereas the geometric level does not, and as before that choice only permutes bucket labels.
 
 The HyperLogLog function for fingerprint-free $N$ on $\Z_N^*$ is defined as $\hll = \bar{\hll}\phi$, *i.e.* the composition of the $\phi$ whose existence is guaranteed by fingerprint-freeness with the essential HyperLogLog function. This depends on the choice of $\bar{g}$ for $\bar\hll$ and on which particular $\phi$ is chosen. For the purposes of the main proof, we can just assume that some fixed $\phi$ is chosen and used. The choice of $\phi$ doesn’t actually introduce any more ambiguity than already introduced by the choice of $\bar{g}$ — both choices merely permute the output bucket indices.
 
@@ -117,9 +121,9 @@ The HyperLogLog function for fingerprint-free $N$ on $\Z_N^*$ is defined as $\hl
 
 **Lemma.** For $\bar{x}, \bar{y} \in S$ we have $\bar{\hll}(\bar{x}) = \bar{\hll}(\bar{y})$ if and only if there exists $t \in \Z$ with $t = 1 \bmod{B}$ such that $\bar{x}^t = \bar{y}$.
 
-**Proof.**  Write the logarithms of $\bar{x}$ and $\bar{y}$ as $(a_1, c_1)$ and $(a_2, c_2)$, with $a_i$ split into $(\alpha_i, \beta_i) \in \Z_4 \times \Z_{B/2}$ and, where it is defined, $c_i = 2^ku_i$ with $u_i$ odd.
+**Proof.**  Write the logarithms of $\bar{x}$ and $\bar{y}$ as $(a_1, c_1)$ and $(a_2, c_2)$, with $a_i$ split into $(\alpha_i, \beta_i) \in \Z_4 \times \Z_{B/2}$ and, where it is defined, $c_i = 2^ku_i$ with $u_i$ odd. Throughout, $k$ is the uncapped $\tz(c_i)$, so the two cases below are $k ≤ m-2$ and $k ≥ m-1$, the latter being the capped level.
 
-Suppose first that $\bar{x}^t = \bar{y}$ for some $t = 1 \bmod B$. Since $B$ is even, $t$ is odd; since $\nfrac{B}{2}$ divides $B$, also $t = 1 \bmod \nfrac{B}{2}$. So $\beta_2 = t\beta_1 = \beta_1$, and $\tz(c_2) = \tz(tc_1) = \tz(c_1)$ because $t$ is odd. Write $k$ for that common value. If $k ≤ m-2$ then $\alpha_2 = t\alpha_1$ and $u_2 = tu_1$, so
+Suppose first that $\bar{x}^t = \bar{y}$ for some $t = 1 \bmod B$. Since $B$ is even, $t$ is odd; since $\nfrac{B}{2}$ divides $B$, also $t = 1 \bmod \nfrac{B}{2}$. So $\beta_2 = t\beta_1 = \beta_1$, and $\tz(c_2) = \tz(tc_1) = \tz(c_1)$ because $t$ is odd. Write $k$ for that common value; capping takes $\min$ of equal arguments and so preserves the level, and at the capped level $tc_1 = 0$ exactly when $c_1 = 0$, so $s$ agrees there as well. If $k ≤ m-2$ then $\alpha_2 = t\alpha_1$ and $u_2 = tu_1$, so
 
 ```math
 \begin{aligned}
@@ -133,7 +137,7 @@ Now suppose instead that $\bar{\hll}(\bar{x}) = \bar{\hll}(\bar{y})$, which give
 
 When $k ≤ m-2$, take $v$ to be any odd lift of $u_2u_1^{-1} \bmod{2^{m-k}}$, so that $vc_1 = 2^k(vu_1) = 2^ku_2 = c_2$. Since $m-k ≥ 2$ this also fixes $v = u_2u_1^{-1} \bmod 4$. From $s_1 = s_2$ we have $\alpha_1u_1 = \alpha_2u_2 \bmod 4$, hence $\alpha_2 = \alpha_1u_1u_2^{-1}$, while $v\alpha_1 = \alpha_1u_2u_1^{-1}$. These agree because $u_1^2 = u_2^2 = 1 \bmod 4$ for odd $u_i$, so $v\alpha_1 = \alpha_2 \bmod 4$.
 
-When $k ≥ m-1$ the situation is simpler: the only elements of $\Z_{2^m}$ with $m-1$ or $m$ trailing zeros are $2^{m-1}$ and $0$, so $c_1 = c_2$ outright, and $vc_1 = c_2$ for *any* odd $v$. Both $\alpha_i$ are odd, since $c_i$ is even and $a_i + c_i$ is odd, so $v = \alpha_2\alpha_1^{-1} \bmod 4$ is odd and gives $v\alpha_1 = \alpha_2$.
+At the capped level the situation is simpler. The only elements of $\Z_{2^m}$ with $m-1$ or $m$ trailing zeros are $2^{m-1}$ and $0$, and $s$ is exactly the record of which one it is — so $s_1 = s_2$ forces $c_1 = c_2$, and then $vc_1 = c_2$ for *any* odd $v$. Both $\alpha_i$ are odd, since $c_i$ is even and $a_i + c_i$ is odd, so $v = \alpha_2\alpha_1^{-1} \bmod 4$ is odd and gives $v\alpha_1 = \alpha_2$.
 
 Either way we have an odd $v$ with $vc_1 = c_2 \bmod{2^m}$ and $v\alpha_1 = \alpha_2 \bmod 4$. Apply the Chinese Remainder Theorem — the moduli are coprime because $\nfrac{B}{2}$ is odd — to find $t$ with:
 
