@@ -153,6 +153,30 @@ end
     end
 end
 
+@testset "public -1 maximum-rank forgery" begin
+    rng = Xoshiro(0)
+    ring = Ring(2^5+1, 8, 63; rng)
+    cert = RingCert(ring; rng)
+    B, m, N, g = ring.B, ring.m, ring.N, cert.g
+
+    # In semigenerator coordinates, -1 has bucket coordinate 0 and
+    # C_(2^m) coordinate 2^(m-1). Multiplying it by g^h for
+    # h = 2^(m-1) + 2^m*j cancels the latter coordinate, giving rank m.
+    # Since B is odd, 2^m*j also visits every bucket as j ranges over 0:B-1.
+    tokens = map(0:B-1) do j
+        h = (one(N) << (m-1)) + (one(N) << m)*j
+        mod(-powermod(g, h, N), N)
+    end
+
+    # Every forged token passes the protocol's Jacobi-symbol validation.
+    @test all(y -> jacobi(y, N) == -1, tokens)
+
+    decoded = [hll_decode(ring, y) for y in tokens]
+    @test sort!(first.(decoded)) == collect(0:B-1)
+    @test all(==(m), last.(decoded))
+    @test isinf(hll_estimate(ring, tokens))
+end
+
 # false &&
 @testset "HLL estimate" begin
     # End-to-end cardinality recovery through the whole protocol, with a seeded
