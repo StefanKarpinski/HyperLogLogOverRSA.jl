@@ -153,7 +153,7 @@ Base.getproperty(ring::Ring, name::Symbol) =
     name === :N ? ring.P*ring.Q :
     name === :P ? 2*ring.p*ring.B + 1 :
     name === :Q ? ring.q << ring.m + 1 :
-    name === :λ ? (ring.B >> 1)*ring.p*(ring.q << ring.m) :
+    name === :λ ? ring.B*ring.p*(ring.q << (ring.m - 1)) :
         getfield(ring, name)
 
 modulus(ring::Ring) = ring.N
@@ -224,35 +224,6 @@ function bucket_map(ring::Ring{T}) where {T<:Integer}
     Dict(powermod(γ, a, P) => a for a = 0:𝟚B-1)
 end
 
-# The C_2B logarithm of `x`, up to a fixed odd scalar fixed by `bmap`'s choice of
-# generator — which only permutes bucket labels.
-function hll_log(
-    ring :: Ring{T},
-    x    :: Integer;
-    bmap :: Dict{T,Int} = bucket_map(ring),
-) where {T<:Integer}
-    bmap[powermod(x, ring.p, ring.P)]
-end
-
-# Returns the geometric sample `k` together with the order-4 element of ⟨x^q⟩,
-# or zero when `x` has no such element (`k ≥ m-1`). Squaring down to 1 counts the
-# order of the C_2^m part, and the second-to-last value it passes through is
-# ι^u, where u is the leading unit of that part's logarithm and ι is one of the
-# two order-4 elements mod Q — so the walk hands us `u` for free.
-function hll_geometric(ring::Ring, x::Integer)
-    Q = ring.Q
-    y = powermod(x, ring.q, Q) # y = x^q mod Q
-    iszero(y) && throw(ArgumentError("invalid x ∉ ℤ_N^*"))
-    k = ring.m
-    o2 = o4 = zero(y)
-    while !isone(y)
-        o4, o2 = o2, y
-        y = powermod(y, 2, Q) # y <- y^2 mod Q
-        k -= 1
-    end
-    return k, o4
-end
-
 """
     hll_decode(ring::Ring, y; bmap=bucket_map(ring)) -> (bucket, geometric)
 
@@ -260,38 +231,59 @@ Decode an encrypted HyperLogLog token `y` to its `(bucket, geometric)` value,
 using the secret factorization carried by `ring`. Pass a precomputed `bmap`
 (from [`bucket_map`](@ref)) to amortize bucket decoding across many tokens.
 
-The geometric value is capped at `m-1`, so it runs over `m` levels rather than
-`m+1`. That is not a rounding-off: the 2-part of the value group has exactly `2m`
-orbits per odd bucket index, so `m` levels times the one surviving bit of
-2-torsion uses every orbit exactly once, and the value space is a clean
-`B × m` rectangle with every cell a single orbit.
+The bucket index is `β + (B/2)·s`, where `β` is the token's logarithm in the odd
+part of `C_(2B)` and `s` is one bit of the 2-part: the xor of `α₁`, the high bit
+of the `C_4` logarithm, with `u₁`, the bit of the `C_(2^m)` logarithm just above
+its lowest set bit. An odd `t` flips both of those bits by its own second bit, so
+their xor is unchanged — which is why the ring holder can read `s` off any token,
+and why `s` must be part of the declared HyperLogLog value rather than left as an
+undeclared bit of client identity.
 
-The bucket index splits as `β + (B/2)·s`: `β` is the token's logarithm in the odd
-part of `C_(2B)`, and `s` is that surviving bit. Neither `w` nor an odd `t` can
-touch 2-torsion, so `s` is information the ring holder can read either way; it is
-part of the HyperLogLog value rather than a fingerprint precisely because it is
-declared here. Below the cap `s` compares the `C_4` logarithm against the leading
-unit of the `C_(2^m)` logarithm; at the capped level it records which of the two
-top rungs — order 2 or order 1 — the token actually sits on.
+The geometric value is capped at `m-1`, giving `m` levels rather than `m+1`. `u₁`
+exists only while the `C_(2^m)` logarithm has two significant bits left, that is
+for `k ≤ m-2`; on the top two rungs there is nothing to xor against. Capping
+merges those two rungs into a single level and uses *which rung* as that level's
+`s`, which is exactly the pair of values the bit needs. The 2-part admits `2m`
+orbits per odd bucket index, so `m` levels times one bit uses each exactly once,
+making the value space a clean `B × m` rectangle.
 """
 function hll_decode(
     ring :: Ring{T},
     x    :: Integer;
     bmap :: Dict{T,Int} = bucket_map(ring),
 ) where {T<:Integer}
-    a = hll_log(ring, x; bmap)
-    k, o4 = hll_geometric(ring, x)
-    local s :: Int
-    if !iszero(o4) # k ≤ m-2
-        # α = a mod 4 and the leading unit u of the C_2^m logarithm are each
-        # defined only up to an odd scalar, but t is odd so t^2 = 1 mod 4: the
-        # product αu is invariant under re-randomization though neither factor is
-        u = 2*o4 < ring.Q ? 1 : 3 # canonical order-4 element gets u = 1
-        s = (a % 4)*u % 4 ≥ 2 ? 1 : 0
-    else           # the two top rungs collapse onto the capped level m-1, and
-        s = k == ring.m # which rung it was is precisely the bit we need there
-        k = ring.m - 1
+    m, Q, B′ = ring.m, ring.Q, ring.B >> 1
+    # Raising to p annihilates C_p and leaves the C_2B part, whose logarithm the
+    # table supplies (up to an odd scalar fixed by bmap's generator, which only
+    # permutes bucket labels). In binary digits, its low bit α₀ is pinned by the
+    # Jacobi condition — α₀ = 1 exactly when the C_2^m logarithm is even — so the
+    # client's own contribution to the 2-part is the single bit α₁.
+    a = bmap[powermod(x, ring.p, ring.P)]
+    α₀, α₁ = a & 1, (a >> 1) & 1
+    # Squaring the C_2^m part down to 1 counts its order and so yields k. The last
+    # two values the chain passes through have order 2 and order 4; the order-4
+    # one is ι^u for a fixed order-4 element ι, so comparing it against the
+    # canonical ι reads off u₁ — the bit of the C_2^m logarithm just above its
+    # lowest set bit — at no extra cost.
+    y = powermod(x, ring.q, Q)
+    iszero(y) && throw(ArgumentError("invalid x ∉ ℤ_N^*"))
+    k = m
+    o2 = o4 = zero(y)
+    while !isone(y)
+        o4, o2 = o2, y
+        y = powermod(y, 2, Q)
+        k -= 1
     end
-    B′ = ring.B >> 1
+    # An odd t flips α₁ and u₁ *together*, each by t's own second bit, so their
+    # xor is exactly what survives re-randomization. Above the cap there is no u₁
+    # to xor against — u is known only mod 2 there — and the two rungs sharing the
+    # capped level are told apart by which one it is.
+    if iszero(o4)
+        s = k == m ? 1 : 0
+        k = m - 1
+    else
+        u₁ = 2*o4 < Q ? 0 : 1 # the canonical order-4 element gets u₁ = 0
+        s = α₁ ⊻ (α₀ & u₁)
+    end
     return a % B′ + B′*s, k
 end

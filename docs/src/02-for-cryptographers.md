@@ -49,7 +49,7 @@ Fix a **semigenerator** $g$: an element whose projection into each cyclic factor
 multiplication adds coordinates, and exponentiation by $t$ scales them by $t$. The sketch is read off the middle two:
 
 ```math
-\hll(x) = \big(b,\; \tz(c)\big),
+\hll(x) = \big(b,\; \min(\tz(c),\, m-1)\big),
 ```
 
 where $\tz(c) = v_2(c)$ is the 2-adic valuation (trailing-zero count, with $\tz(0) = m$), capped at $m-1$. For uniform $x$, $b$ is uniform on $\Z_B$ and the capped $\tz(c)$ is geometric on $\set{0, \dots, m-1}$ — exactly the HLL distribution (made rigorous in [Geometric RSA rings](04-hyperloglog-over-rsa.md#Geometric-RSA-rings)). The remaining coordinates are noise to be washed out: $a \in \Z_2$ only tracks the Jacobi symbol, and $d \in \Z_{pq}$ is pure per-client identity entropy.
@@ -59,7 +59,7 @@ where $\tz(c) = v_2(c)$ is the 2-adic valuation (trailing-zero count, with $\tz(
 A client draws a persistent secret $x_0 \in J_N^-$ (Jacobi symbol $-1$) and derives its per-class secret by hashing into the exponent, $x = x_0\, g^{H(x_0, \text{class})}$. Per request it samples
 
 ```math
-w \in W = (\Z_N^*)^{(B/2)2^m}, \qquad
+w \in W = (\Z_N^*)^{B2^{m-1}}, \qquad
 t \in T = \set{\, 2Bi + 1 \st i \in [0,\, 2^{m-1}) \,},
 ```
 
@@ -71,12 +71,12 @@ The whole construction is in what $(w, t)$ do coordinate-by-coordinate:
 | ------ | --------- | -------------------- | -------------------------------- | ---------------------------------------------------------------------------- |
 | $a$    | $C_4$     | fixed                | $\times$ odd unit                | parity pinned by $J_N^-$; one bit survives, **declared as the bucket’s low bit**                                           |
 | $b$    | $C_{B/2}$ | fixed                | fixed ($t \equiv 1 \bmod{\nfrac{B}{2}}$) | **exposed: the bucket’s high bits**                                                      |
-| $c$    | $C_{2^m}$ | fixed                | $\times$ uniform odd unit        | randomized within its valuation class — **only $\tz(c)$ survives: the rank** |
+| $c$    | $C_{2^m}$ | fixed                | $\times$ uniform odd unit        | randomized within its valuation class — **the capped $\tz(c)$ survives as the rank, and one further bit jointly with $a$** |
 | $d$    | $C_{pq}$  | $\to$ uniform        | (irrelevant)                     | washed out                                                                   |
 
 Two facts make the table work:
 
-- ``W`` is the image of the $(B/2)2^m$-power map. The orders of $C_{2B}$ and $C_{2^m}$ both divide $(B/2)2^m$, while $\gcd(pq,\, (B/2)2^m) = 1$, so that map annihilates the first three factors and is an automorphism on the last: $W = \set{0} \times \set{0} \times \set{0} \times C_{pq}$. Multiplying by uniform $w$ therefore replaces $d$ with fresh uniform randomness and touches nothing else.
+- ``W`` is the image of the $B2^{m-1}$-power map. The orders of $C_{2B}$ and $C_{2^m}$ both divide $B2^{m-1}$, while $\gcd(pq,\, B2^{m-1}) = 1$, so that map annihilates the first three factors and is an automorphism on the last: $W = \set{0} \times \set{0} \times \set{0} \times C_{pq}$. Multiplying by uniform $w$ therefore replaces $d$ with fresh uniform randomness and touches nothing else.
 - For $t = Bi + 1$: $t \equiv 1 \pmod{\nfrac{B}{2}}$ and $t$ is odd (since $B$ is even), so $b$ is fixed and $a$ keeps its parity; and as $i$ ranges over $[0, 2^{m-1})$, $t \bmod 2^m$ runs over **every odd residue exactly once**, so $t$ acts as a uniform unit on $c$ — preserving $v_2(c) = \tz(c)$ but uniformizing $c$ within that valuation class.
 
 Hence the $(w, t)$-orbit of $x$ is exactly the fiber $\hll^{-1}(\hll(x)) \cap J_N^-$, and $y$ is **uniform** on that fiber, not merely supported on it. Two honest clients with the same sketch induce *identical* token distributions, and the server’s entire view is a function of $(b, \tz(c))$. This is the anonymity theorem of [Proof of Anonymity](05-security-analysis.md); the only bookkeeping subtlety is the 2-torsion ($C_2$/Jacobi) accounting, which is exactly why tokens are confined to $J_N^-$. The proof is phrased in these semigenerator coordinates throughout — if there is a more standard way to present it, I’d welcome the pointer.

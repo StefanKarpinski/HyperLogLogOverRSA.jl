@@ -160,7 +160,7 @@ x = x_0 g^h = x_0 g^{\hash(x_0,\,\text{class})}
 
 It then generates a random white noise element and a random exponent value:
 
-- Choose $z \in \set{1, 2, \dots, N-1}$ and let $w = z^{(B/2)2^m} \bmod N$
+- Choose $z \in \set{1, 2, \dots, N-1}$ and let $w = z^{B2^{m-1}} \bmod N$
 - Choose $i \in \set{0, 1, \dots, 2^{m-1}-1}$ and let $t = Bi + 1$
 
 Finally, the client computes:
