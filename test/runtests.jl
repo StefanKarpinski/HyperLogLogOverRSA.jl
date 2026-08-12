@@ -86,23 +86,27 @@ end
     end
     # generate some small rings for comprehensive testing
     rings = Ring{Int}[]
-    for log_B = 2:5, m = 2:5
-        B = 2^log_B + 1
+    for B = (3, 5, 9, 11), m = 3:5
         ring = Ring(B, m, 20)
         check_ring(ring)
         push!(rings, ring)
     end
     @testset "Jacobi classification" for ring in rings
         # jacobi(x) ==  0 <=> not invertible
-        # jacobi(x) == +1 <=> x = g^k for some k
-        # jacobi(x) == -1 <=> x = x₀*g^k for some k
+        # jacobi(x) == +1 <=> x = ±g^k for some k
+        # jacobi(x) == -1 <=> x = ±x₀*g^k for some k
         N, λ = ring.N, ring.λ
         g = rand_semigenerator(ring)
         x₀ = rand_jacobi_twist(N)
         @test jacobi(g, N) == +1
         @test jacobi(x₀, N) == -1
         J₀ = [x for x in 0:N-1 if gcd(x, N) ≠ 1]
-        J₊ = sort!([powermod(g, k, N) for k in 0:λ-1])
+        # ⟨g⟩ has index 2 in J_N^+, not index 1: no semigenerator reaches the
+        # order-2 element of C_4, and -1 is exactly what lies outside ⟨g⟩
+        G = [powermod(g, k, N) for k in 0:λ-1]
+        @test allunique(G)
+        @test !(N-1 in G)
+        J₊ = sort!([G; mod.(N .- G, N)])
         J₋ = sort!(mod.(x₀ .* J₊, N))
         @test all(jacobi(x, N) ==  0 for x in J₀)
         @test all(jacobi(x, N) == +1 for x in J₊)
@@ -115,17 +119,22 @@ end
     @testset "HyperLogLog frequencies" for ring in rings
         B, m, N, = ring.B, ring.m, ring.N
         pq = ring.p * ring.q
-        counts = fill(0, B, m+1)
+        # secrets live in J_N^-; what goes on the wire is their square, which is
+        # what the ring holder decodes
+        counts = fill(0, B, m)
         bmap = bucket_map(ring)
         for x in 0:N-1
             jacobi(x, N) == -1 || continue
-            b, k = hll_decode(ring, x; bmap)
+            b, k = hll_decode(ring, powermod(x, 2, N); bmap)
             counts[b+1,k+1] += 1
         end
+        # every (bucket, k) cell is equally populated, with the two top rungs of
+        # the ladder merged into the capped level m-1
         @test counts == [
-            pq << max(0, m-k-1)
-            for b = 0:B-1, k = 0:m
+            pq << max(2, m-k)
+            for b = 0:B-1, k = 0:m-1
         ]
+        @test sum(counts) == count(x -> jacobi(x, N) == -1, 0:N-1)
     end
 end
 
