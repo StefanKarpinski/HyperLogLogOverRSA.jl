@@ -20,8 +20,8 @@ The system operator chooses HyperLogLog parameters, RSA bit-length, and a certif
 - ``B`` is the bucket count
     - It must be an odd number
     - Example: $B = 2^{12} - 1$
-- ``m`` is the maximum geometric sample value
-    - Maximum client estimate is around $2^m$
+- ``m`` is the geometric range parameter
+    - Ranks run $0$ to $m-1$; a saturated bucket reports $m-1$
     - Example: $m = 63$
 - ``L`` is the bit-length of $N$ values
     - Controls cryptographic strength of the RSA ring
@@ -38,7 +38,7 @@ On behalf of clients, the client implementor should choose acceptance criteria f
 - ``B_{\max}`` — maximum bucket count
     - The simplest way to fingerprint clients is just to choose $B = 2^{128}$ and let the bucket be the fingerprint. This limit prevents that kind of “attack”.
     - Example: $B_{\max} = 2^{12}$
-- ``m_{\max}`` — maximum geometric sample
+- ``m_{\max}`` — maximum geometric range parameter
     - Mostly a sanity check: extreme geometric samples are vanishingly rare, and we don’t want a malicious server forcing a client to work in an absurdly large geometric range. The real ceiling is the width of the hash used to derive per-class values, since the geometric coordinate is uniform only while $m$ is at most that width — $128$ bits in the reference derivation. Within that, a client that does its per-request exponent arithmetic in fixed-width integers should cap near $63$ (to stay in `Int64`/`Int128`), while one using arbitrary-precision integers can accept up to $127$.
     - Example: $m_{\max} = 127$ (arbitrary-precision client) or $63$ (fixed-width client)
 - ``L_{\max}`` — maximum modulus bit-length
@@ -54,11 +54,11 @@ The RSA ring is $\Z_N$ where
 
 ```math
 \begin{aligned}
-N = PQ = (2 B p + 1)(2^m q + 1)
+N = PQ = (4 B p + 1)(2^m q + 1)
 \end{aligned}
 ```
 
-such that $P$, $Q$, $p$, $q$, are all distinct odd primes coprime to $B$.
+such that $P$, $Q$, $p$, $q$, are all distinct odd primes coprime to $B$. The factor of $4$ makes $P \equiv 5 \bmod 8$, hence $N \equiv 5 \bmod 8$.
 
 The server generates $N$ such that:
 
@@ -72,7 +72,7 @@ This can be accomplished by:
 
 - Choose random $p$
 - Check that $p$ is prime
-- Check that $P = 2 B p + 1$ is prime
+- Check that $P = 4 B p + 1$ is prime
 - Check that $B \notin \set{P, p}$
 - Choose random $q$
 - Check that $q$ is prime
@@ -114,7 +114,7 @@ Since $N$ is a semiprime and $x, y \in J_N^+$, one of these three checks must su
 The server publishes a ring certificate containing:
 
 - ``B`` — the bucket count
-- ``m`` — the maximum geometric sample
+- ``m`` — the geometric range parameter
 - ``N`` — the RSA ring modulus
 - ``g`` — the ring semigenerator value
 - ``\text{sqrts}`` — a list of square roots
@@ -127,9 +127,9 @@ To check a ring certificate, the client should:
 
 - Check that $B ≤ B_{\max}$
 - Check that $B$ is odd
-- Check that $2 ≤ m ≤ m_{\max}$
+- Check that $3 ≤ m ≤ m_{\max}$
 - Check that $\log_2(N) ≤ L_{\max}$
-- Check that $N = 3 \bmod 4$
+- Check that $N = 5 \bmod 8$
 - Check that $\gcd(B, N) = 1$
 - Check that $\gcd(B, N-1) = 1$
 - Check that $\Jacobi_N(g) = 1$
@@ -159,7 +159,7 @@ x = x_0 g^h = x_0 g^{\hash(x_0,\,\text{class})}
 
 It then generates a random white noise element and a random exponent value:
 
-- Choose $z \in \set{1, 2, \dots, N-1}$ and let $w = z^{B2^m} \bmod N$
+- Choose $z \in \set{1, 2, \dots, N-1}$ and a random sign, and let $w = \pm z^{B2^{m-1}} \bmod N$
 - Choose $i \in \set{0, 1, \dots, 2^{m-1}-1}$ and let $t = 2Bi + 1$
 
 Finally, the client computes:
@@ -182,12 +182,12 @@ The server decodes the HLL value by computing:
 
 ```math
 \begin{aligned}
-\text{bucket} &= \fmod(y^{2p}, P) \\
-\text{geometric} &= m - \log_2(\ord(\fmod(y^q, Q))) \\
+\text{bucket} &= \fmod(y^{4p}, P) \\
+\text{geometric} &= \min\!\big(m-1,\; m - \log_2(\ord(\fmod(y^q, Q)))\big) \\
 \end{aligned}
 ```
 
-The bucket value is in $\Z_P$ which is huge, but there are only $B$ possible values it takes which can be mapped back to $\set{0, \dots, B-1}$ by any consistent mapping scheme. The geometric values are already in $\set{0, \dots, m}$ and the value can be computed efficiently by repeatedly squaring $\fmod(y^q,Q)$ until reaching one.
+The bucket value is in $\Z_P$ which is huge, but there are only $B$ possible values it takes which can be mapped back to $\set{0, \dots, B-1}$ by any consistent mapping scheme. The geometric values land in $\set{0, \dots, m-1}$ and are computed efficiently by repeatedly squaring $\fmod(y^q,Q)$ until reaching one — the number of squarings is $\log_2(\ord)$. The result is capped at $m-1$: the noise subgroup randomizes the top bit of the $C_{2^m}$ coordinate, so the top two rungs of the ladder are indistinguishable and collapse into one saturated level.
 
 ## Server step 6: Count estimation
 
