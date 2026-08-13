@@ -162,6 +162,44 @@ end
     end
 end
 
+@testset "public -1 maximum-rank forgery survives doubled exponent" begin
+    rng = Xoshiro(0)
+    ring = Ring(3, 3, 20; rng)
+    cert = RingCert(ring; rng)
+    B, m, N, g = ring.B, ring.m, ring.N, cert.g
+
+    # The C_(2^m) coordinate of -1 is 2^(m-1). Adding the public exponent
+    # 2^(m-1) + 2^m*j cancels it, while j = 0:B-1 visits every bucket.
+    hs = [
+        (one(N) << (m-1)) + (one(N) << m)*j
+        for j = 0:B-1
+    ]
+    tokens = [mod(-powermod(g, h, N), N) for h in hs]
+
+    # Revised wire tokens have positive Jacobi symbol. Using the server-only
+    # factorization below verifies that each public forgery is, more strongly,
+    # the square of a negative-Jacobi element and therefore lies in the exact
+    # image the proposed QR/quartic admission check must accept.
+    @test all(y -> jacobi(y, N) == +1, tokens)
+    P, Q = factors(ring)
+    _, u, v = gcdx(P, Q)
+    sqrt_minus_one = mod(
+        modsqrt(-1, P)*v*Q + modsqrt(-1, Q)*u*P,
+        N,
+    )
+    roots = [
+        mod(sqrt_minus_one*powermod(g, h ÷ 2, N), N)
+        for h in hs
+    ]
+    @test all(r -> jacobi(r, N) == -1, roots)
+    @test [powermod(r, 2, N) for r in roots] == tokens
+
+    decoded = [hll_decode(ring, y) for y in tokens]
+    @test sort!(first.(decoded)) == collect(0:B-1)
+    @test all(==(m-1), last.(decoded))
+    @test isinf(hll_estimate(ring, tokens))
+end
+
 # false &&
 @testset "HLL estimate" begin
     # End-to-end cardinality recovery through the whole protocol, with a seeded
