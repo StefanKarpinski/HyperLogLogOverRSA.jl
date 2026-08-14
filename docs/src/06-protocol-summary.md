@@ -20,9 +20,9 @@ The system operator chooses HyperLogLog parameters, RSA bit-length, and a certif
 - ``B`` is the bucket count
     - It must be an odd number
     - Example: $B = 2^{12} - 1$
-- ``m`` is the geometric range parameter
+- ``m`` is the geometric value cap
     - Ranks run $0$ to $m-1$; a saturated bucket reports $m-1$
-    - Example: $m = 63$
+    - Example: $m = 64$
 - ``L`` is the bit-length of $N$ values
     - Controls cryptographic strength of the RSA ring
     - Example: $L = 1024$
@@ -38,7 +38,7 @@ On behalf of clients, the client implementor should choose acceptance criteria f
 - ``B_{\max}`` — maximum bucket count
     - The simplest way to fingerprint clients is just to choose $B = 2^{128}$ and let the bucket be the fingerprint. This limit prevents that kind of “attack”.
     - Example: $B_{\max} = 2^{12}$
-- ``m_{\max}`` — maximum geometric range parameter
+- ``m_{\max}`` — maximum geometric cap
     - Mostly a sanity check: extreme geometric samples are vanishingly rare, and we don’t want a malicious server forcing a client to work in an absurdly large geometric range. The real ceiling is the width of the hash used to derive per-class values, since the geometric coordinate is uniform only while $m$ is at most that width — $128$ bits in the reference derivation. Within that, a client that does its per-request exponent arithmetic in fixed-width integers should cap near $63$ (to stay in `Int64`/`Int128`), while one using arbitrary-precision integers can accept up to $127$.
     - Example: $m_{\max} = 127$ (arbitrary-precision client) or $63$ (fixed-width client)
 - ``L_{\max}`` — maximum modulus bit-length
@@ -114,7 +114,7 @@ Since $N$ is a semiprime and $x, y \in J_N^+$, one of these three checks must su
 The server publishes a ring certificate containing:
 
 - ``B`` — the bucket count
-- ``m`` — the geometric range parameter
+- ``m`` — the geometric value cap
 - ``N`` — the RSA ring modulus
 - ``g`` — the ring semigenerator value
 - ``\text{sqrts}`` — a list of square roots
@@ -187,7 +187,7 @@ The server decodes the HLL value by computing:
 \end{aligned}
 ```
 
-The bucket value is in $\Z_P$ which is huge, but there are only $B$ possible values it takes which can be mapped back to $\set{0, \dots, B-1}$ by any consistent mapping scheme. The geometric values land in $\set{0, \dots, m-1}$ and are computed efficiently by repeatedly squaring $\fmod(y^q,Q)$ until reaching one — the number of squarings is $\log_2(\ord)$. The result is capped at $m-1$: the noise subgroup randomizes the top bit of the $C_{2^m}$ coordinate, so the top two rungs of the ladder are indistinguishable and collapse into one saturated level.
+The bucket value is in $\Z_P$ which is huge, but there are only $B$ possible values it takes which can be mapped back to $\set{0, \dots, B-1}$ by any consistent mapping scheme. The geometric values land in $\set{0, \dots, m-1}$ and are computed efficiently by repeatedly squaring $\fmod(y^q,Q)$ until reaching one — the number of squarings is $\log_2(\ord)$. The result is then capped at $m-1$.
 
 ## Server step 6: Count estimation
 
@@ -215,7 +215,7 @@ The protocol above is general; here we pin down the concrete choices for the Jul
 
 ```toml
 B = 4095
-m = 63
+m = 64
 N = 1152665851984795538…
 g = 2154516298683041933…
 sqrts = [3524590212…, 4461971058…]   # n = 166 of them at α = 2^112
@@ -227,7 +227,7 @@ The client fetches this endpoint with a plain download that does not pass throug
 
 ```toml
 B = 4095
-m = 63
+m = 64
 N = 1152665851984795538…
 g = 2154516298683041933…
 x0 = 1055559624789921343…

@@ -1,6 +1,6 @@
 # HyperLogLog Over RSA
 
-What alternative is there to signing HyperLogLog values? In the last section we encrypted HLL values. What if clients could sample encrypted HLL values for themselves? Of course, the way we discussed encrypting them previously, each distinct HLL value would have an equal chance of being chosen, which is entirely the wrong distribution—the whole point is that it’s geometric. But can we encrypt HLL values so that sampling encrypted values has the right distribution? This requires more common HLL values to appear in distinct encrypted forms many times: the most common values would have to appear $2^{m-1}$ times as often as the least common ones, where $m$ sets the geometric range (the largest sample is $m-1$). This is certainly possible—we can just encrypt a 128-bit unsigned random value and derive the HLL value from it on the server side. But that’s a massive client fingerprint. We need another crucial ingredient: the client needs to be able to randomize what they send so that any client with the same HLL value could have sent that value. This seemingly impossible trick turns out to be possible in the mathematical setting of RSA rings.
+What alternative is there to signing HyperLogLog values? In the last section we encrypted HLL values. What if clients could sample encrypted HLL values for themselves? Of course, the way we discussed encrypting them previously, each distinct HLL value would have an equal chance of being chosen, which is entirely the wrong distribution—the whole point is that it’s geometric. But can we encrypt HLL values so that sampling encrypted values has the right distribution? This requires more common HLL values to appear in distinct encrypted forms many times: the most common values would have to appear $2^{m-1}$ times as often as the least common ones, where $m$ bounds the geometric range. This is certainly possible—we can just encrypt a 128-bit unsigned random value and derive the HLL value from it on the server side. But that’s a massive client fingerprint. We need another crucial ingredient: the client needs to be able to randomize what they send so that any client with the same HLL value could have sent that value. This seemingly impossible trick turns out to be possible in the mathematical setting of RSA rings.
 
 ## RSA ring refresher
 
@@ -41,7 +41,9 @@ Here $P$, $Q$, $p$ and $q$ are all primes and $m \ge 3$ is an integer. This ring
 \end{aligned}
 ```
 
-We take $P = 4p + 1$, giving a $C_4$ factor, rather than $P = 2p + 1$, which would give a $C_2$. The extra factor of two is a forgery defense — it places $-1$, the one ring element whose logarithms are public, on the positive-Jacobi side — and is motivated fully under [Fighting inflation](#Fighting-inflation) and in [Malicious clients](05-security-analysis.md#Malicious-clients). Structurally the $C_4$ contributes the Jacobi parity bit plus one extra bit, and that extra bit is erased by the fingerprint-blurring step below. Here $C_n$ denotes a cyclic group of order $n$, meaning that there is some generator element, $g \in C_n$, such that $g^{n-1} ≠ 1$ and $g^n = 1$ and every element of $C_n$ is of the form $g^k$ for some $k$. When $n$ is prime, every element besides $g^0 = 1$ is also a generator; when $n$ is composite, it’s more complicated. This structure connects back to the Carmichael function and the modular exponential structure of $\Z_N^*$. We choose a “semigenerator” element, $g \in \Z_N^*$, such that $\fmod(g,P)$ and $\fmod(g,Q)$ are generators in $\Z_P^*$ and $\Z_Q^*$, respectively. Each component of $g$ is a generator of that cyclic component, so if we take the elementwise logarithm of the cyclic components of $g$ with respect to itself then by definition we have:
+Here $C_n$ denotes a cyclic group of order $n$, meaning that there is some generator element, $g \in C_n$, such that $g^{n-1} ≠ 1$ and $g^n = 1$ and every element of $C_n$ is of the form $g^k$ for some $k$. When $n$ is prime, every element besides $g^0 = 1$ is also a generator; when $n$ is composite, it’s more complicated. This structure connects back to the Carmichael function and the modular exponential structure of $\Z_N^*$.
+
+Since $\Z_N^*$ is not cyclic overall — because the orders of $C_4$ and $C_{2^m}$ share a factor of four — no element can generate the entire multiplicative group. We can, however, choose a “semigenerator” element, $g \in \Z_N^*$, such that $\fmod(g,P)$ and $\fmod(g,Q)$ are generators in $\Z_P^*$ and $\Z_Q^*$, respectively. Each component of $g$ is a generator of that cyclic component, so if we take the elementwise logarithm of the cyclic components of $g$ with respect to itself then by definition we have:
 
 ```math
 \begin{aligned}
@@ -83,7 +85,7 @@ Then we have:
 
 Products in $\Z_N^*$ turn into vector addition of exponents and exponentiation turns into vector scaling of exponents.
 
-It’s worth emphasizing that the exponent in each component is modular with respect to its own modulus. This is especially significant when exponentiating by $t$, which manifests as scaling all exponents by $t$, since scaling by the same value can have very different effects on components based on their respective moduli. The Chinese Remainder Theorem guarantees that a single value $t$ can be chosen to have independent effects on coprime components, which is very powerful. Components whose moduli are not coprime, on the other hand, will always be scaled in lock step up to the greatest common divisor of their moduli. For example, if we want to scale $b \in \Z_p$ by $t_p$ and $d \in \Z_q$ by $t_q$ then we can find $t$ such that $t = t_p \bmod p$ and $t = t_q \bmod q$ and have precisely the desired effect. If we want to scale $a \in \Z_4$ and $c \in \Z_{2^m}$, on the other hand, a single $t$ scales both, and since $4 \divides 2^m$ the action on $a$ is just the action on $c$ read modulo $4$—so they cannot be chosen independently.
+It’s worth emphasizing that the exponent in each component is modular with respect to its own modulus. This is especially significant when exponentiating by $t$, which manifests as scaling all exponents by $t$, since scaling by the same value can have very different effects on components based on their respective moduli. The Chinese Remainder Theorem guarantees that a single value $t$ can be chosen to have independent effects on coprime components, which is very powerful. Components whose moduli are not coprime, on the other hand, will always be scaled in lock step up to the greatest common divisor of their moduli. For example, if we want to scale $b \in \Z_p$ by $t_p$ and $d \in \Z_q$ by $t_q$ then we can find $t$ such that $t = t_p \bmod p$ and $t = t_q \bmod q$ and have precisely the desired effect. If we want to scale $a \in \Z_4$ and $c \in \Z_{2^m}$, on the other hand, since $4 \divides 2^m$ we cannot scale them independently: the scaling of $a$ is fully dictated by the scaling of $c$.
 
 The key fact about our special RSA ring is that the multiplicative orders of elements of the $C_{2^m}$ component have precisely the geometric distribution we need for HyperLogLog. Here is a table of element orders, how many elements have that order, the probability of randomly choosing such an element, and the corresponding number of trailing zeros for a geometric sample value:
 
@@ -180,7 +182,9 @@ This is possible since $2$, $p$ and $q$ are pairwise coprime, and gives:
 
 We have $ta = a \bmod 2$ since $t$ is odd. In other words, we can hit any combination of values in the $C_p$ and $C_q$ components for some value of $t \in \Z_{pq2^m}$.
 
-Being able to reach any possible values in the $C_p$ and $C_q$ components via exponentiation is predicated on $b$ and $d$ being non-zero, however. In an RSA ring with our proposed structure, if $N$ is thousands of bits (as it would be in real usage), it is astronomically unlikely to choose $x$ with zero exponents in the $C_p$ or $C_q$ components. For the sake of sheer thoroughness, let’s erase even that tiny bit of information — and, while we are at it, two more bits that carry client identity but no geometric sample: the high bit of $a \in \Z_4$ (everything in the $C_4$ factor beyond the Jacobi parity) and the top bit of $c \in \Z_{2^m}$. Choose $z \in \Z_N^*$ at random, pick a random sign, and multiply by $w = \pm z^{2^{m-1}}$. Writing $\log_g(z) = (a_{z}, b_{z}, c_{z}, d_{z})$, the power alone has:
+Being able to reach any possible values in the $C_p$ and $C_q$ components via exponentiation is predicated on $b$ and $d$ being non-zero, however. In an RSA ring with our proposed structure, if $N$ is thousands of bits (as it would be in real usage), it is astronomically unlikely to choose $x$ with zero exponents in the $C_p$ or $C_q$ components. For the sake of sheer thoroughness, let’s erase even that tiny bit of information. While we are at it, there is another bit we’d like to erase: the top bit of the $C_4$ exponent, $a$. (Why did we introduce that bit in the first place? It’s necessary for forgery prevention. More on that later.) Randomizing the high bit of $a$ forces us to randomize the high bit of $c$ as well, but that’s ok since we can choose $m$ to be as large as we want.
+
+How do we randomize these bits while leaving the rest intact? We want to multiply by a random “noise” element that leaves the “signal” alone but randomly perturbs the rest. We start with a fully random element, $z \in \Z_N^*$, and write $\log_g(z) = (a_{z}, b_{z}, c_{z}, d_{z})$. Our noise element is then $w = \pm z^{2^{m-1}}$. To understand what this does, first look at $z^{2^{m-1}}$ alone:
 
 ```math
 \begin{aligned}
@@ -190,30 +194,33 @@ Being able to reach any possible values in the $C_p$ and $C_q$ components via ex
 \end{aligned}
 ```
 
-Since $m ≥ 3$, the factor $2^{m-1}$ is divisible by $4$, so the $C_4$ exponent vanishes. The $C_{2^m}$ exponent $2^{m-1} c_{z} \bmod 2^m$ is $0$ or $2^{m-1}$ according to the parity of $c_{z}$—that is, it lands on the top bit and nothing else. And because $2^{m-1}$ is invertible modulo $p$ and modulo $q$, the $C_p$ and $C_q$ exponents are freshly random as $z$ varies. When the random sign is negative it adds $\log_g(-1) = (2, 0, 2^{m-1}, 0)$ to the exponent vector, flipping the high bit of the $C_4$ exponent and the top bit of the $C_{2^m}$ exponent. Since $p$ and $q$ are coprime, the Chinese Remainder Theorem lets us fold the two random identity exponents into a single unknown $e$ with $e = 2^{m-1} b_{z} \bmod p$ and $e = 2^{m-1} d_{z} \bmod q$. Collecting everything:
+Since $m ≥ 3$, the factor $2^{m-1}$ is divisible by $4$, so the $C_4$ exponent vanishes. The $2^{m-1} c_{z} \bmod 2^m$ component is either $0$ or $2^{m-1}$ — in other words, all the lower bits are zero and the top bit is random. Since $2^{m-1}$ is coprime to both $p$ and $q$, the $C_p$ and $C_q$ exponents are fully randomized; moreover, since $p$ and $q$ are coprime to each other, they are *independently* randomized.
+
+When the random sign is negative it adds $\log_g(-1) = (2, 0, 2^{m-1}, 0)$ to the exponent vector, flipping the top bit of both the $C_4$ and $C_{2^m}$ exponents; the high bit of $C_{2^m}$ was already random, so this doesn’t matter, but now the high bit of the $C_4$ coordinate is *also* randomized. Crucially, the high bits of these two coordinates are independently random. Overall this leaves us with a $w$ element that looks like this:
 
 ```math
 \begin{aligned}
-\log_g(w) = (a_w,\; e,\; c_w,\; e),
-\qquad a_w \in \set{0, 2}, \;\; c_w \in \set{0, 2^{m-1}}
+\log_g(w) = (2 a_w,\; e,\; 2^{m-1} c_w,\; e)
 \end{aligned}
 ```
 
-We multiply by $w$ after exponentiating by $t$, sending $x$ to $w x^t$:
+where $a_w$ and $c_w$ are independent random bits and $e \in \Z_{pq}$ is also random (a single value that fixes the $C_p$ and $C_q$ exponents by the Chinese Remainder Theorem, since $p$ and $q$ are coprime).
+
+Now that we have $w$, we multiply our client value by it after exponentiating by $t$, sending $x$ to $w x^t$:
 
 ```math
 \begin{aligned}
-\log_g(w x^t) = (ta + a_w,\; tb + e,\; tc + c_w,\; td + e)
+\log_g(w x^t) = (ta + 2 a_w,\; tb + e,\; tc + 2^{m-1} c_w,\; td + e)
 \end{aligned}
 ```
 
 Reading this coordinate by coordinate confirms that only the geometric sample and the Jacobi parity survive:
 
 - **$C_p$, $C_q$:** the $e$ terms make these freshly random, erasing all bulk identity; and regardless of the other values, including $t$, some $w$ produces any pair of values here.
-- **$C_4$:** the parity of $ta + a_w$ is the parity of $a$, since $t$ is odd and $a_w$ is even—the Jacobi bit is preserved—while the high bit is scrambled by $a_w$.
-- **$C_{2^m}$:** for $\tz(c) < m-1$ the sample $\tz(tc + c_w) = \tz(c)$ is untouched; at the very top, $c_w$ randomizes the top bit, merging the two rarest rungs ($\tz = m-1$ and $\tz = m$) into a single saturated level. So the readable geometric sample is $\min(\tz(c),\, m-1)$.
+- **$C_4$:** the parity of $ta + 2 a_w$ is the parity of $a$, since $t$ is odd—the Jacobi bit is preserved—while the high bit is scrambled by $a_w$.
+- **$C_{2^m}$:** for $\tz(c) < m-1$ the sample $\tz(tc + 2^{m-1} c_w) = \tz(c)$ is untouched; at the very top, $c_w$ randomizes the top bit, merging the two rarest rungs ($\tz = m-1$ and $\tz = m$) into a single saturated level. So the readable geometric sample is $\min(\tz(c),\, m-1)$.
 
-The parity of $a$—the Jacobi bit—is the one thing the noise deliberately preserves: $x \mapsto x^t$ scales it by the odd $t$ and $w$ shifts it by the even $a_w$, so it survives both. As it turns out, we need this parity bit preserved in order to prevent clients from artificially inflating their geometric samples, which is the subject of the next section.
+The parity of $a$—the Jacobi bit—is the one thing the noise deliberately preserves: $x \mapsto x^t$ scales it by the odd $t$ and $w$ shifts it by the even $2 a_w$, so it survives both. As it turns out, we need this parity bit preserved in order to prevent clients from artificially inflating their geometric samples, which is the subject of the next section.
 
 ## Fighting inflation
 
@@ -261,7 +268,7 @@ N = P Q = (4 B p + 1)(2^m q + 1)
 \end{aligned}
 ```
 
-This is the full RSA ring shape for encrypted HyperLogLog sampling. As before, $P$, $Q$, $p$, and $q$ are distinct, odd primes, $m$ is the geometric range parameter (samples run $0$ to $m-1$), and $B$ is the number of HyperLogLog buckets, which must be odd and coprime to everything else. The multiplicative structure of a HyperLogLog RSA ring is:
+This is the full RSA ring shape for encrypted HyperLogLog sampling. As before, $P$, $Q$, $p$, and $q$ are distinct, odd primes, $m$ is the geometric sample cap (samples run from $0$ to $m-1$), and $B$ is the number of HyperLogLog buckets, which must be odd and coprime to everything else. The multiplicative structure of a HyperLogLog RSA ring is:
 
 ```math
 \begin{aligned}
@@ -269,7 +276,7 @@ This is the full RSA ring shape for encrypted HyperLogLog sampling. As before, $
 \end{aligned}
 ```
 
-The $C_B$ component encodes the encrypted bucket value, the order of the $C_{2^m}$ component encodes the geometric sample value, and the $C_4$ component—specifically its parity, the Jacobi bit—is used to ensure that clients don’t inflate geometric samples by raising values to even powers. The $C_p$ and $C_q$ components are what make values hard to decode—we don’t actually care about the values in these components. Since this is starting to be a lot of components and we don’t actually care about $C_p$ and $C_q$, we’ll combine these two into a single cyclic component with order $pq$:
+The $C_B$ component encodes the encrypted bucket value. The multiplicative order of the $C_{2^m}$ component encodes the geometric sample value. The low bit of the $C_4$ component is used to ensure that clients don’t inflate geometric samples by raising values to even powers. The $C_p$ and $C_q$ components are what make values hard to decode—we don’t actually care about the values in these components. Since this is starting to be a lot of components and we don’t actually care about $C_p$ and $C_q$, we’ll combine them into a single cyclic component with order $pq$:
 
 ```math
 \begin{aligned}
@@ -285,20 +292,20 @@ The client randomly chooses and saves a persistent $x \in \Z_N^*$ value. For eac
 2. The bucket value
 3. The geometric sample
 
-We can analyze it in terms of generator exponents. Choose a semigenerator, $g$, in this new ring and write $\log_g(x) = (a, b, c, d)$. As in the geometric-only ring, the noise has $\log_g(w) = (a_w, 0, c_w, e)$ with $a_w \in \set{0, 2}$ and $c_w \in \set{0, 2^{m-1}}$—the extra factor of $B$ in the exponent only zeroes the $C_B$ component, leaving the bucket untouched. Then:
+We can analyze it in terms of generator exponents. Choose a semigenerator, $g$, in this new ring and write $\log_g(x) = (a, b, c, d)$. As in the geometric-only ring, the noise has $\log_g(w) = (2 a_w, 0, 2^{m-1} c_w, e)$ with $a_w$ and $c_w$ random bits—the extra factor of $B$ in the exponent only zeroes the $C_B$ component, leaving the bucket untouched. Then:
 
 ```math
 \begin{aligned}
 \log_g(wx^t)
-&= (ta + a_w,\; tb,\; tc + c_w,\; td + e) \\
+&= (ta + 2a_w,\; b,\; tc + 2^{m-1} c_w,\; td + e) \\
 \end{aligned}
 ```
 
 Spelling these four components out:
 
-- Parity bit: the parity of $ta + a_w$ is the parity of $a$, since $t = 1 \bmod 2$ and $a_w$ is even (the high bit is scrambled by $a_w$)
+- Parity bit: $ta + 2a_w = a \bmod 2$ since $t = 1 \bmod 2$
 - Bucket index: $tb = b$ since $t = 1 \bmod B$
-- Geometric sample: for $\tz(c) < m-1$, $\tz(tc + c_w) = \tz(c)$; at the top, $c_w$ merges the two rarest rungs, so the readable sample is $\min(\tz(c),\, m-1)$
+- Geometric sample: $\min(\tz(tc + 2^{m-1} c_w), m-1) = \min(\tz(tc), m-1) = \min(\tz(c), m-1)$
 - The rest: $td + e \bmod{pq}$ is freshly random in each request
 
 The core HyperLogLog Over RSA construction is now in place. The server constructs a ring with the shape $N = PQ = (4Bp+1)(2^m q+1)$, keeping $P$, $Q$, $p$, $q$ secret and publishing $N$ together with a semigenerator $g$. A client generates a persistent secret $x \in \Z_N^*$ with $\Jacobi_N(x) = -1$ and, for each request, sends a freshly randomized token $y = wx^t$ where $t \equiv 1 \bmod{2B}$ and $w$ is chosen from $\pm(\Z_N^*)^{B2^{m-1}}$. The server discards any request where $\Jacobi_N(y) \neq -1$, since that indicates a misbehaving client. For the remaining requests, it uses the secret factors, $P$ and $Q$, to extract the bucket index, $b$, from the $C_B$ component and the geometric sample, $k = \min(\tz(c),\, m-1)$, from the $C_{2^m}$ component, yielding a decrypted HLL sample pair, $(b, k)$. Clients cannot steer or bias samples without knowing the factorization of $N$. The next section completes the protocol by making it work nicely with resource class sharding.
@@ -331,7 +338,7 @@ and use the first $x_i$ such that $\Jacobi_N(x_i) = -1$. Since about half of the
 
 ### What we actually do
 
-Can we design a scheme where the client generates a single pre-validated master key and constructs $x$ for each resource class so that it always has a negative Jacobi symbol? And ideally, every possible value in the negative Jacobi set would be reachable for some potential resource class. As it happens, this is possible. The key insight is that our particular shape of RSA ring, while not cyclic, is very close to it. A semigenerator $g$ projects onto every cyclic factor, so its powers already sweep the entire $C_{pq}$ bulk along with all of $C_B$ and $C_{2^m}$; out of the whole group, $\gen{g}$ misses only two order-2 bits — the Jacobi sign and the element $-1$. Recall that it has this multiplicative structure:
+Can we design a scheme where the client generates a single pre-validated master key and constructs $x$ for each resource class so that it always has a negative Jacobi symbol? And ideally, every possible value in the negative Jacobi set would be reachable for some potential resource class. As it happens, this is possible. The key insight is that our particular shape of RSA ring, while not cyclic, is very close to it. A semigenerator $g$ projects onto every cyclic factor, so its powers already sweep the entire $C_{pq}$ bulk along with all of $C_B$ and $C_{2^m}$. The only issue is that the $C_4$ coefficient and the low two bits of the $C_{2^m}$ component are scanned in lock step. The subgroup generated by $g$ is index two in $J_N^+$ and index four in $\Z_N^*$ overall. If we combine $g$ with $-1$ we generate all of $J_N^+$, and if we combine with any element in $J_N^-$, we get all of $\Z_N^*$. Recall that $\Z_N^*$ has this multiplicative structure:
 
 ```math
 \begin{aligned}
@@ -340,7 +347,7 @@ C_4 \times C_B \times C_{2^m} \times C_{pq}
 \end{aligned}
 ```
 
-Recall that for a semigenerator, $g \in \Z_N^*$, both $\fmod(g,P)$ and $\fmod(g,Q)$ are generators in $\Z_P^*$ and $\Z_Q^*$, respectively. All semigenerators in this ring have $\Jacobi_N(g) = 1$, and $g$ has order $\ord(g) = \lambda(N) = B 2^m pq$. So $\gen{g}$ sits inside the positive-Jacobi subgroup $J_N^+$ but reaches only *half* of it: no power of $g$ hits the order-2 element of the $C_4$ factor, and that element is exactly $-1$. Fixing any $x_0$ with $\Jacobi_N(x_0) = -1$, the four cosets of $\gen{g}$ split $\Z_N^*$ as
+All semigenerators in this ring have $\Jacobi_N(g) = 1$ and multiplicative order $\ord(g) = \lambda(N) = B 2^m pq$. So $\gen{g}$ sits inside the positive-Jacobi subgroup $J_N^+$ but reaches only *half* of it: no power of $g$ hits the order-2 element of the $C_4$ factor, and that element is exactly $-1$. Fixing any $x_0$ with $\Jacobi_N(x_0) = -1$, the four cosets of $\gen{g}$ split $\Z_N^*$ as
 
 ```math
 \begin{aligned}
@@ -348,7 +355,7 @@ J_N^+ = \gen{g} \sqcup -\gen{g}, \qquad J_N^- = x_0\gen{g} \sqcup -x_0\gen{g}
 \end{aligned}
 ```
 
-Ranging $k$ over all exponents, $x_0 g^k$ therefore covers the coset $x_0\gen{g}$ — half of $J_N^-$. That is enough. The missing half is $-x_0\gen{g}$, and $-1$ lives in the white-noise subgroup $W$ that the client mixes into every token, so the two halves are identified once the token is randomized. In other words, *modulo the noise*, every $x \in J_N^-$ is reachable as $x_0 g^k$ — which is all the anonymity guarantee needs. The client can easily pick a valid $x_0$ since all they have to check is that $\Jacobi_N(x_0) = -1$. The client cannot, on the other hand, check if $g$ is a semigenerator since it doesn’t know the factorization of $N$, but the server can do this and publish a common $g$ value along with $N$. Clients cannot check that $g$ is actually a semigenerator, but there’s no real harm done if it isn’t.
+Ranging $k$ over all exponents, $x_0 g^k$ therefore covers the coset $x_0\gen{g}$ — half of $J_N^-$. That is enough. The missing half is $-x_0\gen{g}$, and $-1$ lives in the white-noise subgroup $W$ that the client mixes into every token, so the two halves are identified once the token is randomized. In other words, *modulo the noise*, every $x \in J_N^-$ is reachable as $x_0 g^k$ — which is all the anonymity guarantee needs. The client can easily pick a valid $x_0$ since all they have to check is that $\Jacobi_N(x_0) = -1$. The client cannot, on the other hand, check if $g$ is a semigenerator since it doesn’t know the factorization of $N$, but the server can do this and publish a common $g$ value along with $N$. Clients cannot check that $g$ is actually a semigenerator, but there’s no real harm done if it isn’t (we address this rigorously in our security analysis).
 
 Putting it together:
 
@@ -397,29 +404,29 @@ This $x_h$ plays the role of $x$ in previous sections, where we presumed it to b
 = \tfrac{1}{4}\norm{\Z_N^*}
 ```
 
-If $h$ can take on every value in $\Z_{\lambda(N)}$ then $x_h$ takes on every value in $x_0\gen{g}$; the noise supplies the other half of $J_N^-$. Naively, even this presents a problem: $\lambda(N)$ is large and unknown to the client. Fortunately, $h$ does not actually need to cover this entire range because the client doesn’t send $x_h$ as is: it actually sends $y = wx_h^t$ where $w \in W$ is random “white noise” and $t$ is a random exponent with $t = 1 \bmod 2B$. If $\log_g(x_0) = (a, b, c, d)$ and $\log_g(w) = (a_w, 0, c_w, e)$ with $a_w \in \set{0, 2}$ and $c_w \in \set{0, 2^{m-1}}$, then we have:
+If $h$ can take on every value in $\Z_{\lambda(N)}$ then $x_h$ takes on every value in $x_0\gen{g}$ and white noise in $w$ supplies the other half of $J_N^-$. Naively, even this presents a problem: $\lambda(N)$ is large and necessarily unknown to the client. Fortunately, $h$ does not actually need to cover this entire range because the client doesn’t send $x_h$ as is: it actually sends $y = wx_h^t$ where $w \in W$ is random “white noise” and $t$ is a random exponent with $t = 1 \bmod 2B$. If $\log_g(x_0) = (a, b, c, d)$ and $\log_g(w) = (2 a_w, 0, 2^{m-1} c_w, e)$ with $a_w$ and $c_w$ random bits, then we have:
 
 ```math
 \begin{aligned}
 \log(y)
 &= \log(w x_h^t)
 = \log(w (x_0 g^h)^t) \\
-&= t \, (a + h, b + h, c + h, d + h) + (a_w, 0, c_w, e) \\
-&= (t(a + h) + a_w, \; b + h, \; t(c + h) + c_w, \; t(d + h) + e) \\
+&= t \, (a + h, b + h, c + h, d + h) + (2 a_w, 0, 2^{m-1} c_w, e) \\
+&= (t(a + h) + 2 a_w, \; b + h, \; t(c + h) + 2^{m-1} c_w, \; t(d + h) + e) \\
 \end{aligned}
 ```
 
 The components of $y$ that convey information are:
 
-- The parity bit: the parity of $a + h$ (the high bit of the $C_4$ coordinate is randomized by $a_w$)
+- The parity bit: $t(a + h) + 2 a_w = a + h \bmod 2$
 - The bucket index: $b + h \in \Z_B$
-- The geometric sample: $\min(\tz(t(c + h) + c_w),\, m-1) \in \set{0, \dots, m-1}$
+- The geometric sample: $\min(\tz(t(c + h) + 2^{m-1} c_w),\, m-1) = \min(\tz(c + h), m-1) \in \set{0, \dots, m-1}$
 
 Here we can see that the real requirement on $h$ is that $(b + h, c + h)$ covers all of $\Z_B \times \Z_{2^m}$ fairly uniformly as $h$ takes on different values. To ensure this it’s sufficient to ensure that $h$ is sampled from a modulus, $M$ such that $\fmod(M, B2^m)$ is tiny relative to $M \div B2^m$. We could use an exact multiple of $B2^m$, which makes the modulus zero. But that’s inconvenient, since real world hashes have power-of-two outputs. Fortunately, if $M$ is sufficiently large, the bias (ratio) is negligible. For any modern hash function like SHA-256, this is the case. In our reference implementation, we actually use the output of HMAC-SHA-256 (keyed by the SHA-256 hash of $x_0$), truncated into a 128-bit integer value, which is still more than large enough to guarantee effectively uniform coverage.
 
 What information do we make sure is **not** conveyed?
 
-- The leading digits of $t(c+h) + c_w$ should be fully random
+- The leading digits of $t(c+h) + 2^{m-1} c_w$ should be fully random
 - The last component, $t(d + h) + e$, should be fully random
 
 To ensure the former, we want $t$ to be able to take every odd residue class in $\Z_{2^m}$ which is accomplished by choosing $i \in [0, 2^{m-1})$ and letting $t = 2Bi + 1$. To ensure the latter, we want $w$ to take every possible value in $W$ which is accomplished by choosing $z \in \Z_N^*$ at random, picking a random sign, and letting $w = \pm z^{B2^{m-1}}$ (we don’t actually care about $t$ for this factor).
@@ -429,7 +436,7 @@ Putting it all together, for each request a client makes, this scheme requires t
 - Compute $h = \hash(x_0, \text{class})$ — one HMAC-SHA-256 operation
 - Compute $g^h \bmod N$ — one modular exponentiation
 - Compute $x_h = x_0 g^h \bmod N$ — one modular multiplication
-- Generate random $z \in \Z_N^*$ and a random sign
+- Generate random $z \in \Z_N^*$
 - Compute $w = \pm z^{B2^{m-1}}$ — one modular exponentiation (and a negation)
 - Generate random $i \in \Z_{2^{m-1}}$
 - Compute $t = 2Bi + 1$ — a few small arithmetic operations
@@ -450,7 +457,9 @@ h = hash_resource_class(x₀, class)
 x = modmul(x₀, powermod(g, h, N), N)
 z = rand(rng, 1:N-1)
 w = powermod(z, oftype(N, B) << (m-1), N)
-rand(rng, Bool) && (w = N - w)
+if rand(rng, Bool)
+    w = N - w
+end
 i = rand(rng, zero(N):(oftype(N, 1) << (m-1)) - one(N))
 t = 2 * oftype(N, B) * i + one(N)
 y = modmul(w, powermod(x, t, N), N)

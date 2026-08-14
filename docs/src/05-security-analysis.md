@@ -43,28 +43,21 @@ W_N &= \pm(\Z_N^*)^{B2^{m-1}}
 
 Both pieces lie in $J_N^+$: the exponent $B2^{m-1}$ is even (as $m ≥ 3$), so every power $z^{B2^{m-1}}$ has positive Jacobi symbol, and $-1 \in J_N^+$ because $N ≡ 5 \bmod 8$. Hence $W_N ≤ J_N^+$, and crucially $-1 \in W_N$. This subgroup is where we sample “noise” values to randomize the parts of $x$ that don’t encode the HyperLogLog value. We previously described deriving individual $w$ values from random $z$ values; here we consider the entire group.
 
-**Definition.**  We call a positive integer, $N$, *“fingerprint-free”* if it is odd and the quotient $\Z_N^*/W_N$ embeds, as an abstract group, into
+**Definition.**  We call a positive integer, $N$, *“fingerprint-free”* if it is odd and the quotient $\Z_N^*/W_N$ embeds, as an abstract group, into $C_2 \times C_B \times C_{2^m}$.
+
+This is a condition purely on the *size and shape* of the noise quotient: it is what the certification of later sections can verify without the factorization, and it is all we need to bound the leak. The Jacobi symbol is always *a* character of $\Z_N^*/W_N$ (since $W_N ≤ J_N^+ = \ker \Jacobi_N$), but it need not be one of the embedding’s coordinates — its role is kept separate, in the arguments below.
+
+For correctly constructed $N$ — where $\Z_N^* \cong C_4 \times C_B \times C_{2^m} \times C_{pq}$ — the obvious embedding witnessing fingerprint freedom, on coordinates $\log_g(x) = (a, b, c, d)$, is
 
 ```math
 \begin{aligned}
-C_2 \times C_B \times C_{2^m}.
+\phi(x) = \big((-1)^{a+c},\; b,\; c \bmod 2^{m-1}\big) : \Z_N^* \to C_2 \times C_B \times C_{2^{m-1}}.
 \end{aligned}
 ```
 
-This is a statement purely about the *size and shape* of the noise quotient: a token can pin down at most $\log_2(2 \cdot B \cdot 2^m) = 1 + \log_2 B + m$ bits — one bucket and one geometric sample, plus the single Jacobi bit, which is public and constant for honest clients. The Jacobi symbol is always *a* character of $\Z_N^*/W_N$ (since $W_N ≤ J_N^+ = \ker \Jacobi_N$), but it need not be one of the embedding’s coordinates; its role is kept separate, in the arguments below.
+Its kernel is exactly $W_N$: the conditions $(-1)^{a+c} = +1$, $b = 0$, and $c \equiv 0 \pmod{2^{m-1}}$ (that is, $c \in \set{0, 2^{m-1}}$) cut out precisely $\pm(\Z_N^*)^{B2^{m-1}}$. Note $\phi(-1) = (+1, 0, 0)$, confirming $-1 \in W_N$; reading $c$ only modulo $2^{m-1}$ is exactly what collapses the two rarest rungs into one saturated level. Since $C_2 \times C_B \times C_{2^{m-1}}$ embeds into $C_2 \times C_B \times C_{2^m}$, this $\phi$ witnesses that $N$ is fingerprint-free.
 
-For the moduli our servers actually build — $\Z_N^* \cong C_4 \times C_B \times C_{2^m} \times C_{pq}$ — the embedding is concrete. The map
-
-```math
-\begin{aligned}
-\bar\phi: \Z_N^* \to C_B \times C_{2^{m-1}}, \qquad
-\bar\phi(x) = (b,\; c \bmod 2^{m-1})
-\end{aligned}
-```
-
-reading the bucket coordinate and the geometric coordinate modulo its top bit, paired with the Jacobi symbol as $\phi = (\Jacobi_N, \bar\phi)$, has kernel exactly $W_N$: the conditions $\Jacobi_N(x) = +1$, $b = 0$, and $c \in \set{0, 2^{m-1}}$ cut out precisely $\pm(\Z_N^*)^{B2^{m-1}}$. Because $-1 \in W_N$ we have $\bar\phi(-1) = 0$, so the geometric coordinate is read only modulo $2^{m-1}$ — which is why the two rarest rungs collapse into one saturated level. The anonymity argument below uses this concrete $\bar\phi$; the weaker embedding condition in the definition is what the certification of later sections can verify without the factorization, and it is all that is needed to bound the leak.
-
-Our convention will be that if $x \in \Z_N^*$ we’ll write $\bar{x} = \bar\phi(x) \in C_B \times C_{2^{m-1}}$ and if $\bar{f}$ is a function on $C_B \times C_{2^{m-1}}$, we’ll write $f = \bar{f}\bar\phi$ for the composition whose domain is $\Z_N^*$. So you can generally think of $\bar{\triangle}$ as the “essential version” of $\triangle$, whether $\triangle$ is an element or a function.
+We adopt the convention that the *essential version* of $x \in \Z_N^*$ is the bucket–geometric pair $\bar{x} = (b,\; c \bmod 2^{m-1}) \in C_B \times C_{2^{m-1}}$ — the last two coordinates of $\phi(x)$, so that $\phi(x) = \big((-1)^{a+c},\, \bar{x}\big)$. If $\bar{f}$ is a function on $C_B \times C_{2^{m-1}}$ we write $f(x) = \bar{f}(\bar{x})$ for the corresponding function on $\Z_N^*$. So $\bar{\triangle}$ is generally the “essential version” of $\triangle$, whether an element or a function.
 
 **Definition.** We generalize our earlier definition of a *“semigenerator”* in a multiplicative group. Let $G = \prod_{i=1}^n C_{\alpha_i}$ be a product of cyclic groups and let $\pi_i: G \to C_{\alpha_i}$ be the canonical projection onto the $i$th component. An element $g \in G$ is called a semigenerator if the projection of $g$ onto each cyclic component is a generator for that component:
 
@@ -97,7 +90,7 @@ In what follows, let $\bar{g} \in C_B \times C_{2^{m-1}}$ be a fixed semigenerat
 
 Here $c$ ranges over $\Z_{2^{m-1}}$, so $\tz(c)$ ranges over $\set{0, \dots, m-1}$ with $\tz(0) = m-1$—the saturated level into which the two rarest rungs have already collapsed. The first value, $b$, implicitly depends on the choice of semigenerator, $\bar{g}$, whereas the latter, $\tz(c)$, does not: $\tz(c)$ only depends on the multiplicative order of the $C_{2^{m-1}}$ part of $\bar{x}$, which is independent of $\bar{g}$. The higher bits of $c$ do depend on $\bar{g}$, but the position of the last bit does not.
 
-The HyperLogLog function for fingerprint-free $N$ on $\Z_N^*$ is defined as $\hll = \bar{\hll}\bar\phi$, *i.e.* the composition of the $\bar\phi$ whose existence is guaranteed by fingerprint-freeness with the essential HyperLogLog function. Because $\bar\phi$ reads the geometric coordinate modulo $2^{m-1}$, this is $\hll(x) = (b, \min(\tz(c), m-1))$ in terms of a raw logarithm $\log_g(x) = (a, b, c, d)$. It depends on the choice of $\bar{g}$ for $\bar\hll$ and on which particular $\bar\phi$ is chosen. For the purposes of the main proof, we can just assume that some fixed $\bar\phi$ is chosen and used. The choice of $\bar\phi$ doesn’t actually introduce any more ambiguity than already introduced by the choice of $\bar{g}$ — both choices merely permute the output bucket indices.
+The HyperLogLog function on $\Z_N^*$ is then $\hll(x) = \bar{\hll}(\bar{x})$. In terms of a raw logarithm $\log_g(x) = (a, b, c, d)$ this is $\hll(x) = (b, \min(\tz(c), m-1))$, since $\bar{x}$ reads the geometric coordinate modulo $2^{m-1}$. It depends on the choice of $\bar{g}$ for $\bar\hll$ and, through $\bar{x}$, on the semigenerator $g$; both choices merely permute the output bucket indices.
 
 ### The anonymity theorem
 
@@ -168,44 +161,43 @@ Since $t$ is odd, the second equality implies that $\tz(c_1) = \tz(c_2)$ which m
 
 **Theorem.** Let $N$ be fingerprint-free. For $x, y \in \Z_N^*$ with the same Jacobi symbol: $\hll(x) = \hll(y)$ if and only if there exists $w \in W_N$ and $t \in \Z$ with $t = 1 \bmod{2B}$ such that $wx^t = y \bmod N$.
 
-**Proof.**  We use the map $\bar\phi: \Z_N^* \to C_B \times C_{2^{m-1}}$ from the definition, whose paired map $\phi = (\Jacobi_N, \bar\phi)$ has $\ker(\phi) = W_N$. The following conditions are equivalent for $x$ and $y$ with $\Jacobi_N(x) = \Jacobi_N(y)$:
+**Proof.**  The witness $\phi = \big((-1)^{a+c},\, \bar{\cdot}\,\big) : \Z_N^* \to C_2 \times C_B \times C_{2^{m-1}}$ from the definition has $\ker(\phi) = W_N$, and its essential part $x \mapsto \bar{x}$ is a homomorphism onto $C_B \times C_{2^{m-1}}$. The following conditions are equivalent for $x$ and $y$ with $\Jacobi_N(x) = \Jacobi_N(y)$:
 
 1. ``\hll(x) = \hll(y)``
-2. ``\bar{\hll}(\bar\phi(x)) = \bar{\hll}(\bar\phi(y))``
-3. ``\E\, t = 1 \bmod{2B}`` such that $\bar\phi(x)^t = \bar\phi(y)$
+2. ``\bar{\hll}(\bar{x}) = \bar{\hll}(\bar{y})``
+3. ``\E\, t = 1 \bmod{2B}`` such that $\bar{x}^t = \bar{y}$
 4. ``{} \E\, t = 1 \bmod{2B},\, w \in W_N {}`` such that $wx^t = y$
 
-Equivalence of (1) and (2) is just the definition of $\hll = \bar{\hll}\bar\phi$. The lemma we just proved gives equivalence of (2) and (3). That leaves us to prove equivalence of (3) and (4). We will show that for any odd exponent, $t$, we have:
+Equivalence of (1) and (2) is just the definition $\hll(x) = \bar{\hll}(\bar{x})$. The lemma we just proved gives equivalence of (2) and (3). That leaves us to prove equivalence of (3) and (4). We will show that for any odd exponent, $t$, we have:
 
 ```math
 \begin{aligned}
-\bar\phi(x)^t = \bar\phi(y) ~\iff~
+\bar{x}^t = \bar{y} ~\iff~
 \E\, w \in W_N\!:~ wx^t = y
 \end{aligned}
 ```
 
-which means (3) and (4) are logically equivalent. Suppose that $\bar\phi(x)^t = \bar\phi(y)$. Let $w = y x^{-t}$ and check that $w \in \ker(\phi) = W_N$—that is, both coordinates of $\phi(w)$ are trivial:
+which means (3) and (4) are logically equivalent. Suppose that $\bar{x}^t = \bar{y}$. Let $w = y x^{-t}$; we check that $\phi(w) = 1$, i.e. $w \in \ker(\phi) = W_N$, by looking at its two parts. The essential part is trivial,
 
 ```math
 \begin{aligned}
-\bar\phi(w)
-= \bar\phi(y x^{-t})
-= \bar\phi(y) \bar\phi(x)^{-t}
-&= 1 \\
-\Jacobi_N(w)
-= \Jacobi_N(y) \Jacobi_N(x)^{-t}
-&= 1
+\bar{w} = \bar{y}\,\bar{x}^{-t} = 1,
 \end{aligned}
 ```
 
-The Jacobi identity requires $\Jacobi_N(x) = \Jacobi_N(y) \in \set{±1}$ and $t$ odd so that raising to $-t$ doesn’t change the sign. Together these give $\phi(w) = (\Jacobi_N(w), \bar\phi(w)) = 1$, so $w \in \ker(\phi) = W_N$. In the other direction, suppose $w \in W_N = \ker(\phi)$ with $wx^t = y$; then $\bar\phi(w) = 1$, and
+and so is the Jacobi coordinate,
 
 ```math
 \begin{aligned}
-\bar\phi(y)
-= \bar\phi(wx^t)
-= \bar\phi(w) \bar\phi(x)^t
-= \bar\phi(x)^t
+\Jacobi_N(w) = \Jacobi_N(y)\,\Jacobi_N(x)^{-t} = 1,
+\end{aligned}
+```
+
+using $\Jacobi_N(x) = \Jacobi_N(y) \in \set{±1}$ and $t$ odd so that raising to $-t$ doesn’t change the sign. Together these give $\phi(w) = 1$, so $w \in W_N$. In the other direction, suppose $w \in W_N = \ker(\phi)$ with $wx^t = y$; then $\bar{w} = 1$, and
+
+```math
+\begin{aligned}
+\bar{y} = \overline{wx^t} = \bar{w}\,\bar{x}^t = \bar{x}^t.
 \end{aligned}
 ```
 
@@ -601,7 +593,7 @@ Because $n$ grows only logarithmically in $\alpha$, buying a gigantic safety mar
 The non-interactive version of this protocol serves as a certificate of fingerprint-freedom for a published $N$ value. The certificate structure contains:
 
 - ``B`` — the number of buckets
-- ``m`` — the geometric range parameter
+- ``m`` — the geometric value cap
 - ``N`` — the ring modulus
 - ``g`` — a server-selected semigenerator for $\Z_N^*$
 - ``\text{sqrts}`` — a list of square roots

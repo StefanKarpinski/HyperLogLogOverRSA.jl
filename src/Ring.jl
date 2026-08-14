@@ -20,10 +20,9 @@ where `B` (which must be odd) is the number of HyperLogLog buckets and `m` is on
 more than the maximum geometric sample value; `L` is the target bit-length of `N`.
 
 The `C_4` factor carries no HyperLogLog value: the noise subgroup randomizes it,
-so it contributes nothing a log holder can read. It is there for its arithmetic
-alone — it makes `P ≡ 5 mod 8`, hence `N ≡ 5 mod 8`, hence `jacobi(-1, N) = 1`, so
-`-1` — the one element of the ring whose logarithms are public — stays out of
-`J_N^-` where it would be a ready-made forgery.
+so it contributes nothing a log holder can use. It is there for its arithmetic
+alone — it makes `P ≡ 5 mod 8`, hence `N ≡ 5 mod 8`, hence `jacobi(-1, N) = 1`. Otherwise
+`-1` is an element of `J_N^-` with known log-coordinates, which allows forging tokens.
 
 The primes `P`, `Q`, `p`, `q` are secret — and are deliberately omitted when a
 `Ring` is shown — so only a holder of the `Ring` can decode HLL values via

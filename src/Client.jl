@@ -109,7 +109,9 @@ function hll_generate(client::Client, class::Any="/registries"; rng::AbstractRNG
     x = modmul(x₀, powermod(g, h, N), N)       # x = x₀ g^h
     z = rand(rng, 1:N-1)                       # z ∈ [1, N)
     w = powermod(z, oftype(N, B) << (m-1), N)  # w = z^(B 2^(m-1))
-    rand(rng, Bool) && (w = N - w)             # w = ±z^(B 2^(m-1))
+    if rand(rng, Bool)                         # w = ±z^(B 2^(m-1))
+        w = N - w
+    end
     i = rand(rng, zero(N):(oftype(N, 1) << (m-1)) - one(N))  # i ∈ [0, 2^(m-1))
     t = 2 * oftype(N, B) * i + one(N)          # t ≡ 1 mod 2B
     y = modmul(w, powermod(x, t, N), N)        # y = w x^t
