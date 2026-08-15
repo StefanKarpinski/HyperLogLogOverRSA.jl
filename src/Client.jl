@@ -1,5 +1,5 @@
 const B_max = 2^12
-const m_max = 127         # per-request arithmetic runs in the ring's integer type
+const m_max = 128         # per-request arithmetic runs in the ring's integer type
 const L_max = 2^20
 const α_min = exp2(112)
 

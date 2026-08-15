@@ -39,8 +39,8 @@ On behalf of clients, the client implementor should choose acceptance criteria f
     - The simplest way to fingerprint clients is just to choose $B = 2^{128}$ and let the bucket be the fingerprint. This limit prevents that kind of “attack”.
     - Example: $B_{\max} = 2^{12}$
 - ``m_{\max}`` — maximum geometric cap
-    - Mostly a sanity check: extreme geometric samples are vanishingly rare, and we don’t want a malicious server forcing a client to work in an absurdly large geometric range. The real ceiling is the width of the hash used to derive per-class values, since the geometric coordinate is uniform only while $m$ is at most that width — $128$ bits in the reference derivation. Within that, a client that does its per-request exponent arithmetic in fixed-width integers should cap near $63$ (to stay in `Int64`/`Int128`), while one using arbitrary-precision integers can accept up to $127$.
-    - Example: $m_{\max} = 127$ (arbitrary-precision client) or $63$ (fixed-width client)
+    - Mostly a sanity check: extreme geometric samples are vanishingly rare, and we don’t want a malicious server forcing a client to work in an absurdly large geometric range. The real ceiling is the width of the hash used to derive per-class values, since the geometric coordinate is uniform only while $m$ is at most that width — $128$ bits in the reference derivation. Within that, a client that does its per-request exponent arithmetic in fixed-width integers should cap near $64$ (to stay in `Int64`/`Int128`), while one using arbitrary-precision integers can accept up to $128$.
+    - Example: $m_{\max} = 128$ (arbitrary-precision client) or $64$ (fixed-width client)
 - ``L_{\max}`` — maximum modulus bit-length
     - This is also mostly a sanity check to make sure that clients aren’t DoSed by being made to do arithmetic in some absurdly large modulus.
     - Example: $L_{\max} = 2^{20}$
@@ -209,7 +209,7 @@ These rules also close the inflation channel discussed in [Malicious clients](05
 
 The protocol above is general; here we pin down the concrete choices for the Julia Pkg client, the setting these ideas were developed for.
 
-**Acceptance bounds.** A client accepts a ring only within $B_{\max} = 2^{12}$, $m_{\max} = 127$, $L_{\max} = 2^{20}$, and $\alpha_{\min} = 2^{112}$ — so a conforming certificate carries $n ≥ 166$ square roots, all of which the client verifies. The relatively high $m_{\max} = 127$ is possible because the client does its per-request arithmetic in arbitrary-precision integers; the client doesn’t care what kind of integers the server needs to use for its arithmetic.
+**Acceptance bounds.** A client accepts a ring only within $B_{\max} = 2^{12}$, $m_{\max} = 128$, $L_{\max} = 2^{20}$, and $\alpha_{\min} = 2^{112}$ — so a conforming certificate carries $n ≥ 166$ square roots, all of which the client verifies. The relatively high $m_{\max} = 128$ is possible because the client does its per-request arithmetic in arbitrary-precision integers; the client doesn’t care what kind of integers the server needs to use for its arithmetic.
 
 **Certificate endpoint.** The server publishes its certificate as TOML at `$server/hll_rsa.toml`. Client and server both use Julia’s TOML implementation, which reads and writes arbitrary-precision integers, so $N$, $g$, and the square roots are bare integer literals — no quoting is needed even though they far exceed 64 bits:
 
