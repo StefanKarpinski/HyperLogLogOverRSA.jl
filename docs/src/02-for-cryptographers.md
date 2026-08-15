@@ -52,7 +52,7 @@ multiplication adds coordinates, and exponentiation by $t$ scales them by $t$. T
 \hll(x) = \big(b,\; \min(\tz(c),\, m-1)\big),
 ```
 
-where $\tz(c) = v_2(c)$ is the 2-adic valuation (trailing-zero count, with $\tz(0) = m$). For uniform $x$, $b$ is uniform on $\Z_B$ and $\tz(c)$ is geometric — exactly the HLL distribution, capped at $m-1$ because the noise below washes out the top bit of $c$ (made rigorous in [Geometric RSA rings](04-hyperloglog-over-rsa.md#Geometric-RSA-rings)). The remaining coordinates are noise to be washed out: $a \in \Z_4$ contributes only its parity, which tracks the Jacobi symbol — its high bit is randomized away — and $d \in \Z_{pq}$ is pure per-client identity entropy.
+where $\tz(c) = v_2(c)$ is the 2-adic valuation (trailing-zero count, with $\tz(0) = m$). For uniform $x$, $b$ is uniform on $\Z_B$ and $\tz(c)$ is geometric — exactly the HLL distribution (made rigorous in [Geometric RSA rings](04-hyperloglog-over-rsa.md#Geometric-RSA-rings)). The remaining coordinates are either determined or noise to be washed out: $a \in \Z_4$ contributes only its parity, which tracks the Jacobi symbol — its high bit is randomized away — and $d \in \Z_{pq}$ is pure per-client identity entropy. The high bit of the $c$ coordinate is *also* noise, which is why the geometric sample is capped at $m-1$.
 
 ## The token, and why it leaks only the sketch
 
