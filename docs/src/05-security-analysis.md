@@ -38,39 +38,39 @@ Since the Jacobi symbol only takes $±1$ values in $\Z_N^*$, $J_N^- = \Z_N^* \se
 \begin{aligned}
 W_N &= \pm(\Z_N^*)^{B2^{m-1}}
 = \set{\, \pm z^{B2^{m-1}} \st z \in \Z_N^* \,}
+\subseteq J_N^+
 \end{aligned}
 ```
 
-Both pieces lie in $J_N^+$: the exponent $B2^{m-1}$ is even (as $m ≥ 3$), so every power $z^{B2^{m-1}}$ has positive Jacobi symbol, and $-1 \in J_N^+$ because $N ≡ 5 \bmod 8$. Hence $W_N ≤ J_N^+$, and crucially $-1 \in W_N$. This subgroup is where we sample “noise” values to randomize the parts of $x$ that don’t encode the HyperLogLog value. We previously described deriving individual $w$ values from random $z$ values; here we consider the entire group.
+Since the exponent $B2^{m-1}$ is even (as $m ≥ 3$), every $z^{B2^{m-1}}$ has positive Jacobi symbol, and $-1 \in J_N^+$ because $N ≡ 5 \bmod 8$, so the entire noise group has positive Jacobi symbol. This subgroup is where we sample “noise” values to randomize the parts of $x$ that don’t encode the HyperLogLog value. We previously described deriving individual $w$ values from random $z$ values; here we consider the entire group.
 
-**Definition.**  We call a positive integer, $N$, *“fingerprint-free”* if it is odd and the quotient $J_N^+/W_N$ is cyclic of order dividing $B2^{m-1}$.
+**Definition.**  We call a positive integer, $N$, *“fingerprint-free”* if it is odd and the quotient $J_N^+/W_N$ is cyclic with order dividing $B2^{m-1}$.
 
 This is an intrinsic condition on the noise quotient — it is what the certification of later sections verifies without the factorization — and it is exactly what supplies the homomorphism the anonymity proof needs:
 
-**Proposition.**  If $N$ is fingerprint-free then there is a group homomorphism
+**Proposition.**  If $N$ is fingerprint-free then the embedding $J_N^+/W_N \hookrightarrow C_B \times C_{2^{m-1}}$ extends to a group homomorphism on all of $\Z_N^*$,
 
 ```math
 \begin{aligned}
-\phi = (\Jacobi_N,\, \bar{\cdot}\,) : \Z_N^* \to C_2 \times C_B \times C_{2^{m-1}}
+\phi : \Z_N^* \to C_B \times C_{2^{m-1}},
 \end{aligned}
 ```
 
-whose first coordinate is the Jacobi symbol and whose kernel is exactly $W_N$.
+whose kernel meets $J_N^+$ in exactly $W_N$; that is, $\ker(\phi) \cap J_N^+ = W_N$.
 
-**Proof.**  Cyclicity of order dividing $B2^{m-1}$ means $J_N^+/W_N$ embeds into $C_B \times C_{2^{m-1}} \cong C_{B2^{m-1}}$; write $\bar{\cdot}$ for the resulting homomorphism $J_N^+ \to C_B \times C_{2^{m-1}}$, which has kernel $W_N$. Extend it to all of $\Z_N^*$: for $\xi \in J_N^-$ we have $\xi^2 \in J_N^+$, and $\bar{\xi^2}$ is a square in $C_B \times C_{2^{m-1}}$ (the odd factor $C_B$ has unique square roots, and the $C_{2^{m-1}}$ component of a square is even, so a root exists), so pick $\bar{\xi}$ with $\bar{\xi}^2 = \bar{\xi^2}$ and set $\bar{\xi h} = \bar{\xi}\,\bar{h}$ for $h \in J_N^+$. Pairing $\bar{\cdot}$ with the Jacobi symbol gives $\phi$, and since $W_N ≤ J_N^+$, $\ker(\phi) = \ker(\Jacobi_N) \cap \ker(\bar{\cdot}) = J_N^+ \cap \ker(\bar{\cdot}) = W_N$. $\square$
+**Proof.**  Cyclicity with order dividing $B2^{m-1}$ means $J_N^+/W_N$ embeds into $C_B \times C_{2^{m-1}} \cong C_{B2^{m-1}}$, giving a homomorphism $J_N^+ \to C_B \times C_{2^{m-1}}$ with kernel $W_N$. We extend it across $J_N^-$: for $\xi \in J_N^-$ we have $\xi^2 \in J_N^+$, and its image is a square in $C_B \times C_{2^{m-1}}$ (the odd factor $C_B$ has unique square roots, and the $C_{2^{m-1}}$ component of a square is even, so a root exists), so choose such a square root to be $\phi(\xi)$ and set $\phi(\xi h) = \phi(\xi)\,\phi(h)$ for $h \in J_N^+$. This $\phi$ is a homomorphism on all of $\Z_N^*$ extending the embedding, so restricting it to $J_N^+$ recovers the embedding and $\ker(\phi) \cap J_N^+ = W_N$. $\square$
 
-For a correctly constructed ring — $\Z_N^* \cong C_4 \times C_B \times C_{2^m} \times C_{pq}$ — this $\phi$ is concrete. On coordinates $\log_g(x) = (a, b, c, d)$,
+For a correctly constructed ring we can explicitly write down such a $\phi$. For $x \in C_4 \times C_B \times C_{2^m} \times C_{pq}$ with $\log_g(x) = (a, b, c, d)$ this is:
 
 ```math
 \begin{aligned}
-\phi(x) = \big(\Jacobi_N(x),\, \bar{x}\big), \qquad
-\bar{x} = (b,\; c \bmod 2^{m-1}) \in C_B \times C_{2^{m-1}},
+\phi(x) = (b,\; c \bmod 2^{m-1}) \in C_B \times C_{2^{m-1}}.
 \end{aligned}
 ```
 
-with $\Jacobi_N(x) = (-1)^{a+c} \in \set{\pm 1} = C_2$. Its kernel is exactly $W_N$: the conditions $\Jacobi_N(x) = +1$, $b = 0$, and $c \equiv 0 \pmod{2^{m-1}}$ (that is, $c \in \set{0, 2^{m-1}}$) cut out precisely $\pm(\Z_N^*)^{B2^{m-1}}$. Reading $c$ only modulo $2^{m-1}$ is what collapses the two rarest rungs into one saturated level, and $\bar{-1} = 1$ with $\Jacobi_N(-1) = +1$ confirms $-1 \in W_N$.
+Its kernel meets $J_N^+$ in exactly $W_N$: an element lies in $J_N^+$ when $a + c$ is even, and $\phi(x) = 1$ forces $b = 0$ and $c \in \set{0, 2^{m-1}}$; the latter makes $c$ even, so $a$ is even too, and the surviving elements are precisely $\pm(\Z_N^*)^{B2^{m-1}} = W_N$. (Over all of $\Z_N^*$, $\ker(\phi)$ is twice as large — it also contains the $a$-odd elements of $J_N^-$ — but only its intersection with $J_N^+$ is used below.) Reading $c$ only modulo $2^{m-1}$ is what collapses the two rarest rungs into one saturated level, and $\phi(-1) = 1$ with $-1 \in J_N^+$ confirms $-1 \in W_N$.
 
-We adopt the convention that the *essential version* of $x \in \Z_N^*$ is $\bar{x} \in C_B \times C_{2^{m-1}}$ — the second coordinate of $\phi(x)$. If $\bar{f}$ is a function on $C_B \times C_{2^{m-1}}$ we write $f(x) = \bar{f}(\bar{x})$ for the corresponding function on $\Z_N^*$. So $\bar{\triangle}$ is generally the “essential version” of $\triangle$, whether an element or a function.
+When $N$ is fingerprint-free — so that $\phi$ from the Proposition exists — we call $\bar{x} := \phi(x) \in C_B \times C_{2^{m-1}}$ the *essential version* of $x$. If $\bar{f}$ is a function on $C_B \times C_{2^{m-1}}$ we write $f(x) = \bar{f}(\bar{x})$ for the corresponding function on $\Z_N^*$. So $\bar{\triangle}$ is generally the “essential version” of $\triangle$, whether an element or a function.
 
 **Definition.** We generalize our earlier definition of a *“semigenerator”* in a multiplicative group. Let $G = \prod_{i=1}^n C_{\alpha_i}$ be a product of cyclic groups and let $\pi_i: G \to C_{\alpha_i}$ be the canonical projection onto the $i$th component. An element $g \in G$ is called a semigenerator if the projection of $g$ onto each cyclic component is a generator for that component:
 
@@ -174,7 +174,7 @@ Since $t$ is odd, the second equality implies that $\tz(c_1) = \tz(c_2)$ which m
 
 **Theorem.** Let $N$ be fingerprint-free. For $x, y \in \Z_N^*$ with the same Jacobi symbol: $\hll(x) = \hll(y)$ if and only if there exists $w \in W_N$ and $t \in \Z$ with $t = 1 \bmod{2B}$ such that $wx^t = y \bmod N$.
 
-**Proof.**  Fingerprint-freeness gives us, via the Proposition, the homomorphism $\phi = (\Jacobi_N,\, \bar{\cdot}\,) : \Z_N^* \to C_2 \times C_B \times C_{2^{m-1}}$ with $\ker(\phi) = W_N$, whose essential part $x \mapsto \bar{x}$ is a homomorphism to $C_B \times C_{2^{m-1}}$. The following conditions are equivalent for $x$ and $y$ with $\Jacobi_N(x) = \Jacobi_N(y)$:
+**Proof.**  Fingerprint-freeness gives us, via the Proposition, the essential homomorphism $\phi : \Z_N^* \to C_B \times C_{2^{m-1}}$, $x \mapsto \bar{x}$, with $\ker(\phi) \cap J_N^+ = W_N$. The following conditions are equivalent for $x$ and $y$ with $\Jacobi_N(x) = \Jacobi_N(y)$:
 
 1. ``\hll(x) = \hll(y)``
 2. ``\bar{\hll}(\bar{x}) = \bar{\hll}(\bar{y})``
@@ -190,15 +190,7 @@ Equivalence of (1) and (2) is just the definition $\hll(x) = \bar{\hll}(\bar{x})
 \end{aligned}
 ```
 
-which means (3) and (4) are logically equivalent. Suppose that $\bar{x}^t = \bar{y}$. Let $w = y x^{-t}$; we check that $\phi(w) = 1$, i.e. $w \in \ker(\phi) = W_N$, by looking at its two parts. The essential part is trivial,
-
-```math
-\begin{aligned}
-\bar{w} = \bar{y}\,\bar{x}^{-t} = 1,
-\end{aligned}
-```
-
-and so is the Jacobi coordinate,
+which means (3) and (4) are logically equivalent. Suppose that $\bar{x}^t = \bar{y}$. Let $w = y x^{-t}$; we show $w \in W_N$ by landing it in both $J_N^+$ and $\ker(\phi)$. Its Jacobi symbol is positive,
 
 ```math
 \begin{aligned}
@@ -206,7 +198,15 @@ and so is the Jacobi coordinate,
 \end{aligned}
 ```
 
-using $\Jacobi_N(x) = \Jacobi_N(y) \in \set{±1}$ and $t$ odd so that raising to $-t$ doesn’t change the sign. Together these give $\phi(w) = 1$, so $w \in W_N$. In the other direction, suppose $w \in W_N = \ker(\phi)$ with $wx^t = y$; then $\bar{w} = 1$, and
+using $\Jacobi_N(x) = \Jacobi_N(y) \in \set{±1}$ and $t$ odd so that raising to $-t$ doesn’t change the sign — so $w \in J_N^+$. And its essential version is trivial,
+
+```math
+\begin{aligned}
+\bar{w} = \bar{y}\,\bar{x}^{-t} = 1,
+\end{aligned}
+```
+
+so $w \in \ker(\phi)$. Together these give $w \in \ker(\phi) \cap J_N^+ = W_N$. In the other direction, suppose $w \in W_N$ with $wx^t = y$; since $W_N \subseteq \ker(\phi)$ we have $\bar{w} = 1$, and
 
 ```math
 \begin{aligned}
