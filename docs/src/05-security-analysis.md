@@ -39,7 +39,6 @@ Since the Jacobi symbol only takes $±1$ values in $\Z_N^*$, $J_N^- = \Z_N^* \se
 W_N &= \pm(\Z_N^*)^{B2^{m-1}}
 = \set{\, \pm z^{B2^{m-1}} \st z \in \Z_N^* \,}
 \subseteq J_N^+
-\subseteq J_N^+
 \end{aligned}
 ```
 
