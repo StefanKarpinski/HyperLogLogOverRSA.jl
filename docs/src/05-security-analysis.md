@@ -55,7 +55,7 @@ This is what the certification of later sections verifies without the factorizat
 \end{aligned}
 ```
 
-whose kernel meets $J_N^+$ in exactly $W_N$; that is, $\ker(\phi) \cap J_N^+ = W_N$.
+such that $\ker(\phi) \cap J_N^+ = W_N$.
 
 **Proof.**  Cyclicity with order dividing $B2^{m-1}$ means $J_N^+/W_N$ embeds into $C_B \times C_{2^{m-1}} \cong C_{B2^{m-1}}$, giving a homomorphism $\phi: J_N^+ \to C_B \times C_{2^{m-1}}$ with kernel $W_N$. It remains to extend $\phi$ across $J_N^-$. Fix any $\xi \in J_N^-$; since $J_N^+$ has index $2$, every element of $\Z_N^*$ is uniquely $\xi^i h$ with $i \in \set{0, 1}$ and $h \in J_N^+$. Now $\xi^2 \in J_N^+$, and $\phi(\xi^2)$ is a square in $C_B \times C_{2^{m-1}}$ — the odd factor $C_B$ has unique square roots, and the $C_{2^{m-1}}$ component of a square is even, so a root exists — so choose $r$ with $r^2 = \phi(\xi^2)$ and define $\phi(\xi h) = r\,\phi(h)$ for $h \in J_N^+$.
 
@@ -75,7 +75,7 @@ For a correctly constructed ring we can explicitly write down such a $\phi$. For
 \end{aligned}
 ```
 
-where $\bar{g}$ is a semigenerator of $C_B \times C_{2^{m-1}}$ (fixed just below). Its kernel meets $J_N^+$ in exactly $W_N$: an element lies in $J_N^+$ when $a + c$ is even, and $\phi(x) = 1$ forces $b = 0$ and $c \in \set{0, 2^{m-1}}$; the latter makes $c$ even, so $a$ is even too, and the surviving elements are precisely $\pm(\Z_N^*)^{B2^{m-1}} = W_N$. (Over all of $\Z_N^*$, $\ker(\phi)$ is twice as large — it also contains the $a$-odd elements of $J_N^-$ — but only its intersection with $J_N^+$ is used below.) Reading $c$ only modulo $2^{m-1}$ is what collapses the two rarest rungs into one saturated level, and $\phi(-1) = 1$ with $-1 \in J_N^+$ confirms $-1 \in W_N$.
+where $\bar{g}$ is a chosen generator of $C_B \times C_{2^{m-1}}$. Its kernel meets $J_N^+$ at $W_N$ exactly: an element lies in $J_N^+$ when $a + c$ is even, and $\phi(x) = 1$ forces $b = 0$ and $c \in \set{0, 2^{m-1}}$; the latter makes $c$ even, so $a$ is even too, and the surviving elements are precisely $\pm(\Z_N^*)^{B2^{m-1}} = W_N$. (Over all of $\Z_N^*$, $\ker(\phi)$ is twice as large — it also contains the $a$-odd elements of $J_N^-$ — but only its intersection with $J_N^+$ is used later.) Reading $c$ only modulo $2^{m-1}$ is what collapses the two rarest rungs into one saturated level, and $\phi(-1) = 1$ with $-1 \in J_N^+$ confirms $-1 \in W_N$.
 
 Our convention when $N$ is fingerprint-free will be that if $x \in \Z_N^*$ we’ll write $\bar{x} = \phi(x) \in C_B \times C_{2^{m-1}}$ and if $\bar{f}$ is a function on $C_B \times C_{2^{m-1}}$, we’ll write $f = \bar{f}\phi$ for the composition whose domain is $\Z_N^*$. So you can generally think of $\bar{\triangle}$ as the “essential version” of $\triangle$, whether $\triangle$ is an element or a function.
 
@@ -96,7 +96,7 @@ If the ${} \alpha_i$ are pairwise coprime, then $G$ is cyclic and $g$ is a true 
 \end{aligned}
 ```
 
-In what follows, let $\bar{g} \in C_B \times C_{2^{m-1}}$ be a fixed semigenerator.
+In what follows, let $\bar{g} \in C_B \times C_{2^{m-1}}$ be a fixed generator.
 
 **Definition.** The *“essential HyperLogLog function”* maps each value in $C_B \times C_{2^{m-1}}$ to its HyperLogLog sample value:
 
@@ -108,7 +108,7 @@ In what follows, let $\bar{g} \in C_B \times C_{2^{m-1}}$ be a fixed semigenerat
 \end{gathered}
 ```
 
-Here $c$ ranges over $\Z_{2^{m-1}}$, so $\tz(c)$ ranges over $\set{0, \dots, m-1}$ with $\tz(0) = m-1$—the saturated level into which the two rarest rungs have already collapsed. The first value, $b$, implicitly depends on the choice of semigenerator, $\bar{g}$, whereas the latter, $\tz(c)$, does not: $\tz(c)$ only depends on the multiplicative order of the $C_{2^{m-1}}$ part of $\bar{x}$, which is independent of $\bar{g}$. The higher bits of $c$ do depend on $\bar{g}$, but the position of the last bit does not.
+Here $c$ ranges over $\Z_{2^{m-1}}$, so $\tz(c)$ ranges over $\set{0, \dots, m-1}$ with $\tz(0) = m-1$—the saturated level into which the two rarest rungs have already collapsed. The first value, $b$, implicitly depends on the choice of generator, $\bar{g}$, whereas the latter, $\tz(c)$, does not: $\tz(c)$ only depends on the multiplicative order of the $C_{2^{m-1}}$ part of $\bar{x}$, which is independent of $\bar{g}$. The higher bits of $c$ do depend on $\bar{g}$, but the position of the last bit does not.
 
 The HyperLogLog function on $\Z_N^*$ is then $\hll(x) = \bar{\hll}(\bar{x})$. In terms of a raw logarithm $\log_g(x) = (a, b, c, d)$ this is $\hll(x) = (b, \min(\tz(c), m-1))$, since $\bar{x}$ reads the geometric coordinate modulo $2^{m-1}$. It depends on the choice of $\bar{g}$ for $\bar\hll$ and, through $\bar{x}$, on the semigenerator $g$; both choices merely permute the output bucket indices.
 
@@ -252,7 +252,7 @@ With the anonymity theorem in hand, we turn to the integrity side of the protoco
 
 Plaintext HyperLogLog counting has a serious inflation problem: an attacker can send one request for each bucket, each carrying the maximum geometric value, and instantly push the unique client estimate to its ceiling. How does our protocol compare? Our gold standard is the naive unique client ID approach, where each forged request inflates the count by exactly one—attack effort is linear with coefficient one.
 
-If a malicious client sends $y$ with $\Jacobi_N(y) ≠ -1$, the server will detect it. So we can focus on a malicious client sending $y$ with $\Jacobi_N(y) = -1$. As discussed in the previous section, the values it can build from a fixed twist $x_0$ (with $\Jacobi_N(x_0) = -1$) and the published semigenerator $g$ are those of the form $y = \pm x_0 g^h$; take $y = x_0 g^h$, the other case being identical. Here we use $h$ as just an arbitrary attacker-controlled exponent value, not necessarily the output of a hash function. The question is whether a malicious client can influence $y$ to have large geometric sample values.
+If a malicious client sends $y$ with $\Jacobi_N(y) ≠ -1$, the server will detect it. So we can focus on a malicious client sending $y$ with $\Jacobi_N(y) = -1$. As discussed in the previous section, the values it can build from a fixed twist $x_0$ (with $\Jacobi_N(x_0) = -1$) and the published semigenerator $g$ are those of the form $y = \pm x_0 g^h$; take $y = x_0 g^h$, the other case being essentially the same. Here we use $h$ as just an arbitrary attacker-controlled exponent value, not necessarily the output of a hash function. The question is whether a malicious client can influence $y$ to have large geometric sample values.
 
 The server doesn’t publish any $x_0$ value, so clients have to generate one for themselves. However, since they don’t know the factorization of $N$, they have no idea what its logarithms are. For our analysis, write $\log(x_0) = (a, b, c, d)$, but keep in mind that the attacker has no idea what these values are. The HyperLogLog sample that $y = x_0 g^h$ encodes is $(b + h, \tz(c + h))$. The attacker controls $h$ but doesn’t know $b$ or $c$. Since they don’t know $c$, they cannot force $\tz(c + h)$ to be large or know how large it is for any particular $h$. In order to hit $k ≥ \tz(c + h)$ the attacker needs to happen to choose $h$ whose last $k$ bits complement $c$ perfectly, which occurs with probability $1/2^k$ — exactly the probability of picking a value that good by chance. What they can do, however, is scan through consecutive $h$ values. If they scan $2^k$ consecutive values, they’re guaranteed to hit $h = -c \bmod{2^k}$ for one of those values and they may happen to hit something better.
 
