@@ -203,7 +203,7 @@ When the random sign is negative it adds $\log_g(-1) = (2, 0, 2^{m-1}, 0)$ to th
 \log_g(w) = (2 a_w,\; e,\; 2^{m-1} c_w,\; e)
 \end{aligned}
 ```
-
+where $a_w$ and $c_w$ are independent random bits and $e \in \Z_{pq}$ also random.
 where $a_w$ and $c_w$ are independent random bits and $e \in \Z_{pq}$ is also random (a single value that fixes the $C_p$ and $C_q$ exponents by the Chinese Remainder Theorem, since $p$ and $q$ are coprime).
 
 Now that we have $w$, we multiply our client value by it after exponentiating by $t$, sending $x$ to $w x^t$:
