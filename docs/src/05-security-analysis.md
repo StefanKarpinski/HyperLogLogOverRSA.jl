@@ -43,21 +43,34 @@ W_N &= \pm(\Z_N^*)^{B2^{m-1}}
 
 Both pieces lie in $J_N^+$: the exponent $B2^{m-1}$ is even (as $m ≥ 3$), so every power $z^{B2^{m-1}}$ has positive Jacobi symbol, and $-1 \in J_N^+$ because $N ≡ 5 \bmod 8$. Hence $W_N ≤ J_N^+$, and crucially $-1 \in W_N$. This subgroup is where we sample “noise” values to randomize the parts of $x$ that don’t encode the HyperLogLog value. We previously described deriving individual $w$ values from random $z$ values; here we consider the entire group.
 
-**Definition.**  We call a positive integer, $N$, *“fingerprint-free”* if it is odd and the quotient $\Z_N^*/W_N$ embeds, as an abstract group, into $C_2 \times C_B \times C_{2^m}$.
+**Definition.**  We call a positive integer, $N$, *“fingerprint-free”* if it is odd and the quotient $J_N^+/W_N$ is cyclic of order dividing $B2^{m-1}$.
 
-This is a condition purely on the *size and shape* of the noise quotient: it is what the certification of later sections can verify without the factorization, and it is all we need to bound the leak. The Jacobi symbol is always *a* character of $\Z_N^*/W_N$ (since $W_N ≤ J_N^+ = \ker \Jacobi_N$), but it need not be one of the embedding’s coordinates — its role is kept separate, in the arguments below.
+This is an intrinsic condition on the noise quotient — it is what the certification of later sections verifies without the factorization — and it is exactly what supplies the homomorphism the anonymity proof needs:
 
-For correctly constructed $N$ — where $\Z_N^* \cong C_4 \times C_B \times C_{2^m} \times C_{pq}$ — the obvious embedding witnessing fingerprint freedom, on coordinates $\log_g(x) = (a, b, c, d)$, is
+**Proposition.**  If $N$ is fingerprint-free then there is a group homomorphism
 
 ```math
 \begin{aligned}
-\phi(x) = \big((-1)^{a+c},\; b,\; c \bmod 2^{m-1}\big) : \Z_N^* \to C_2 \times C_B \times C_{2^{m-1}}.
+\phi = (\Jacobi_N,\, \bar{\cdot}\,) : \Z_N^* \to C_2 \times C_B \times C_{2^{m-1}}
 \end{aligned}
 ```
 
-Its kernel is exactly $W_N$: the conditions $(-1)^{a+c} = +1$, $b = 0$, and $c \equiv 0 \pmod{2^{m-1}}$ (that is, $c \in \set{0, 2^{m-1}}$) cut out precisely $\pm(\Z_N^*)^{B2^{m-1}}$. Note $\phi(-1) = (+1, 0, 0)$, confirming $-1 \in W_N$; reading $c$ only modulo $2^{m-1}$ is exactly what collapses the two rarest rungs into one saturated level. Since $C_2 \times C_B \times C_{2^{m-1}}$ embeds into $C_2 \times C_B \times C_{2^m}$, this $\phi$ witnesses that $N$ is fingerprint-free.
+whose first coordinate is the Jacobi symbol and whose kernel is exactly $W_N$.
 
-We adopt the convention that the *essential version* of $x \in \Z_N^*$ is the bucket–geometric pair $\bar{x} = (b,\; c \bmod 2^{m-1}) \in C_B \times C_{2^{m-1}}$ — the last two coordinates of $\phi(x)$, so that $\phi(x) = \big((-1)^{a+c},\, \bar{x}\big)$. If $\bar{f}$ is a function on $C_B \times C_{2^{m-1}}$ we write $f(x) = \bar{f}(\bar{x})$ for the corresponding function on $\Z_N^*$. So $\bar{\triangle}$ is generally the “essential version” of $\triangle$, whether an element or a function.
+**Proof.**  Cyclicity of order dividing $B2^{m-1}$ means $J_N^+/W_N$ embeds into $C_B \times C_{2^{m-1}} \cong C_{B2^{m-1}}$; write $\bar{\cdot}$ for the resulting homomorphism $J_N^+ \to C_B \times C_{2^{m-1}}$, which has kernel $W_N$. Extend it to all of $\Z_N^*$: for $\xi \in J_N^-$ we have $\xi^2 \in J_N^+$, and $\bar{\xi^2}$ is a square in $C_B \times C_{2^{m-1}}$ (the odd factor $C_B$ has unique square roots, and the $C_{2^{m-1}}$ component of a square is even, so a root exists), so pick $\bar{\xi}$ with $\bar{\xi}^2 = \bar{\xi^2}$ and set $\bar{\xi h} = \bar{\xi}\,\bar{h}$ for $h \in J_N^+$. Pairing $\bar{\cdot}$ with the Jacobi symbol gives $\phi$, and since $W_N ≤ J_N^+$, $\ker(\phi) = \ker(\Jacobi_N) \cap \ker(\bar{\cdot}) = J_N^+ \cap \ker(\bar{\cdot}) = W_N$. $\square$
+
+For a correctly constructed ring — $\Z_N^* \cong C_4 \times C_B \times C_{2^m} \times C_{pq}$ — this $\phi$ is concrete. On coordinates $\log_g(x) = (a, b, c, d)$,
+
+```math
+\begin{aligned}
+\phi(x) = \big(\Jacobi_N(x),\, \bar{x}\big), \qquad
+\bar{x} = (b,\; c \bmod 2^{m-1}) \in C_B \times C_{2^{m-1}},
+\end{aligned}
+```
+
+with $\Jacobi_N(x) = (-1)^{a+c} \in \set{\pm 1} = C_2$. Its kernel is exactly $W_N$: the conditions $\Jacobi_N(x) = +1$, $b = 0$, and $c \equiv 0 \pmod{2^{m-1}}$ (that is, $c \in \set{0, 2^{m-1}}$) cut out precisely $\pm(\Z_N^*)^{B2^{m-1}}$. Reading $c$ only modulo $2^{m-1}$ is what collapses the two rarest rungs into one saturated level, and $\bar{-1} = 1$ with $\Jacobi_N(-1) = +1$ confirms $-1 \in W_N$.
+
+We adopt the convention that the *essential version* of $x \in \Z_N^*$ is $\bar{x} \in C_B \times C_{2^{m-1}}$ — the second coordinate of $\phi(x)$. If $\bar{f}$ is a function on $C_B \times C_{2^{m-1}}$ we write $f(x) = \bar{f}(\bar{x})$ for the corresponding function on $\Z_N^*$. So $\bar{\triangle}$ is generally the “essential version” of $\triangle$, whether an element or a function.
 
 **Definition.** We generalize our earlier definition of a *“semigenerator”* in a multiplicative group. Let $G = \prod_{i=1}^n C_{\alpha_i}$ be a product of cyclic groups and let $\pi_i: G \to C_{\alpha_i}$ be the canonical projection onto the $i$th component. An element $g \in G$ is called a semigenerator if the projection of $g$ onto each cyclic component is a generator for that component:
 
@@ -161,7 +174,7 @@ Since $t$ is odd, the second equality implies that $\tz(c_1) = \tz(c_2)$ which m
 
 **Theorem.** Let $N$ be fingerprint-free. For $x, y \in \Z_N^*$ with the same Jacobi symbol: $\hll(x) = \hll(y)$ if and only if there exists $w \in W_N$ and $t \in \Z$ with $t = 1 \bmod{2B}$ such that $wx^t = y \bmod N$.
 
-**Proof.**  The witness $\phi = \big((-1)^{a+c},\, \bar{\cdot}\,\big) : \Z_N^* \to C_2 \times C_B \times C_{2^{m-1}}$ from the definition has $\ker(\phi) = W_N$, and its essential part $x \mapsto \bar{x}$ is a homomorphism onto $C_B \times C_{2^{m-1}}$. The following conditions are equivalent for $x$ and $y$ with $\Jacobi_N(x) = \Jacobi_N(y)$:
+**Proof.**  Fingerprint-freeness gives us, via the Proposition, the homomorphism $\phi = (\Jacobi_N,\, \bar{\cdot}\,) : \Z_N^* \to C_2 \times C_B \times C_{2^{m-1}}$ with $\ker(\phi) = W_N$, whose essential part $x \mapsto \bar{x}$ is a homomorphism to $C_B \times C_{2^{m-1}}$. The following conditions are equivalent for $x$ and $y$ with $\Jacobi_N(x) = \Jacobi_N(y)$:
 
 1. ``\hll(x) = \hll(y)``
 2. ``\bar{\hll}(\bar{x}) = \bar{\hll}(\bar{y})``
@@ -322,7 +335,7 @@ I found myself really wishing for a simpler way to demonstrate the structure of 
 
 ### Criteria for fingerprint-freedom
 
-Recall from the section with the formal anonymity proof that an odd integer, $N$, is shown to be fingerprint-free if $N = 5 \bmod 8$ and $J_N^+/W_N$ is cyclic with order dividing $B2^m$. These subgroups of $\Z_N^*$ have the following definitions:
+Recall that an odd integer, $N$, is *fingerprint-free* when $J_N^+/W_N$ is cyclic of order dividing $B2^{m-1}$ — the definition from the anonymity section, which is what guarantees the map $\phi$ that makes two same-sketch clients indistinguishable. These subgroups of $\Z_N^*$ have the following definitions:
 
 ```math
 \begin{aligned}
@@ -450,7 +463,7 @@ Combining these results, we get the following claim.
 
 then $N$ is fingerprint-free.
 
-**Proof.**  From the prior lemma the last condition is equivalent to $N$ having at most two distinct prime factors. We compute the noise quotient $\Z_N^*/W_N$ directly and show it embeds into $C_2 \times C_B \times C_{2^m}$.
+**Proof.**  From the prior lemma the last condition is equivalent to $N$ having at most two distinct prime factors. We compute the noise quotient $\Z_N^*/W_N$ and then read off its index-2 Jacobi-kernel $J_N^+/W_N$, showing that kernel is cyclic of order dividing $B2^{m-1}$ — the definition of fingerprint-freedom.
 
 Two general tools. First, for a cyclic group $C_M$ and any exponent $E$, the power map $x \mapsto x^E$ has image of index $\gcd(M, E)$, so $C_M/(C_M)^E \cong C_{\gcd(M, E)}$. Applied factor by factor to $\Z_N^* \cong \prod_i C_{M_i}$ with $E = B2^{m-1}$,
 
@@ -478,7 +491,7 @@ where $\overline{-1}$ is the image of $-1$. We take the odd and 2-power parts of
 \end{aligned}
 ```
 
-The gcd condition pins the odd factor: $\gcd(B, U) \divides \gcd(B, P-1)$, which divides $\gcd(B, N-1) = 1$ (as $N - 1 = (P-1)\,(P^{j-1} + \dots + 1)$ is a multiple of $P-1$), so $\gcd(U, B) = 1$. That leaves $C_4$; and $\overline{-1}$ is its order-2 element, so $\Z_N^*/W_N \cong C_2$, a subgroup of $C_2 \times C_B \times C_{2^m}$. Fingerprint-free.
+The gcd condition pins the odd factor: $\gcd(B, U) \divides \gcd(B, P-1)$, which divides $\gcd(B, N-1) = 1$ (as $N - 1 = (P-1)\,(P^{j-1} + \dots + 1)$ is a multiple of $P-1$), so $\gcd(U, B) = 1$. That leaves $C_4$; and $\overline{-1}$ is its order-2 element, so $\Z_N^*/W_N \cong C_2$. The Jacobi symbol is injective on this $C_2$ (its generator is the image of a coordinate-$a = 1$ element, with $\Jacobi_N = -1$), so the Jacobi-kernel $J_N^+/W_N$ is trivial — cyclic of order dividing $B2^{m-1}$. Fingerprint-free.
 
 **Two prime factors.**  $N = P^j Q^k$. Writing $s = \tz(P-1)$ and $n = \tz(Q-1)$,
 
@@ -500,7 +513,7 @@ For the **2-part**, $N \equiv 5 \bmod 8$ pins the 2-Sylow. On coordinates $(a, b
 - **$s = 2$, $n \ge m$:** then $r = m-1$ and $2^{n-1} \equiv 0 \bmod 2^{m-1}$, so $\overline{-1} = (2, 0)$ and the quotient is $C_2 \times C_{2^{m-1}}$ — the honest case, Jacobi bit times a geometric $C_{2^{m-1}}$.
 - **$s = 2$, $2 \le n \le m-1$:** then $r = n$ and $2^{n-1} \bmod 2^n = 2^{n-1}$, so $\overline{-1} = (2, 2^{n-1})$ is a diagonal order-2 element and the quotient is cyclic of order $2^{n+1}$, with $n + 1 \le m$.
 
-Each of these is a subgroup of $C_2 \times C_{2^m}$: $C_2 \times C_{2^{m-1}}$ directly, and a cyclic $C_{2^{n+1}}$ with $n+1 \le m$ inside the $C_{2^m}$ factor. Combined with the odd part, $\Z_N^*/W_N$ embeds into $C_2 \times C_B \times C_{2^m}$, so $N$ is fingerprint-free. $\square$
+Now take the Jacobi-kernel. The Jacobi symbol is a character of $\Z_N^*/W_N$ whose kernel is exactly $J_N^+/W_N$, an index-2 subgroup; its 2-part is the index-2 subgroup of the 2-parts above, namely — respectively — the trivial group ($s = n = 1$), the cyclic $C_{2^{m-1}}$ (the diagonal kernel $\gen{(1,1)}$ inside $C_2 \times C_{2^{m-1}}$, since here $\Jacobi_N$ is the *sum* of the two coordinates' parities), and the cyclic $C_{2^n}$ (the index-2 subgroup of $C_{2^{n+1}}$, with $n \le m-1$). Each is cyclic of order dividing $2^{m-1}$. Together with the odd part $C_{B_U} \times C_{B_V} \cong C_{B_U B_V}$ (order dividing $B$), $J_N^+/W_N$ is cyclic of order dividing $B2^{m-1}$, so $N$ is fingerprint-free. $\square$
 
 This gives us a concrete set of criteria on $N$, which, taken together, imply that $N$ is fingerprint-free. Of course, the obvious question is how can a client be convinced that for *every* pair $\set{x, y} \subseteq J_N^+$ one of $\set{x, y, xy}$ has a square root? This obviously cannot be checked exhaustively by client or server, since $J_N^+$ is huge for realistic $N$. The next section gives results that allow us to design a protocol that lets a server convince clients that ${} N$ is overwhelmingly likely to be fingerprint-free.
 
@@ -560,7 +573,11 @@ This bound allows a protocol whereby a server can convince a client that $N$ is 
 
 ### Certifying a good modulus
 
-Based on these results, we can design a protocol for a server to convince clients that $N$ is fingerprint-free. First, the client checks that $N = 5 \bmod 8$, that $\gcd(B, N) = 1$, and that $\gcd(B, N-1) = 1$. These are simple numerical checks. The client is then ready to be convinced that $N$ has at most two prime divisors. The interactive version is:
+Based on these results, we can design a protocol for a server to convince clients that $N$ is fingerprint-free. First, the client checks that $N = 5 \bmod 8$, that $\gcd(B, N) = 1$, and that $\gcd(B, N-1) = 1$. These are simple numerical checks.
+
+Why exactly $N \equiv 5 \bmod 8$? Two independent requirements fix it. First, *integrity*: $-1$ must not be a free $J_N^-$ forgery, i.e. $\Jacobi_N(-1) = (-1)^{(N-1)/2} = +1$, which holds iff $N \equiv 1 \bmod 4$ — this is what rules out the $N \equiv 3 \bmod 4$ of a would-be modulus with $-1 \in J_N^-$. Second, *anonymity*: at most one prime may carry a large 2-Sylow factor, since two of them would give the token a second geometric-like coordinate — a fingerprint. That is governed by $\tz(N-1)$: $N \equiv 5 \bmod 8$ forces $\tz(N-1) = 2$, pinning the smaller prime’s 2-part to $C_4$ (or both primes' to $C_2$), whereas $N \equiv 1 \bmod 8$ (that is $\tz(N-1) \ge 3$) would permit two large 2-Sylow factors that the client cannot rule out without the factorization. Requiring $N \equiv 1 \bmod 4$ while forbidding $N \equiv 1 \bmod 8$ is exactly $N \equiv 5 \bmod 8$. As a bonus, $5 \equiv -3 \bmod 8$ gives $\Jacobi_N(2) = -1$, so $2$ is a ready-made, publicly nameable element of $J_N^-$.
+
+The client is then ready to be convinced that $N$ has at most two prime divisors. The interactive version is:
 
 > The client picks $n$ random pairs $\set{x, y} \subseteq J_N^+$ and challenges the server to produce $r \in \Z_N^*$ for each pair such that $r^2 \in \set{x, y, xy} \bmod N$.
 
