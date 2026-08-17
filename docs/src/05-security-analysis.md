@@ -61,9 +61,9 @@ such that $\ker(\phi) \cap J_N^+ = W_N$.
 
 This $\phi$ is a homomorphism: for $u = \xi^i h$ and $v = \xi^j h'$,
 
-- $i = j = 0$: $\phi(uv) = \phi(h h') = \phi(h)\,\phi(h') = \phi(u)\,\phi(v)$;
-- $i = 0,\, j = 1$ (and symmetrically): $\phi(h \cdot \xi h') = \phi(\xi \cdot h h') = r\,\phi(h h') = \phi(h)\cdot r\,\phi(h') = \phi(u)\,\phi(v)$;
-- $i = j = 1$: $\phi(\xi h \cdot \xi h') = \phi(\xi^2 h h') = \phi(\xi^2)\,\phi(h)\,\phi(h') = r^2\,\phi(h)\,\phi(h') = \phi(u)\,\phi(v)$.
+- ``i = j = 0``: $\phi(uv) = \phi(h h') = \phi(h)\,\phi(h') = \phi(u)\,\phi(v)$;
+- ``i = 0,\, j = 1`` (and symmetrically): $\phi(h \cdot \xi h') = \phi(\xi \cdot h h') = r\,\phi(h h') = \phi(h)\cdot r\,\phi(h') = \phi(u)\,\phi(v)$;
+- ``i = j = 1``: $\phi(\xi h \cdot \xi h') = \phi(\xi^2 h h') = \phi(\xi^2)\,\phi(h)\,\phi(h') = r^2\,\phi(h)\,\phi(h') = \phi(u)\,\phi(v)$.
 
 Restricting $\phi$ to $J_N^+$ recovers the embedding, so $\ker(\phi) \cap J_N^+ = W_N$. $\square$
 
@@ -96,7 +96,7 @@ If the ${} \alpha_i$ are pairwise coprime, then $G$ is cyclic and $g$ is a true 
 \end{aligned}
 ```
 
-In what follows, let $g$ be a fixed semigenerator for $\Z_n^*$ (non-cyclic) and let $\bar{g}$ be a fixed generator for  $C_B \times C_{2^{m-1}}$ (cyclic).
+In what follows, let $g$ be a fixed semigenerator for $\Z_N^*$ (non-cyclic) and let $\bar{g}$ be a fixed generator for $C_B \times C_{2^{m-1}}$ (cyclic).
 
 **Definition.** The *“essential HyperLogLog function”* maps each value in $C_B \times C_{2^{m-1}}$ to its HyperLogLog sample value:
 
@@ -110,7 +110,7 @@ In what follows, let $g$ be a fixed semigenerator for $\Z_n^*$ (non-cyclic) and 
 
 Here $c$ ranges over $\Z_{2^{m-1}}$, so $\tz(c)$ ranges over $\set{0, \dots, m-1}$ with $\tz(0) = m-1$—the saturated level into which the two rarest rungs have already collapsed. The first value, $b$, implicitly depends on the choice of generator, $\bar{g}$, whereas the latter, $\tz(c)$, does not: $\tz(c)$ only depends on the multiplicative order of the $C_{2^{m-1}}$ part of $\bar{x}$, which is independent of $\bar{g}$. The higher bits of $c$ do depend on $\bar{g}$, but the position of the last bit does not.
 
-The HyperLogLog function on $\Z_N^*$ is then ${} \hll(x) = \bar{\hll}(\phi(x)) = \bar{\hll}(\bar{x}) {}$ or equivalently $\hll = \bar\hll\phi$. For a well-formend $N$, we have $\log_g(x) = (a, b, c, d)$, and this is $\hll(x) = (b, \min(\tz(c), m-1))$. This depends on the choices of $g$ and $\bar{g}$; both choices merely permute the output bucket indices.
+The HyperLogLog function on $\Z_N^*$ is then ${} \hll(x) = \bar{\hll}(\phi(x)) = \bar{\hll}(\bar{x}) {}$ or equivalently $\hll = \bar\hll\phi$. For a well-formed $N$, we have $\log_g(x) = (a, b, c, d)$, and this is $\hll(x) = (b, \min(\tz(c), m-1))$. This depends on the choices of $g$ and $\bar{g}$; both choices merely permute the output bucket indices.
 
 ### The anonymity theorem
 
@@ -183,10 +183,10 @@ Since $t$ is odd, the second equality implies that $\tz(c_1) = \tz(c_2)$ which m
 
 **Proof.**  Since $N$ is fingerprint-free there exists $\phi : \Z_N^* \to C_B \times C_{2^{m-1}}$ with $\ker(\phi) \cap J_N^+ = W_N$. The following conditions are equivalent for $x$ and $y$ with $\Jacobi_N(x) = \Jacobi_N(y)$:
 
-1. $\hll(x) = \hll(y)$
-2. $\bar{\hll}(\phi(x)) = \bar{\hll}(\phi(y))$
-3. $\E\, t = 1 \bmod{2B}$ such that $\phi(x)^t = \phi(y)$
-4. $\E\, t = 1 \bmod{2B},\, w \in W_N$ such that $wx^t = y$
+1. ``\hll(x) = \hll(y)``
+2. ``\bar{\hll}(\phi(x)) = \bar{\hll}(\phi(y))``
+3. ``\E\, t = 1 \bmod{2B}`` such that $\phi(x)^t = \phi(y)$
+4. ``\E\, t = 1 \bmod{2B},\, w \in W_N`` such that $wx^t = y$
 
 Equivalence of (1) and (2) is just the definition of $\hll = \bar{\hll}\phi$. The lemma we just proved gives equivalence of (2) and (3). That leaves us to prove equivalence of (3) and (4). We will show that for any odd exponent, $t$, we have:
 
@@ -253,7 +253,7 @@ Plaintext HyperLogLog counting has a serious inflation problem: an attacker can 
 
 If a malicious client sends $y$ with $\Jacobi_N(y) ≠ -1$, the server will detect it. So we can focus on a malicious client sending $y$ with $\Jacobi_N(y) = -1$. As discussed in the previous section, the values it can build from a fixed twist $x_0$ (with $\Jacobi_N(x_0) = -1$) and the published semigenerator $g$ are those of the form $y = \pm x_0 g^h$; take $y = x_0 g^h$, the other case being essentially the same. Here we use $h$ as just an arbitrary attacker-controlled exponent value, not necessarily the output of a hash function. The question is whether a malicious client can influence $y$ to have large geometric sample values.
 
-The server doesn’t publish any $x_0$ value, so clients have to generate one for themselves. However, since they don’t know the factorization of $N$, they have no idea what its logarithms are. For our analysis, write $\log(x_0) = (a, b, c, d)$, but keep in mind that the attacker has no idea what these values are. The HyperLogLog sample that $y = x_0 g^h$ encodes is ${} (b + h, \min(\tz(c + h), 2^{m-1})) {}$. The attacker controls $h$ but doesn’t know $b$ or $c$. Since they don’t know $c$, they cannot force $\tz(c + h)$ to be large or know how large it is for any particular $h$. In order to hit $k ≥ \tz(c + h)$ the attacker needs to happen to choose $h$ whose last $k$ bits complement $c$ perfectly, which occurs with probability $1/2^k$ — exactly the probability of picking a value that rare by chance. What they can do, however, is scan through consecutive $h$ values. If they scan $2^k$ consecutive values, they’re guaranteed to hit $h = -c \bmod{2^k}$ for one of those values and they may happen to hit something better.
+The server doesn’t publish any $x_0$ value, so clients have to generate one for themselves. However, since they don’t know the factorization of $N$, they have no idea what its logarithms are. For our analysis, write $\log(x_0) = (a, b, c, d)$, but keep in mind that the attacker has no idea what these values are. The HyperLogLog sample that $y = x_0 g^h$ encodes is ${} (b + h, \min(\tz(c + h), m-1)) {}$. The attacker controls $h$ but doesn’t know $b$ or $c$. Since they don’t know $c$, they cannot force $\tz(c + h)$ to be large or know how large it is for any particular $h$. In order to hit $k ≥ \tz(c + h)$ the attacker needs to happen to choose $h$ whose last $k$ bits complement $c$ perfectly, which occurs with probability $1/2^k$ — exactly the probability of picking a value that rare by chance. What they can do, however, is scan through consecutive $h$ values. If they scan $2^k$ consecutive values, they’re guaranteed to hit $h = -c \bmod{2^k}$ for one of those values and they may happen to hit something better.
 
 In the unique ID scheme, each request with a freshly “forged” client ID inflates the client count by one. How does HLL over RSA compare to this when an attacker tries to inflate its estimates? The expected maximum value of $\tz(c + h)$ is $k+1$ when scanning a consecutive block of $2^k$ values. This is slightly better than sending random values. If an attacker sends $B2^k$ spoofed requests they can push each bucket up to an expected value of $k + 1$, which gives a client count estimate of:
 
@@ -269,7 +269,7 @@ There is an important assumption hiding inside this linear bound: that the attac
 
 It’s worth flagging a stronger mitigation that we have deliberately *not* adopted, since it’s a natural question. One could try to *bind each token to its request*—mixing something request-specific (a server-issued nonce, or the full request path) into the value the client sends—so that a single high-value forgery can’t be reused across many requests. The difficulty is that honest counting needs the opposite: a client’s value must be *stable* across its requests within a class, or we’d be counting requests instead of unique clients. A binding that preserved per-(client, class) stability while denying an attacker reuse of a curated value is not obviously achievable, and in any case the cardinality floor already removes the count oracle that the curated-set attack depends on. So we rely on the floor and leave token-request binding as an open question—to revisit only if some deployment leaks count feedback through a channel the floor can’t cover.
 
-While this is quite a good result, our analysis of resistance to malicious clients rests on a hardness assumption we can argue for but not prove. In particular, if an attacker learns the $c$ coordinate of any element in $J_N^-$ with respect to $g$, they will be able to forge arbitrarily rare samples by choosing $h$ so that $\tz(c + h)$ is as large as they want. So the question is how hard it really is for an attacker can produce a $J_N^-$ element together with its $C_{2^m}$-logarithm.
+While this is quite a good result, our analysis of resistance to malicious clients rests on a hardness assumption we can argue for but not prove. In particular, if an attacker learns the $c$ coordinate of any element in $J_N^-$ with respect to $g$, they will be able to forge arbitrarily rare samples by choosing $h$ so that $\tz(c + h)$ is as large as they want. So the question is how hard it really is for an attacker to produce a $J_N^-$ element together with its $C_{2^m}$-logarithm.
 
 We should be precise about what “produce” means. Merely *naming* an element of $J_N^-$ is trivial. For correctly constructed $N$, we always have $\Jacobi_N(2) = -1$, for example. But the logarithms of $2$ with respect to $g$ are unknown. Similarly, the fingerprint-freedom certificate for $N$ publishes a list of square roots, roughly half of which land in $J_N^-$. None of these count, again because their logarithms are unknown. The attacker needs to be able to give an element of $J_N^-$ along with its $c$ coordinate in order to freely forge large geometric values.
 
@@ -328,11 +328,11 @@ With this structure of $N$ then, the malicious server gets a total of $2 \log_2(
 Can we convince a client that we aren’t smuggling fingerprint bits in the structure of $N$ without giving away its factorization? In this particular case, the unusual structure of $N$ is actually quite easy to detect:
 
 - The correct structure has
-  - $P = 5 \bmod 8 \and Q = 1 \bmod 8 \implies N = PQ = 5 \bmod 8$
-  - $P = 1 \bmod B \and Q ≠ 1 \bmod B \implies N = PQ ≠ 1 \bmod B$
+  - ``P = 5 \bmod 8 \and Q = 1 \bmod 8 \implies N = PQ = 5 \bmod 8``
+  - ``P = 1 \bmod B \and Q ≠ 1 \bmod B \implies N = PQ ≠ 1 \bmod B``
 - This incorrect structure has
-  - $N = P = Q = 1 \bmod 8$
-  - $N = P = Q = 1 \bmod B$
+  - ``N = P = Q = 1 \bmod 8``
+  - ``N = P = Q = 1 \bmod B``
 
 So the incorrect structure of $N$ is easy to spot. Unfortunately, not all possible malicious structures are so easy to detect. For example, if $N = PQR$ where $P = Q = 1 \bmod 8$ and $P = Q = 1 \bmod B$ and $R = 5 \bmod 8$ and $R ≠ 1 \bmod B$, then you’d have $N = PQR = 5 \bmod 8$ and $N = PQR ≠ 1 \bmod B$ so $N$ looks normal from simple modular criteria, yet $PQ$ carries the $2 \log_2(B) + m$ bits of client fingerprint from before. To guarantee that a server cannot fingerprint clients, more evidence about the structure of $N$ needs to be provided.
 
@@ -413,8 +413,8 @@ This means that $d \divides N-1$ as required. $\square$
 
 **Proof.**  Since $(p_i-1)\,p_i^{n_i-1}$ is always even, each of the log-coordinates has a well-defined notion of parity. We can understand both the Jacobi symbol and quadratic residues in terms of parity of log-coordinates:
 
-- $\Jacobi_N(x) = 1$ iff an even number of the $\ell_i$ are odd
-- $x$ is a quadratic residue iff none of the $\ell_i$ are odd
+- ``\Jacobi_N(x) = 1`` iff an even number of the $\ell_i$ are odd
+- ``x`` is a quadratic residue iff none of the $\ell_i$ are odd
 
 In the $D = 1$ case, $\Jacobi_N(x) = 1$ if and only if $x$ is a quadratic residue, so all three of $x$, $y$ and $xy$ are quadratic residues.
 
@@ -466,8 +466,8 @@ Combining these results, we get the following claim.
 
 **Claim.** If the following conditions are satisfied:
 
-- $N = 5 \bmod 8$
-- $\gcd(B, N) = \gcd(B, N-1) = 1$
+- ``N = 5 \bmod 8``
+- ``\gcd(B, N) = \gcd(B, N-1) = 1``
 - For all $x, y \in J_N^+$ one of $\set{x, y, xy}$ is a quadratic residue
 
 then $N$ is fingerprint-free.
@@ -490,7 +490,7 @@ Second, $W_N = \pm(\Z_N^*)^{B2^{m-1}}$ adjoins the single order-2 element $-1$, 
 \end{aligned}
 ```
 
-where $\overline{-1}$ is the image of $-1$ (also $-1$ in that group, but we use the bar to distinguish which group we're in). We take the odd and 2-power parts of this in turn.
+where $\overline{-1}$ is the image of $-1$ (also $-1$ in that group, but we use the bar to distinguish which group we’re in). We take the odd and 2-power parts of this in turn.
 
 **One prime factor.**  $N = P^j$, so $\Z_N^*$ is cyclic of order $(P-1)P^{j-1}$. A prime power $P^j \equiv 5 \bmod 8$ forces $P \equiv 5 \bmod 8$ (the residues $1, 3, 7 \bmod 8$ generate cyclic subgroups of $(\Z/8)^*$ that never contain $5$), so $\tz(P-1) = 2$ and $\Z_N^* \cong C_4 \times C_U$ with $U$ odd. Then $\gcd(4, B2^{m-1}) = 4$ (since $m ≥ 3$) and $\gcd(U, B2^{m-1}) = \gcd(U, B)$, so
 
@@ -544,13 +544,13 @@ In particular, for $D ≥ 3$ it is at most $5/8$.
 
 - There are $D$ even log-coordinates in $\log_g(x) = (\ell_1, \ell_2, \dots, \ell_D)$ which gives $D$ independent parity bits in $\Z_N^*$
 - Requiring $x \in J_N^+$ forces $\sum_i \ell_i = 0 \bmod 2$, removing a single independent parity bit, leaving $D-1$ parity bits
-- $x$ is a quadratic residue if and only if all the parity bits are even, which has a probability in $J_N^+$ of $1/2^{D-1}$
+- ``x`` is a quadratic residue if and only if all the parity bits are even, which has a probability in $J_N^+$ of $1/2^{D-1}$
 
 Now, define three events:
 
-- $X$: $x$ is a quadratic residue
-- $Y$: $y$ is a quadratic residue
-- $Z$: $xy$ is a quadratic residue
+- ``X``: $x$ is a quadratic residue
+- ``Y``: $y$ is a quadratic residue
+- ``Z``: $xy$ is a quadratic residue
 
 Note that any two of these events are independent, but any two of them imply the third. Thus, we have:
 
@@ -614,21 +614,21 @@ To put numbers on it, take a deliberately attacker-favorable estimate of $10^{11
 | $2^{112}$ | infeasible | infeasible | 166 | ~21 KB |
 | $2^{128}$ | infeasible | infeasible | 189 | ~24 KB |
 
-Because $n$ grows only logarithmically in $\alpha$, buying a gigantic safety margin is nearly free: the certificate stays a few dozen kilobytes and the server’s square-root computation stays sub-second. The recommendation is therefore to set $\alpha \ge 2^\lambda$ for the system’s overall security level $\lambda$, and never below $2^{80}$. The simplest safe choice is $\alpha = 2^{112}$ ($n = 166$), which makes finding a malicious $N$ that passes the test so unlikely that it is no longer a concern. We'll use $\alpha = 2^{128}$ to be extra safe.
+Because $n$ grows only logarithmically in $\alpha$, buying a gigantic safety margin is nearly free: the certificate stays a few dozen kilobytes and the server’s square-root computation stays sub-second. The recommendation is therefore to set $\alpha \ge 2^\lambda$ for the system’s overall security level $\lambda$, and never below $2^{80}$. The simplest safe choice is $\alpha = 2^{112}$ ($n = 166$), which makes finding a malicious $N$ that passes the test so unlikely that it is no longer a concern. We’ll use $\alpha = 2^{128}$ to be extra safe.
 
 The non-interactive version of this protocol serves as a certificate of fingerprint-freedom for a published $N$ value. The certificate structure contains:
 
-- $B$ — the number of buckets
-- $m$ — the geometric value cap
-- $N$ — the ring modulus
-- $g$ — a server-selected semigenerator for $\Z_N^*$
-- $\text{sqrts}$ — a list of square roots
+- ``B`` — the number of buckets
+- ``m`` — the geometric value cap
+- ``N`` — the ring modulus
+- ``g`` — a server-selected semigenerator for $\Z_N^*$
+- ``\text{sqrts}`` — a list of square roots
 
 When downloading a new ring structure, a client checks the following requirements based on the data in this certificate:
 
-- $N = 5 \bmod 8$
-- $\gcd(B, N) = 1$
-- $\gcd(B, N-1) = 1$
+- ``N = 5 \bmod 8``
+- ``\gcd(B, N) = 1``
+- ``\gcd(B, N-1) = 1``
 - Enough square roots are provided
 - All the square roots are valid
 
