@@ -61,6 +61,16 @@ function rand_jacobi_twist(N::Integer; rng::AbstractRNG = DEFAULT_RNG)
     end
 end
 
+## Apply a uniformly random sign to a ring element
+
+"""
+    randsign(rng, w, N) -> Integer
+
+Return `w` or `N - w` with equal probability — a uniformly random sign on the
+ring element `w ∈ ℤ_N`. A positive sign returns `w` unchanged.
+"""
+randsign(rng::AbstractRNG, w::Integer, N::Integer) = rand(rng, Bool) ? N - w : w
+
 ## Small inline helpers with BigInt-specialized fast paths
 
 @inline mod4(x::Integer) = Int(x & (4-1))

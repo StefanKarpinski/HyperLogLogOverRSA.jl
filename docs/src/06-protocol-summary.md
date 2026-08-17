@@ -39,8 +39,8 @@ On behalf of clients, the client implementor should choose acceptance criteria f
     - The simplest way to fingerprint clients is just to choose $B = 2^{128}$ and let the bucket be the fingerprint. This limit prevents that kind of “attack”.
     - Example: $B_{\max} = 2^{12}$
 - ``m_{\max}`` — maximum geometric cap
-    - Mostly a sanity check: extreme geometric samples are vanishingly rare, and we don’t want a malicious server forcing a client to work in an absurdly large geometric range. The real ceiling is the width of the hash used to derive per-class values, since the geometric coordinate is uniform only while $m$ is at most that width — $128$ bits in the reference derivation. Within that, a client that does its per-request exponent arithmetic in fixed-width integers should cap near $64$ (to stay in `Int64`/`Int128`), while one using arbitrary-precision integers can accept up to $128$.
-    - Example: $m_{\max} = 128$ (arbitrary-precision client) or $64$ (fixed-width client)
+    - Mostly a sanity check: extreme geometric samples are vanishingly rare, and we don’t want a malicious server forcing a client to work in an absurdly large geometric range. The real ceiling is the width of the hash used to derive per-class values, since the geometric coordinate is uniform only while $m$ is at most that width — $128$ bits in the reference derivation.
+    - Example: $m_{\max} = 128$
 - ``L_{\max}`` — maximum modulus bit-length
     - This is also mostly a sanity check to make sure that clients aren’t DoSed by being made to do arithmetic in some absurdly large modulus.
     - Example: $L_{\max} = 2^{20}$
