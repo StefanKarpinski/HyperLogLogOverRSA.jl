@@ -272,7 +272,7 @@ It’s worth flagging a stronger mitigation that we have deliberately *not* adop
 
 While this is quite a good result, our analysis of resistance to malicious clients rests on a hardness assumption we can argue for but not prove. If an attacker learns the $c$ coordinate of any element in $J_N^-$ with respect to $g$, they will be able to forge arbitrarily rare samples by choosing $h$ so that $\tz(c + h)$ is as large as they want. So the question is whether an attacker can produce a $J_N^-$ element *together with its $C_{2^m}$-logarithm*.
 
-It is essential to be precise about “produce,” because merely *naming* an element of $J_N^-$ is trivial. For correctly constructed $N$, we always have $\Jacobi_N(2) = -1$, for example. But the logarithms of $2$ with respect to $g$ are unknown. Similarly, the fingerprint-freedom certificate for $N$ publishes a list of square roots, roughly half of which land in $J_N^-$. None of these are dangerous, because the logarithms of are all unknown.
+It is essential to be precise about “produce,” because merely *naming* an element of $J_N^-$ is trivial. For correctly constructed $N$, we always have $\Jacobi_N(2) = -1$, for example. But the logarithms of $2$ with respect to $g$ are unknown. Similarly, the fingerprint-freedom certificate for $N$ publishes a list of square roots, roughly half of which land in $J_N^-$. None of these are dangerous, because the logarithms of these are all unknown.
 
 The elements whose logarithms an attacker *can* write down are exactly those built from known powers of $g$ and $-1$. Since $\Jacobi_N(g) = 1$ and $\Jacobi_N(-1) = 1$, that subgroup sits inside $J_N^+$—and in fact fills it:
 
