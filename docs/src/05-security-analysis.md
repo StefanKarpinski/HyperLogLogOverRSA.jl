@@ -37,7 +37,7 @@ Since the Jacobi symbol only takes $±1$ values in $\Z_N^*$, $J_N^- = \Z_N^* \se
 ```math
 \begin{aligned}
 W_N &= \pm(\Z_N^*)^{B2^{m-1}}
-= \set{\, \pm z^{B2^{m-1}} \st z \in \Z_N^* \,}
+= \set{\, s z^{B2^{m-1}} \st s \in \set{-1, 1}, z \in \Z_N^* \,}
 \end{aligned}
 ```
 
@@ -47,7 +47,7 @@ The exponent $B2^{m-1}$ is even ($m ≥ 3$), so every $z^{B2^{m-1}}$ has positiv
 
 This is what the certification of later sections verifies without the factorization, and it supplies the homomorphism the anonymity proof needs:
 
-**Proposition.**  If $N$ is fingerprint-free then the embedding $J_N^+/W_N \hookrightarrow C_B \times C_{2^{m-1}}$ extends to a group homomorphism on all of $\Z_N^*$,
+**Proposition.**  If $N$ is fingerprint-free then the embedding $J_N^+/W_N \hookrightarrow C_B \times C_{2^{m-1}}$ extends to a group homomorphism on all of $\Z_N^*$:
 
 ```math
 \begin{aligned}
@@ -57,7 +57,7 @@ This is what the certification of later sections verifies without the factorizat
 
 such that $\ker(\phi) \cap J_N^+ = W_N$.
 
-**Proof.**  Cyclicity with order dividing $B2^{m-1}$ means $J_N^+/W_N$ embeds into $C_B \times C_{2^{m-1}} \cong C_{B2^{m-1}}$, giving a homomorphism $\phi: J_N^+ \to C_B \times C_{2^{m-1}}$ with kernel $W_N$. It remains to extend $\phi$ across $J_N^-$. Fix any $\xi \in J_N^-$; since $J_N^+$ has index $2$, every element of $\Z_N^*$ is uniquely $\xi^i h$ with $i \in \set{0, 1}$ and $h \in J_N^+$. Now $\xi^2 \in J_N^+$, and $\phi(\xi^2)$ is a square in $C_B \times C_{2^{m-1}}$ — the odd factor $C_B$ has unique square roots, and the $C_{2^{m-1}}$ component of a square is even, so a root exists — so choose $r$ with $r^2 = \phi(\xi^2)$ and define $\phi(\xi h) = r\,\phi(h)$ for $h \in J_N^+$.
+**Proof.**  Cyclicity with order dividing $B2^{m-1}$ means $J_N^+/W_N$ embeds into $C_B \times C_{2^{m-1}} \cong C_{B2^{m-1}}$, giving a homomorphism $\phi: J_N^+ \to C_B \times C_{2^{m-1}}$ with kernel $W_N$. It remains to extend $\phi$ to $J_N^-$. Pick any $\xi \in J_N^-$; since $J_N^+$ has index $2$, every element of $\Z_N^*$ is uniquely $\xi^i h$ with $i \in \set{0, 1}$ and $h \in J_N^+$. Now $\xi^2 \in J_N^+$, and $\phi(\xi^2)$ is a square in $C_B \times C_{2^{m-1}}$ — the odd factor $C_B$ has unique square roots, and the $C_{2^{m-1}}$ component of a square is even, so a root exists — so choose $r$ with $r^2 = \phi(\xi^2)$ and define $\phi(\xi h) = r\,\phi(h)$ for $h \in J_N^+$.
 
 This $\phi$ is a homomorphism: for $u = \xi^i h$ and $v = \xi^j h'$,
 
@@ -67,15 +67,15 @@ This $\phi$ is a homomorphism: for $u = \xi^i h$ and $v = \xi^j h'$,
 
 Restricting $\phi$ to $J_N^+$ recovers the embedding, so $\ker(\phi) \cap J_N^+ = W_N$. $\square$
 
-For a correctly constructed ring we can explicitly write down such a $\phi$. For $x \in C_4 \times C_B \times C_{2^m} \times C_{pq}$ with $\log_g(x) = (a, b, c, d)$ it is simply
+For a correctly constructed ring we can explicitly write down such a $\phi$. For $x \in C_4 \times C_B \times C_{2^m} \times C_{pq}$ with $\log_g(x) = (a, b, c, d)$ it is given by
 
 ```math
 \begin{aligned}
-\log_{\bar{g}}(\phi(x)) = (b,\; c \bmod 2^{m-1}) \in \Z_B \times \Z_{2^{m-1}},
+\log_{\bar{g}}(\phi(x)) = (b,\; c \bmod 2^{m-1}) \in \Z_B \times \Z_{2^{m-1}}
 \end{aligned}
 ```
 
-where $\bar{g}$ is a chosen generator of $C_B \times C_{2^{m-1}}$. Its kernel meets $J_N^+$ at $W_N$ exactly: an element lies in $J_N^+$ when $a + c$ is even, and $\phi(x) = 1$ forces $b = 0$ and $c \in \set{0, 2^{m-1}}$; the latter makes $c$ even, so $a$ is even too, and the surviving elements are precisely $\pm(\Z_N^*)^{B2^{m-1}} = W_N$. (Over all of $\Z_N^*$, $\ker(\phi)$ is twice as large — it also contains the $a$-odd elements of $J_N^-$ — but only its intersection with $J_N^+$ is used later.) Reading $c$ only modulo $2^{m-1}$ is what collapses the two rarest rungs into one saturated level, and $\phi(-1) = 1$ with $-1 \in J_N^+$ confirms $-1 \in W_N$.
+where $\bar{g}$ is a chosen generator of $C_B \times C_{2^{m-1}}$. Its kernel meets $J_N^+$ at $W_N$ exactly: an element lies in $J_N^+$ when $a + c$ is even, and $\phi(x) = 1$ forces $b = 0$ and $c \in \set{0, 2^{m-1}}$; the latter makes $c$ even, so $a$ is even too, and the surviving elements are precisely $\pm(\Z_N^*)^{B2^{m-1}} = W_N$. (Over all of $\Z_N^*$, $\ker(\phi)$ is twice as large — it also contains the $a$-odd elements of $J_N^-$ — but only its intersection with $J_N^+$ is used later.) Reading $c$ modulo $2^{m-1}$ rather than $2^m$ is what collapses the two rarest rungs into one saturated level.
 
 Our convention when $N$ is fingerprint-free will be that if $x \in \Z_N^*$ we’ll write $\bar{x} = \phi(x) \in C_B \times C_{2^{m-1}}$ and if $\bar{f}$ is a function on $C_B \times C_{2^{m-1}}$, we’ll write $f = \bar{f}\phi$ for the composition whose domain is $\Z_N^*$. So you can generally think of $\bar{\triangle}$ as the “essential version” of $\triangle$, whether $\triangle$ is an element or a function.
 
@@ -96,7 +96,7 @@ If the ${} \alpha_i$ are pairwise coprime, then $G$ is cyclic and $g$ is a true 
 \end{aligned}
 ```
 
-In what follows, let $\bar{g} \in C_B \times C_{2^{m-1}}$ be a fixed generator.
+In what follows, let $g$ be a fixed semigenerator for $\Z_n^*$ (non-cyclic) and let $\bar{g}$ be a fixed generator for  $C_B \times C_{2^{m-1}}$ (cyclic).
 
 **Definition.** The *“essential HyperLogLog function”* maps each value in $C_B \times C_{2^{m-1}}$ to its HyperLogLog sample value:
 
@@ -110,7 +110,7 @@ In what follows, let $\bar{g} \in C_B \times C_{2^{m-1}}$ be a fixed generator.
 
 Here $c$ ranges over $\Z_{2^{m-1}}$, so $\tz(c)$ ranges over $\set{0, \dots, m-1}$ with $\tz(0) = m-1$—the saturated level into which the two rarest rungs have already collapsed. The first value, $b$, implicitly depends on the choice of generator, $\bar{g}$, whereas the latter, $\tz(c)$, does not: $\tz(c)$ only depends on the multiplicative order of the $C_{2^{m-1}}$ part of $\bar{x}$, which is independent of $\bar{g}$. The higher bits of $c$ do depend on $\bar{g}$, but the position of the last bit does not.
 
-The HyperLogLog function on $\Z_N^*$ is then $\hll(x) = \bar{\hll}(\bar{x})$. In terms of a raw logarithm $\log_g(x) = (a, b, c, d)$ this is $\hll(x) = (b, \min(\tz(c), m-1))$, since $\bar{x}$ reads the geometric coordinate modulo $2^{m-1}$. It depends on the choice of $\bar{g}$ for $\bar\hll$ and, through $\bar{x}$, on the semigenerator $g$; both choices merely permute the output bucket indices.
+The HyperLogLog function on $\Z_N^*$ is then ${} \hll(x) = \bar{\hll}(\phi(x)) = \bar{\hll}(\bar{x}) {}$ or equivalently $\hll = \bar\hll\phi$. For a well-formend $N$, we have $\log_g(x) = (a, b, c, d)$, and this is $\hll(x) = (b, \min(\tz(c), m-1))$. This depends on the choices of $g$ and $\bar{g}$; both choices merely permute the output bucket indices.
 
 ### The anonymity theorem
 
@@ -131,7 +131,7 @@ Suppose $\bar{\hll}(\bar{x}) = \bar{\hll}(\bar{y})$. This gives us two equalitie
 
 ```math
 \begin{aligned}
-b_1 &= b_2 \bmod B &
+b_1 &= b_2 \bmod B \\
 \tz(c_1) &= \tz(c_2) \\
 \end{aligned}
 ```
@@ -179,14 +179,14 @@ t c_1 &= c_2 && \pmod{2^{m-1}} \\
 
 Since $t$ is odd, the second equality implies that $\tz(c_1) = \tz(c_2)$ which means we’ve shown that $\bar{\hll}(\bar{x}) = \bar{\hll}(\bar{y})$. $\square$
 
-**Theorem.** Let $N$ be fingerprint-free. For $x, y \in \Z_N^*$ with the same Jacobi symbol: $\hll(x) = \hll(y)$ if and only if there exists $w \in W_N$ and $t \in \Z$ with $t = 1 \bmod{2B}$ such that $wx^t = y \bmod N$.
+**Theorem.** Let $N$ be fingerprint-free. For $x, y \in \Z_N^*$ with the same Jacobi symbol we have: $\hll(x) = \hll(y)$ if and only if there exists $w \in W_N$ and $t \in \Z$ with $t = 1 \bmod{2B}$ such that $wx^t = y \bmod N$.
 
 **Proof.**  Since $N$ is fingerprint-free there exists $\phi : \Z_N^* \to C_B \times C_{2^{m-1}}$ with $\ker(\phi) \cap J_N^+ = W_N$. The following conditions are equivalent for $x$ and $y$ with $\Jacobi_N(x) = \Jacobi_N(y)$:
 
 1. ``\hll(x) = \hll(y)``
 2. ``\bar{\hll}(\phi(x)) = \bar{\hll}(\phi(y))``
 3. ``\E\, t = 1 \bmod{2B}`` such that $\phi(x)^t = \phi(y)$
-4. ``{} \E\, t = 1 \bmod{2B},\, w \in W_N {}`` such that $wx^t = y$
+4. ``\E\, t = 1 \bmod{2B},\, w \in W_N`` such that $wx^t = y$
 
 Equivalence of (1) and (2) is just the definition of $\hll = \bar{\hll}\phi$. The lemma we just proved gives equivalence of (2) and (3). That leaves us to prove equivalence of (3) and (4). We will show that for any odd exponent, $t$, we have:
 
