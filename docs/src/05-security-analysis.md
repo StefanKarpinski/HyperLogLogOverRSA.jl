@@ -183,10 +183,10 @@ Since $t$ is odd, the second equality implies that $\tz(c_1) = \tz(c_2)$ which m
 
 **Proof.**  Since $N$ is fingerprint-free there exists $\phi : \Z_N^* \to C_B \times C_{2^{m-1}}$ with $\ker(\phi) \cap J_N^+ = W_N$. The following conditions are equivalent for $x$ and $y$ with $\Jacobi_N(x) = \Jacobi_N(y)$:
 
-1. ``\hll(x) = \hll(y)``
-2. ``\bar{\hll}(\phi(x)) = \bar{\hll}(\phi(y))``
-3. ``\E\, t = 1 \bmod{2B}`` such that $\phi(x)^t = \phi(y)$
-4. ``\E\, t = 1 \bmod{2B},\, w \in W_N`` such that $wx^t = y$
+1. $\hll(x) = \hll(y)$
+2. $\bar{\hll}(\phi(x)) = \bar{\hll}(\phi(y))$
+3. $\E\, t = 1 \bmod{2B}$ such that $\phi(x)^t = \phi(y)$
+4. $\E\, t = 1 \bmod{2B},\, w \in W_N$ such that $wx^t = y$
 
 Equivalence of (1) and (2) is just the definition of $\hll = \bar{\hll}\phi$. The lemma we just proved gives equivalence of (2) and (3). That leaves us to prove equivalence of (3) and (4). We will show that for any odd exponent, $t$, we have:
 
@@ -329,11 +329,11 @@ With this structure of $N$ then, the malicious server gets a total of $2 \log_2(
 Can we convince a client that we aren’t smuggling fingerprint bits in the structure of $N$ without giving away its factorization? In this particular case, the unusual structure of $N$ is actually quite easy to detect:
 
 - The correct structure has
-  - ``P = 5 \bmod 8 \and Q = 1 \bmod 8 \implies N = PQ = 5 \bmod 8``
-  - ``P = 1 \bmod B \and Q ≠ 1 \bmod B \implies N = PQ ≠ 1 \bmod B``
+  - $P = 5 \bmod 8 \and Q = 1 \bmod 8 \implies N = PQ = 5 \bmod 8$
+  - $P = 1 \bmod B \and Q ≠ 1 \bmod B \implies N = PQ ≠ 1 \bmod B$
 - This incorrect structure has
-  - ``N = P = Q = 1 \bmod 8``
-  - ``N = P = Q = 1 \bmod B``
+  - $N = P = Q = 1 \bmod 8$
+  - $N = P = Q = 1 \bmod B$
 
 Unfortunately, not all possible malicious structures are so easy to detect. For example, if $N = PQR$ where $P = Q = 1 \bmod 8$ and $P = Q = 1 \bmod B$ and $R = 5 \bmod 8$ and $R ≠ 1 \bmod B$, then you’d have $N = PQR = 5 \bmod 8$ and $N = PQR ≠ 1 \bmod B$ so $N$ looks normal from simple modular criteria, yet $PQ$ carries the $2 \log_2(B) + m$ bits of client fingerprint from before. To guarantee that a server cannot fingerprint clients, more evidence about the structure of $N$ needs to be provided.
 
@@ -414,8 +414,8 @@ This means that $d \divides N-1$ as required. $\square$
 
 **Proof.**  Since $(p_i-1)\,p_i^{n_i-1}$ is always even, each of the log-coordinates has a well-defined notion of parity. We can understand both the Jacobi symbol and quadratic residues in terms of parity of log-coordinates:
 
-- ``\Jacobi_N(x) = 1`` iff an even number of the $\ell_i$ are odd
-- ``x`` is a quadratic residue iff none of the $\ell_i$ are odd
+- $\Jacobi_N(x) = 1$ iff an even number of the $\ell_i$ are odd
+- $x$ is a quadratic residue iff none of the $\ell_i$ are odd
 
 In the $D = 1$ case, $\Jacobi_N(x) = 1$ if and only if $x$ is a quadratic residue, so all three of $x$, $y$ and $xy$ are quadratic residues.
 In the $D = 2$ case, let’s write coordinates for $x$, $y$ and $xy$:
@@ -465,8 +465,8 @@ Combining these results, we get the following claim.
 
 **Claim.** If the following conditions are satisfied:
 
-- ``N = 5 \bmod 8``
-- ``\gcd(B, N) = \gcd(B, N-1) = 1``
+- $N = 5 \bmod 8$
+- $\gcd(B, N) = \gcd(B, N-1) = 1$
 - For all $x, y \in J_N^+$ one of $\set{x, y, xy}$ is a quadratic residue
 
 then $N$ is fingerprint-free.
@@ -543,13 +543,13 @@ In particular, for $D ≥ 3$ it is at most $5/8$.
 
 - There are $D$ even log-coordinates in $\log_g(x) = (\ell_1, \ell_2, \dots, \ell_D)$ which gives $D$ independent parity bits in $\Z_N^*$
 - Requiring $x \in J_N^+$ forces $\sum_i \ell_i = 0 \bmod 2$, removing a single independent parity bit, leaving $D-1$ parity bits
-- ``x`` is a quadratic residue if and only if all the parity bits are even, which has a probability in $J_N^+$ of $1/2^{D-1}$
+- $x$ is a quadratic residue if and only if all the parity bits are even, which has a probability in $J_N^+$ of $1/2^{D-1}$
 
 Now, define three events:
 
-- ``X``: $x$ is a quadratic residue
-- ``Y``: $y$ is a quadratic residue
-- ``Z``: $xy$ is a quadratic residue
+- $X$: $x$ is a quadratic residue
+- $Y$: $y$ is a quadratic residue
+- $Z$: $xy$ is a quadratic residue
 
 Note that any two of these events are independent, but any two of them imply the third. Thus, we have:
 
@@ -617,17 +617,17 @@ Because $n$ grows only logarithmically in $\alpha$, buying a gigantic safety mar
 
 The non-interactive version of this protocol serves as a certificate of fingerprint-freedom for a published $N$ value. The certificate structure contains:
 
-- ``B`` — the number of buckets
-- ``m`` — the geometric value cap
-- ``N`` — the ring modulus
-- ``g`` — a server-selected semigenerator for $\Z_N^*$
-- ``\text{sqrts}`` — a list of square roots
+- $B$ — the number of buckets
+- $m$ — the geometric value cap
+- $N$ — the ring modulus
+- $g$ — a server-selected semigenerator for $\Z_N^*$
+- $\text{sqrts}$ — a list of square roots
 
 When downloading a new ring structure, a client checks the following requirements based on the data in this certificate:
 
-- ``N = 5 \bmod 8``
-- ``\gcd(B, N) = 1``
-- ``\gcd(B, N-1) = 1``
+- $N = 5 \bmod 8$
+- $\gcd(B, N) = 1$
+- $\gcd(B, N-1) = 1$
 - That enough square roots are provided
 - That all the square roots are valid
 

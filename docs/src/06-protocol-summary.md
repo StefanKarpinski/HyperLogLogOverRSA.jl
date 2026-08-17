@@ -17,16 +17,16 @@ A test implementation of the entire HyperLogLog Over RSA protocol in Julia can b
 
 The system operator chooses HyperLogLog parameters, RSA bit-length, and a certificate strength:
 
-- ``B`` is the bucket count
+- $B$ is the bucket count
     - It must be an odd number
     - Example: $B = 2^{12} - 1$
-- ``m`` is the geometric value cap
+- $m$ is the geometric value cap
     - Ranks run $0$ to $m-1$; a saturated bucket reports $m-1$
     - Example: $m = 64$
-- ``L`` is the bit-length of $N$ values
+- $L$ is the bit-length of $N$ values
     - Controls cryptographic strength of the RSA ring
     - Example: $L = 1024$
-- ``\alpha`` is the certificate strength
+- $\alpha$ is the certificate strength
     - Effort to generate a valid-looking malicious $N$ value
     - Should be at least $2^\lambda$ for the system security level $\lambda$, and never below $2^{80}$ (see [Malicious servers](05-security-analysis.md#Malicious-servers))
     - Example: $\alpha = 2^{112}$
@@ -35,16 +35,16 @@ The system operator chooses HyperLogLog parameters, RSA bit-length, and a certif
 
 On behalf of clients, the client implementor should choose acceptance criteria for protocol parameters, including:
 
-- ``B_{\max}`` — maximum bucket count
+- $B_{\max}$ — maximum bucket count
     - The simplest way to fingerprint clients is just to choose $B = 2^{128}$ and let the bucket be the fingerprint. This limit prevents that kind of “attack”.
     - Example: $B_{\max} = 2^{12}$
-- ``m_{\max}`` — maximum geometric cap
+- $m_{\max}$ — maximum geometric cap
     - Mostly a sanity check: extreme geometric samples are vanishingly rare, and we don’t want a malicious server forcing a client to work in an absurdly large geometric range. The real ceiling is the width of the hash used to derive per-class values, since the geometric coordinate is uniform only while $m$ is at most that width — $128$ bits in the reference derivation.
     - Example: $m_{\max} = 128$
-- ``L_{\max}`` — maximum modulus bit-length
+- $L_{\max}$ — maximum modulus bit-length
     - This is also mostly a sanity check to make sure that clients aren’t DoSed by being made to do arithmetic in some absurdly large modulus.
     - Example: $L_{\max} = 2^{20}$
-- ``\alpha_{\min}`` — minimum certificate strength
+- $\alpha_{\min}$ — minimum certificate strength
     - This is the least number of modulus values a malicious server would expect to have to try in order to find one that passes certificate checks. The server can provide more square roots than this strength implies, but not fewer.
     - Example: $\alpha_{\min} = 2^{112}$
 
@@ -113,11 +113,11 @@ Since $N$ is a semiprime and $x, y \in J_N^+$, one of these three checks must su
 
 The server publishes a ring certificate containing:
 
-- ``B`` — the bucket count
-- ``m`` — the geometric value cap
-- ``N`` — the RSA ring modulus
-- ``g`` — the ring semigenerator value
-- ``\text{sqrts}`` — a list of square roots
+- $B$ — the bucket count
+- $m$ — the geometric value cap
+- $N$ — the RSA ring modulus
+- $g$ — the ring semigenerator value
+- $\text{sqrts}$ — a list of square roots
 
 ## Client step 1: Ring certificate checking
 
@@ -143,7 +143,7 @@ If a certificate passes checks, the client should generate a random twist elemen
 
 Replace any existing ring record with a new ring record:
 
-- ``B``, $m$, $N$, $g$, $x_0$
+- $B$, $m$, $N$, $g$, $x_0$
 
 This must be stored persistently so that the client uses the same $x_0$ in different sessions. The client should check for a new ring certificate periodically.
 
