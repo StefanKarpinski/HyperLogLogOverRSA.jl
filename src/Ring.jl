@@ -10,14 +10,19 @@ lets its holder decode HyperLogLog values while no one else can.
 
 The ring has the form
 
-    N = P Q = (2 B p + 1)(2^m q + 1)
+    N = P Q = (4 B p + 1)(2^m q + 1)
 
 so that, multiplicatively,
 
-    ℤ_N^* ≅ C_2 × C_B × C_(2^m) × C_(p q)
+    ℤ_N^* ≅ C_4 × C_B × C_(2^m) × C_(p q)
 
-where `B` (which must be odd) is the number of HyperLogLog buckets and `m` is the
-maximum geometric sample value; `L` is the target bit-length of `N`.
+where `B` (which must be odd) is the number of HyperLogLog buckets and `m` is one
+more than the maximum geometric sample value; `L` is the target bit-length of `N`.
+
+The `C_4` factor carries no HyperLogLog value: the noise subgroup randomizes it,
+so it contributes nothing a log holder can use. It is there for its arithmetic
+alone — it makes `P ≡ 5 mod 8`, hence `N ≡ 5 mod 8`, hence `jacobi(-1, N) = 1`. Otherwise
+`-1` is an element of `J_N^-` with known log-coordinates, which allows forging tokens.
 
 The primes `P`, `Q`, `p`, `q` are secret — and are deliberately omitted when a
 `Ring` is shown — so only a holder of the `Ring` can decode HLL values via
@@ -45,7 +50,7 @@ function Ring{T}(
 ) where {T<:Integer}
     # argument checks
     isodd(B) || throw(ArgumentError("B must be odd"))
-    m ≥ 2 || throw(ArgumentError("m must be ≥ 2"))
+    m ≥ 3 || throw(ArgumentError("m must be ≥ 3"))
     L > 0 || throw(ArgumentError("L must be positive"))
 
     # range of N values
@@ -53,7 +58,7 @@ function Ring{T}(
     N_min = one(T) << (L-1) + 1
 
     # ranges of prime factors
-    P_scale, Q_scale = T(2B), one(T) << m
+    P_scale, Q_scale = T(4B), one(T) << m
     P_min = Q_min = one(T) << fld(L-1,2) + 1
     P_max = Q_max = fld(N_max, P_min)
     # for small log₂(N) we need to check for feasibility, which
@@ -147,7 +152,7 @@ end
 
 Base.getproperty(ring::Ring, name::Symbol) =
     name === :N ? ring.P*ring.Q :
-    name === :P ? 2*ring.p*ring.B + 1 :
+    name === :P ? 4*ring.p*ring.B + 1 :
     name === :Q ? ring.q << ring.m + 1 :
     name === :λ ? ring.B*ring.p*(ring.q << ring.m) :
         getfield(ring, name)
@@ -164,16 +169,15 @@ function rand_semigenerator(ring::Ring; rng::AbstractRNG = DEFAULT_RNG)
     P, Q = factors(ring)
     # find generator for ℤ_P^*
     range_P = 1:P-1
-    Bp = ring.B*ring.p
-    𝟚B = 2*ring.B
-    λ_P = 2*ring.B*ring.p
-    λ_P_rs = [λ_P ÷ r for r in keys(factor(ring.B))]
+    P_1 = 4*ring.B*ring.p # P - 1
+    𝟜B = 4*ring.B
+    P_1_rs = [P_1 ÷ r for r in keys(factor(ring.B))]
     local g_P
     while true
         g_P = rand(rng, range_P)
-        powermod(g_P, Bp, P) ≠ 1 &&
-        powermod(g_P, 𝟚B, P) ≠ 1 &&
-        all(powermod(g_P, λ_P_r, P) ≠ 1 for λ_P_r in λ_P_rs) && break
+        powermod(g_P, P_1 ÷ 2, P) ≠ 1 && # generates C_4
+        powermod(g_P, 𝟜B, P) ≠ 1 &&      # nontrivial in C_p
+        all(powermod(g_P, P_1_r, P) ≠ 1 for P_1_r in P_1_rs) && break # generates C_B
     end
     @assert jacobi(g_P, P) == -1
     # find generator for ℤ_Q^*
@@ -215,8 +219,8 @@ function bucket_map(ring::Ring{T}) where {T<:Integer}
         all(powermod(g_B, P_1 ÷ p, P) ≠ 1 for p in keys(factor(B))) && break
         g_B += 1
     end
-    𝟚p = 2ring.p
-    Dict(powermod(g_B, 𝟚p*b, P) => b for b = 0:B-1)
+    𝟜p = 4ring.p
+    Dict(powermod(g_B, 𝟜p*b, P) => b for b = 0:B-1)
 end
 
 function hll_bucket(
@@ -224,7 +228,7 @@ function hll_bucket(
     x    :: Integer;
     bmap :: Dict{T,Int} = bucket_map(ring),
 ) where {T<:Integer}
-    bmap[powermod(x, 2ring.p, ring.P)]
+    bmap[powermod(x, 4ring.p, ring.P)]
 end
 
 function hll_geometric(ring::Ring, x::Integer)
@@ -235,7 +239,9 @@ function hll_geometric(ring::Ring, x::Integer)
         y = powermod(y, 2, ring.Q) # y <- y^2 mod Q
         k -= 1
     end
-    return k
+    # The noise subgroup randomizes the C_2^m component's top bit, so the two top
+    # rungs of the ladder are indistinguishable and the sample caps at m-1.
+    return min(k, ring.m - 1)
 end
 
 """

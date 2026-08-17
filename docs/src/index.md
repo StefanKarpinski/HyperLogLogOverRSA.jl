@@ -23,7 +23,7 @@ For running the protocol:
 
 ```julia
 using HyperLogLogOverRSA
-ring   = Ring(2^12-1, 63, 1024)                # generate a HyperLogLog RSA ring
+ring   = Ring(2^12-1, 64, 1024)                # generate a HyperLogLog RSA ring
 cert   = RingCert(ring)                        # certificate that the ring is fingerprint-free
 client = Client(cert)                          # verify cert, pick a random secret
 y      = hll_generate(client, "/package/123")  # encrypted HLL token for a request
