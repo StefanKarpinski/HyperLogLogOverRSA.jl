@@ -210,7 +210,6 @@ which means (3) and (4) are logically equivalent. Suppose that $\phi(x)^t = \phi
 &= 1
 \end{aligned}
 ```
-
 This requires $\Jacobi_N(x) = \Jacobi_N(y) \in \set{±1}$ and $t$ odd so that raising to $-t$ doesn’t change the sign. In the other direction, suppose $w \in W_N \subseteq \ker(\phi)$ with $wx^t = y$. Check the required equality:
 
 ```math
@@ -254,7 +253,7 @@ Plaintext HyperLogLog counting has a serious inflation problem: an attacker can 
 
 If a malicious client sends $y$ with $\Jacobi_N(y) ≠ -1$, the server will detect it. So we can focus on a malicious client sending $y$ with $\Jacobi_N(y) = -1$. As discussed in the previous section, the values it can build from a fixed twist $x_0$ (with $\Jacobi_N(x_0) = -1$) and the published semigenerator $g$ are those of the form $y = \pm x_0 g^h$; take $y = x_0 g^h$, the other case being essentially the same. Here we use $h$ as just an arbitrary attacker-controlled exponent value, not necessarily the output of a hash function. The question is whether a malicious client can influence $y$ to have large geometric sample values.
 
-The server doesn’t publish any $x_0$ value, so clients have to generate one for themselves. However, since they don’t know the factorization of $N$, they have no idea what its logarithms are. For our analysis, write $\log(x_0) = (a, b, c, d)$, but keep in mind that the attacker has no idea what these values are. The HyperLogLog sample that $y = x_0 g^h$ encodes is $(b + h, \tz(c + h))$. The attacker controls $h$ but doesn’t know $b$ or $c$. Since they don’t know $c$, they cannot force $\tz(c + h)$ to be large or know how large it is for any particular $h$. In order to hit $k ≥ \tz(c + h)$ the attacker needs to happen to choose $h$ whose last $k$ bits complement $c$ perfectly, which occurs with probability $1/2^k$ — exactly the probability of picking a value that good by chance. What they can do, however, is scan through consecutive $h$ values. If they scan $2^k$ consecutive values, they’re guaranteed to hit $h = -c \bmod{2^k}$ for one of those values and they may happen to hit something better.
+The server doesn’t publish any $x_0$ value, so clients have to generate one for themselves. However, since they don’t know the factorization of $N$, they have no idea what its logarithms are. For our analysis, write $\log(x_0) = (a, b, c, d)$, but keep in mind that the attacker has no idea what these values are. The HyperLogLog sample that $y = x_0 g^h$ encodes is ${} (b + h, \min(\tz(c + h), 2^{m-1})) {}$. The attacker controls $h$ but doesn’t know $b$ or $c$. Since they don’t know $c$, they cannot force $\tz(c + h)$ to be large or know how large it is for any particular $h$. In order to hit $k ≥ \tz(c + h)$ the attacker needs to happen to choose $h$ whose last $k$ bits complement $c$ perfectly, which occurs with probability $1/2^k$ — exactly the probability of picking a value that rare by chance. What they can do, however, is scan through consecutive $h$ values. If they scan $2^k$ consecutive values, they’re guaranteed to hit $h = -c \bmod{2^k}$ for one of those values and they may happen to hit something better.
 
 In the unique ID scheme, each request with a freshly “forged” client ID inflates the client count by one. How does HLL over RSA compare to this when an attacker tries to inflate its estimates? The expected maximum value of $\tz(c + h)$ is $k+1$ when scanning a consecutive block of $2^k$ values. This is slightly better than sending random values. If an attacker sends $B2^k$ spoofed requests they can push each bucket up to an expected value of $k + 1$, which gives a client count estimate of:
 
@@ -270,11 +269,11 @@ There is an important assumption hiding inside this linear bound: that the attac
 
 It’s worth flagging a stronger mitigation that we have deliberately *not* adopted, since it’s a natural question. One could try to *bind each token to its request*—mixing something request-specific (a server-issued nonce, or the full request path) into the value the client sends—so that a single high-value forgery can’t be reused across many requests. The difficulty is that honest counting needs the opposite: a client’s value must be *stable* across its requests within a class, or we’d be counting requests instead of unique clients. A binding that preserved per-(client, class) stability while denying an attacker reuse of a curated value is not obviously achievable, and in any case the cardinality floor already removes the count oracle that the curated-set attack depends on. So we rely on the floor and leave token-request binding as an open question—to revisit only if some deployment leaks count feedback through a channel the floor can’t cover.
 
-While this is quite a good result, our analysis of resistance to malicious clients rests on a hardness assumption we can argue for but not prove. If an attacker learns the $c$ coordinate of any element in $J_N^-$ with respect to $g$, they will be able to forge arbitrarily rare samples by choosing $h$ so that $\tz(c + h)$ is as large as they want. So the question is whether an attacker can produce a $J_N^-$ element *together with its $C_{2^m}$-logarithm*.
+While this is quite a good result, our analysis of resistance to malicious clients rests on a hardness assumption we can argue for but not prove. In particular, if an attacker learns the $c$ coordinate of any element in $J_N^-$ with respect to $g$, they will be able to forge arbitrarily rare samples by choosing $h$ so that $\tz(c + h)$ is as large as they want. So the question is how hard it really is for an attacker can produce a $J_N^-$ element together with its $C_{2^m}$-logarithm.
 
-It is essential to be precise about “produce,” because merely *naming* an element of $J_N^-$ is trivial. For correctly constructed $N$, we always have $\Jacobi_N(2) = -1$, for example. But the logarithms of $2$ with respect to $g$ are unknown. Similarly, the fingerprint-freedom certificate for $N$ publishes a list of square roots, roughly half of which land in $J_N^-$. None of these are dangerous, because the logarithms of these are all unknown.
+We should be precise about what “produce” means. Merely *naming* an element of $J_N^-$ is trivial. For correctly constructed $N$, we always have $\Jacobi_N(2) = -1$, for example. But the logarithms of $2$ with respect to $g$ are unknown. Similarly, the fingerprint-freedom certificate for $N$ publishes a list of square roots, roughly half of which land in $J_N^-$. None of these count, again because their logarithms are unknown. The attacker needs to be able to give an element of $J_N^-$ along with its $c$ coordinate in order to freely forge large geometric values.
 
-The elements whose logarithms an attacker *can* write down are exactly those built from known powers of $g$ and $-1$. Since $\Jacobi_N(g) = 1$ and $\Jacobi_N(-1) = 1$, that subgroup sits inside $J_N^+$—and in fact fills it:
+The elements whose logarithms an attacker *can* write down are exactly those built from known powers of $g$ and $-1$. Since $\Jacobi_N(g) = 1$ and $\Jacobi_N(-1) = 1$, that subgroup sits inside $J_N^+$, and in fact fills it:
 
 ```math
 \begin{aligned}
@@ -308,7 +307,7 @@ N = P Q = (2^m B p + 1)(2^m B q + 1)
 \end{aligned}
 ```
 
-In other words, $P-1$ is divisible by $2^m$ instead of the intended $4$ and $Q-1$ is divisible by $B$ when it shouldn’t be. With this alternative structure, $\Z_N^*$ has the following richer multiplicative structure:
+In other words, $P-1$ is divisible by $2^m$ instead of just $4$ and $Q-1$ is divisible by $B$ when it shouldn’t be. With this alternative structure, $\Z_N^*$ has the following richer multiplicative structure:
 
 ```math
 \begin{aligned}
@@ -320,11 +319,11 @@ C_{2^m} \times C_B \times C_q
 
 When the client follows the protocol and picks a random $x_0 \in J_N^-$, it has two random $C_B$ components and two random $C_{2^m}$ components instead of one of each. How much extra identifying information about each client does the malicious server get from this?
 
-First, consider the two $C_B$ components. When the client raises their $x$ value to $t = 1 \bmod{2B}$ both $C_B$ components are preserved. Instead of getting $\log_2(B)$ bits of identifying information from them, the server gets $2 \log_2(B)$ bits. When $B \approx 2^{12}$ that’s 24 bits of fingerprint. Multiplying $x^t$ by a white noise value, $w \in W = \pm(\Z_N^*)^{B2^{m-1}}$, also doesn’t touch either of the two $C_B$ and $C_{2^m}$ components—the definition of $W_N$ is specifically crafted to leave those components intact while randomizing everything else.
+First, consider the two $C_B$ components. When the client raises their $x$ value to $t = 1 \bmod{2B}$ both $C_B$ components are preserved. Instead of getting $\log_2(B)$ bits of identifying information from them, the server gets $2 \log_2(B)$ bits. When $B \approx 2^{12}$ that’s 24 bits of fingerprint. Multiplying $x^t$ by a white noise value, $w \in W = \pm(\Z_N^*)^{B2^{m-1}}$, also doesn’t touch either of the two $C_B$ and $C_{2^m}$ components—the definition of $W_N$ is specifically crafted to leave those components intact.
 
-Next, consider the two $C_{2^m}$ components. When there is only one $C_{2^m}$ component, taking $x^t$ with random odd $t$ destroys all information in it except for the position of the last bit, which is only $\log_2(m)$ bits of information. When there are two $C_{2^m}$ components, however, the information provided doesn’t just double: since the two $C_{2^m}$ components are scaled in lock-step, their _ratio_ remains fixed, which carries significantly more information. It’s not hard to see that two $C_{2^m}$ components raised to random $t$, convey a full $m$ bits of client fingerprint. Again, multiplying by $w$ doesn’t affect this, by design. So the malicious server gets an additional $m$ bits of fingerprint from the two $C_{2^m}$ components.
+Next, consider the two $C_{2^m}$ components. When there is only one $C_{2^m}$ component, taking $x^t$ with random odd $t$ destroys all information in it except for the position of the last bit, which is only $\log_2(m)$ bits of information. When there are two $C_{2^m}$ components, however, the information provided doesn’t just double: since the two $C_{2^m}$ components are scaled in lock-step, their _ratio_ remains fixed, which carries significantly more information. It’s not hard to see that two $C_{2^m}$ components raised to random $t$, convey a full $m$ bits of client fingerprint via their ratio. Again, multiplying by $w$ doesn’t affect this, by design. So the malicious server gets $m$ bits of fingerprint from the two $C_{2^m}$ components instead of the intended $\log_2(m)$.
 
-With this structure of $N$ then, the malicious server gets a total of $2 \log_2(B) + m$ bits of client fingerprint. For our usual choice of $B$ and $m$, that’s $2\cdot12 + 63 = 87$ bits, which is enough to uniquely identify billions of clients with random fingerprints without significant chance of collisions. If we left this unmitigated, it would be a serious defect in our protocol.
+With this structure of $N$ then, the malicious server gets a total of $2 \log_2(B) + m$ bits of client fingerprint, instead of just the intended $\log_2(B) + \log_2(m)$ bits. For our usual choice of $B$ and $m$, that’s $2\cdot12 + 63 = 87$ bits (*c.f.* $12 + 6 = 18$), which is enough to uniquely identify billions of clients with random fingerprints with negligible chance of collisions. If we left this unmitigated, it would be a serious defect in our protocol.
 
 Can we convince a client that we aren’t smuggling fingerprint bits in the structure of $N$ without giving away its factorization? In this particular case, the unusual structure of $N$ is actually quite easy to detect:
 
@@ -335,11 +334,11 @@ Can we convince a client that we aren’t smuggling fingerprint bits in the stru
   - $N = P = Q = 1 \bmod 8$
   - $N = P = Q = 1 \bmod B$
 
-Unfortunately, not all possible malicious structures are so easy to detect. For example, if $N = PQR$ where $P = Q = 1 \bmod 8$ and $P = Q = 1 \bmod B$ and $R = 5 \bmod 8$ and $R ≠ 1 \bmod B$, then you’d have $N = PQR = 5 \bmod 8$ and $N = PQR ≠ 1 \bmod B$ so $N$ looks normal from simple modular criteria, yet $PQ$ carries the $2 \log_2(B) + m$ bits of client fingerprint from before. To guarantee that a server cannot fingerprint clients, more evidence about the structure of $N$ needs to be provided.
+So the incorrect structure of $N$ is easy to spot. Unfortunately, not all possible malicious structures are so easy to detect. For example, if $N = PQR$ where $P = Q = 1 \bmod 8$ and $P = Q = 1 \bmod B$ and $R = 5 \bmod 8$ and $R ≠ 1 \bmod B$, then you’d have $N = PQR = 5 \bmod 8$ and $N = PQR ≠ 1 \bmod B$ so $N$ looks normal from simple modular criteria, yet $PQ$ carries the $2 \log_2(B) + m$ bits of client fingerprint from before. To guarantee that a server cannot fingerprint clients, more evidence about the structure of $N$ needs to be provided.
 
 Zero-knowledge proofs (ZKPs) are a popular solution to this kind of problem. I spent a good bit of time going down this rabbit hole. It’s definitely doable. However, every time I sat down to implement zero-knowledge proofs of semiprimality, I found myself getting bogged down in complex and fussy details. This isn’t just a matter of laziness—if the code is that hard to implement, I find it hard to convince myself that it’s fully correct. And if we’re not confident in the correctness of the code that checks whether $N$ has the right structure, then we haven’t really proven anything.
 
-I found myself really wishing for a simpler way to demonstrate the structure of $\Z_N^*$. One that would be easier to have confidence in, both in the sense of having a simpler implementation to review, but also in the sense of having mathematics that’s easier for more people (including myself) to understand. After some research, I found some straightforward evidence that the server can provide to convince clients a server-provided modulus cannot be used to fingerprint clients.
+I found myself really wishing for a simpler way to demonstrate the structure of $\Z_N^*$. One that would be easier to have confidence in, both in the sense of having a simpler implementation to review, but also in the sense of having mathematics that’s easier for more people (including myself) to understand. After some research, I found some straightforward evidence that the server can provide to convince clients that a server-provided modulus cannot be used to fingerprint them.
 
 ### Criteria for fingerprint-freedom
 
@@ -418,6 +417,7 @@ This means that $d \divides N-1$ as required. $\square$
 - $x$ is a quadratic residue iff none of the $\ell_i$ are odd
 
 In the $D = 1$ case, $\Jacobi_N(x) = 1$ if and only if $x$ is a quadratic residue, so all three of $x$, $y$ and $xy$ are quadratic residues.
+
 In the $D = 2$ case, let’s write coordinates for $x$, $y$ and $xy$:
 
 ```math
@@ -449,6 +449,7 @@ a_x + a_y = b_x + b_y &= 0 && \pmod 2 \\
 ```
 
 Each condition means one of $x$, $y$ or $xy$ is a quadratic residue.
+
 In the $D = 3$ case, we have a counterexample:
 
 ```math
@@ -489,7 +490,7 @@ Second, $W_N = \pm(\Z_N^*)^{B2^{m-1}}$ adjoins the single order-2 element $-1$, 
 \end{aligned}
 ```
 
-where $\overline{-1}$ is the image of $-1$. We take the odd and 2-power parts of this in turn.
+where $\overline{-1}$ is the image of $-1$ (also $-1$ in that group, but we use the bar to distinguish which group we're in). We take the odd and 2-power parts of this in turn.
 
 **One prime factor.**  $N = P^j$, so $\Z_N^*$ is cyclic of order $(P-1)P^{j-1}$. A prime power $P^j \equiv 5 \bmod 8$ forces $P \equiv 5 \bmod 8$ (the residues $1, 3, 7 \bmod 8$ generate cyclic subgroups of $(\Z/8)^*$ that never contain $5$), so $\tz(P-1) = 2$ and $\Z_N^* \cong C_4 \times C_U$ with $U$ odd. Then $\gcd(4, B2^{m-1}) = 4$ (since $m ≥ 3$) and $\gcd(U, B2^{m-1}) = \gcd(U, B)$, so
 
@@ -583,9 +584,9 @@ This bound allows a protocol whereby a server can convince a client that $N$ is 
 
 Based on these results, we can design a protocol for a server to convince clients that $N$ is fingerprint-free. First, the client checks that $N = 5 \bmod 8$, that $\gcd(B, N) = 1$, and that $\gcd(B, N-1) = 1$. These are simple numerical checks.
 
-Why exactly $N \equiv 5 \bmod 8$? Two independent requirements force this. First, *integrity*: $-1$ must not be a free $J_N^-$ forgery, i.e. $\Jacobi_N(-1) = (-1)^{(N-1)/2} = +1$, which holds iff $N \equiv 1 \bmod 4$ — this is what rules out the $N \equiv 3 \bmod 4$ of a would-be modulus with $-1 \in J_N^-$. Second, *anonymity*: at most one prime may carry a large 2-Sylow factor, since two of them would give the token a second geometric-like coordinate — a fingerprint. That is governed by $\tz(N-1)$: $N \equiv 5 \bmod 8$ forces $\tz(N-1) = 2$, pinning the smaller prime’s 2-part to $C_4$ (or both primes' to $C_2$), whereas $N \equiv 1 \bmod 8$ (that is $\tz(N-1) \ge 3$) would permit two large 2-Sylow factors that the client cannot rule out without the factorization. Requiring $N \equiv 1 \bmod 4$ while forbidding $N \equiv 1 \bmod 8$ is exactly $N \equiv 5 \bmod 8$. As a bonus, $5 \equiv -3 \bmod 8$ gives $\Jacobi_N(2) = -1$, so $2$ is a ready-made, publicly nameable element of $J_N^-$.
+[Aside.] Why exactly $N \equiv 5 \bmod 8$? Two independent requirements force this. First, *integrity*: $-1$ must not be a free $J_N^-$ forgery, i.e. $\Jacobi_N(-1) = (-1)^{(N-1)/2} = +1$, which holds iff $N \equiv 1 \bmod 4$ — this is what rules out the $N \equiv 3 \bmod 4$ of a would-be modulus with $-1 \in J_N^-$. Second, *anonymity*: at most one prime may carry a large 2-Sylow factor, since two of them would give the token a second geometric-like coordinate — a fingerprint. That is governed by $\tz(N-1)$: $N \equiv 5 \bmod 8$ forces $\tz(N-1) = 2$, pinning the smaller prime’s 2-part to $C_4$ (or both primes' to $C_2$), whereas $N \equiv 1 \bmod 8$ (that is $\tz(N-1) \ge 3$) would permit two large 2-Sylow factors that the client cannot rule out without the factorization. Requiring $N \equiv 1 \bmod 4$ while forbidding $N \equiv 1 \bmod 8$ is exactly $N \equiv 5 \bmod 8$. As a bonus, $5 \equiv -3 \bmod 8$ gives $\Jacobi_N(2) = -1$, so $2$ is a ready-made, publicly nameable element of $J_N^-$.
 
-After doing the simple numerical checks on $N$, the client is ready to be convinced that $N$ has at most two prime divisors. The interactive version is:
+After doing the aforementioned simple numerical checks on $N$, the client is ready to be convinced that $N$ has at most two prime divisors. The interactive version is:
 
 > The client picks $n$ random pairs $\set{x, y} \subseteq J_N^+$ and challenges the server to produce $r \in \Z_N^*$ for each pair such that $r^2 \in \set{x, y, xy} \bmod N$.
 
@@ -599,11 +600,11 @@ n &≥ \frac{\log_2(\alpha)}{\log_2(8)-\log_2(5)}
 \end{alignedat}
 ```
 
-We can turn this into a non-interactive protocol by picking a cryptographic hashing scheme to generate pairs of values in such a way that the server cannot influence them. The hash should include $N$ as an input so that the set of hash-generated values is not fixed and must be computed after choosing a candidate modulus. This prevents generating $n$ pairs and then solving for an $N$ that happens to have quadratic residues for those pairs. In order to generate an incorrectly structured $N$ that passes this test, a malicious server would have to try about $\alpha$ candidate $N$ values before expecting to find one that passes. Since $n$ grows only as $\log_2(\alpha)$, we can demand an enormous amount of attacker work while keeping the certificate small—but we have to choose $\alpha$ with the real cost of a forgery attempt in mind, and here it pays to be pessimistic, because a successful forgery is catastrophic. The fingerprinting structures from the start of this section yield on the order of $2\log_2(B) + m \approx 87$ bits of fingerprint—enough to deanonymize every client of the system at once—so $\alpha$ is guarding against total failure, not a marginal leak.
+We can turn this into a non-interactive protocol by picking a cryptographic hashing scheme to generate pairs of values in such a way that the server cannot influence them. The hash should include $N$ as an input so that the set of hash-generated values is not fixed and must be computed *after* choosing a candidate modulus. This prevents generating $n$ pairs and then solving for an $N$ that happens to have quadratic residues for those pairs. In order to generate an incorrectly structured $N$ that passes this test, a malicious server would have to try about $\alpha$ candidate $N$ values before expecting to find one that passes. Since $n$ grows only as $\log_2(\alpha)$, we can demand an enormous amount of attacker work while keeping the certificate small—but we have to choose $\alpha$ with the real cost of a forgery attempt in mind, and here it pays to be pessimistic.
 
-It’s tempting to reason about the per-attempt cost in terms of the $n$ quadratic-residue checks, but that reasoning cuts the wrong way: the attacker is forging *their own* candidate moduli, so they know each candidate’s factorization, which makes the QR checks essentially free for them. Worse for the defender, the attacker fails fast—each challenge pair passes a bad modulus with probability at most $5/8$, so on a doomed candidate they bail after two or three pairs and pay the full $n$ square roots only on the eventual success. The real per-attempt cost is dominated by generating a constrained candidate modulus, and the search is embarrassingly parallel. We should not lean on QR-testing being expensive; for this attacker, it isn’t.
+It’s tempting to reason about the per-attempt cost in terms of the $n$ quadratic-residue checks, but that reasoning cuts the wrong way: the attacker is forging *their own* candidate moduli, so they know each candidate’s factorization, which makes the QR checks essentially free for them. Worse for the defender, the attacker fails fast—each challenge pair passes a bad modulus with probability at most $5/8$, so on a doomed candidate they bail after two or three pairs and pay the full $n$ square roots only on the eventual success. The real per-attempt cost is dominated by generating a constrained candidate modulus, and that search is embarrassingly parallel. So we should not lean on QR-testing being expensive since for this attacker, it isn’t.
 
-To put numbers on it, take a deliberately attacker-favorable estimate of $10^{11}$ modular exponentiations per second of aggregate compute, and pretend each attempt costs only a single modexp (generating a constrained prime is much more expensive, so this *understates* the attacker’s work, which is the safe direction for a security margin):
+To put numbers on it, take a deliberately attacker-favorable estimate of $10^{11}$ modular exponentiations per second of aggregate compute, and pretend each attempt costs only a single `modexp` (generating a constrained prime is much more expensive, so this *understates* the attacker’s work, which is the safe direction for a security margin):
 
 | $\alpha$ | candidates | wall-clock | $n$ | cert size |
 |:---:|:---:|:---:|:---:|:---:|
@@ -613,7 +614,7 @@ To put numbers on it, take a deliberately attacker-favorable estimate of $10^{11
 | $2^{112}$ | infeasible | infeasible | 166 | ~21 KB |
 | $2^{128}$ | infeasible | infeasible | 189 | ~24 KB |
 
-Because $n$ grows only logarithmically in $\alpha$, buying a gigantic safety margin is nearly free: the certificate stays a few dozen kilobytes and the server’s square-root computation stays sub-second. The recommendation is therefore to set $\alpha \ge 2^\lambda$ for the system’s overall security level $\lambda$, and never below $2^{80}$. The simplest safe choice is $\alpha = 2^{112}$ ($n = 166$), which makes finding a malicious $N$ that passes the test so unlikely that it is no longer a concern.
+Because $n$ grows only logarithmically in $\alpha$, buying a gigantic safety margin is nearly free: the certificate stays a few dozen kilobytes and the server’s square-root computation stays sub-second. The recommendation is therefore to set $\alpha \ge 2^\lambda$ for the system’s overall security level $\lambda$, and never below $2^{80}$. The simplest safe choice is $\alpha = 2^{112}$ ($n = 166$), which makes finding a malicious $N$ that passes the test so unlikely that it is no longer a concern. We'll use $\alpha = 2^{128}$ to be extra safe.
 
 The non-interactive version of this protocol serves as a certificate of fingerprint-freedom for a published $N$ value. The certificate structure contains:
 
@@ -628,7 +629,7 @@ When downloading a new ring structure, a client checks the following requirement
 - $N = 5 \bmod 8$
 - $\gcd(B, N) = 1$
 - $\gcd(B, N-1) = 1$
-- That enough square roots are provided
-- That all the square roots are valid
+- Enough square roots are provided
+- All the square roots are valid
 
 That’s it. Once the client has done this, it can safely use $N$ and proceed with the protocol for generating and sending $y = xw^t$ values with each request, confident that it has provable anonymity.
