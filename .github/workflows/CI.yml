@@ -29,7 +29,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: ['lts', '1']   # current LTS + latest release
+        version: ['1.11', '1']   # min supported (Random/Test 1.11 compat) + latest
         os: [ubuntu-latest]
     steps:
       - uses: actions/checkout@v4
