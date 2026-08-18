@@ -63,6 +63,28 @@ end
     end
 end
 
+@testset "hash_into_ring type-independence" begin
+    # The certificate challenge must depend only on the value of N, not its
+    # in-memory integer type — otherwise a TOML reparse (which picks the type by
+    # magnitude) would rederive different challenges and reject a valid cert.
+    for Nval in (2663261, Int128(2)^126 + 15, Int128(2)^100 - 25)
+        types = Nval ≤ typemax(Int64) ? (Int64, Int128, BigInt) : (Int128, BigInt)
+        for keys in ((:sqrt_x, 1), (:sqrt_y, 7))
+            ref = hash_into_ring(big(Nval), keys...)
+            for T in types
+                x = hash_into_ring(T(Nval), keys...)
+                @test x == ref              # same value regardless of type
+                @test typeof(x) == T        # returned in N's type, in [0, N)
+                @test 0 ≤ x < Nval
+            end
+        end
+        # the twist path must be type-independent too
+        τ = big(2)
+        @test hash_into_ring(big(Nval), :sqrt_x, 3; untwist=τ) ==
+              hash_into_ring(Int128(Nval), :sqrt_x, 3; untwist=Int128(2))
+    end
+end
+
 # false &&
 @testset "Ring sructure" begin
     @testset "basics" begin
