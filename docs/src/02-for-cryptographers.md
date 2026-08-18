@@ -67,12 +67,12 @@ t \in T = \set{\, 2Bi + 1 \st i \in [0,\, 2^{m-1}) \,},
 
 The whole construction is in what $(w, t)$ do coordinate-by-coordinate:
 
-| coord.  | factor    | effect of $(\cdot)^t$                              | effect of $\times\, w$          | net effect                       | decodes to                                       |
-| ------- | --------- | -------------------------------------------------- | ------------------------------- | -------------------------------- | ------------------------------------------------ |
-| $a$     | $C_4$     | parity preserved ($t$ odd), high bit scrambled     | high bit randomized             | only the parity is stable        | the Jacobi bit — pinned to $J_N^-$, same for all clients |
-| $b$     | $C_B$     | preserved ($t \equiv 1 \bmod B$)                   | untouched                       | $b$ preserved exactly            | **the bucket**                                   |
-| $c$     | $C_{2^m}$ | $\tz(c)$ preserved, higher bits scrambled          | top bit randomized              | only $\tz(c)$, and only to $m-1$ | **the rank**, $\min(\tz(c), m-1)$                |
-| $d$     | $C_{pq}$  | scrambled (irrelevant)                             | replaced by a fresh uniform value | fully randomized               | nothing — pure noise                             |
+| coord. | factor    | effect of $(\cdot)^t$                      | effect of $\times\, w$ | net effect                                     | decodes to                   |
+| ------ | --------- | ------------------------------------------ | ---------------------- | ---------------------------------------------- | ---------------------------- |
+| $a$    | $C_4$     | low bit fixed, high bit randomized         | high bit randomized    | low bit fixed, high bit random                 | parity bit for Jacobi symbol |
+| $b$    | $C_B$     | fixed                                      | fixed                  | fixed                                          | bucket                       |
+| $c$    | $C_{2^m}$ | $\tz(c)$ preserved, higher bits randomized | high bit randomized    | $\min(\tz(c), m-1)$ preserved, high bit random | geometric sample             |
+| $d$    | $C_{pq}$  | mostly randomized                          | fully randomized       | randomized                                     | pure noise                   |
 
 Two facts make the table work:
 
