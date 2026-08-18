@@ -137,13 +137,14 @@ end
         @test ring isa Ring{BigInt}
         check_ring(ring)
     end
-    # generate some small rings for comprehensive structural testing. These use
-    # the raw generator: they exercise the group structure and decoding, which
-    # are independent of the semisharding f, and at L=20 some (B,m) specs have no
-    # shardable modulus (so the protocol-level `Ring` would rightly reject them).
+    # generate some small rings for comprehensive structural testing. These
+    # exercise the group structure and decoding, which are independent of the
+    # semisharding f, so they are built with `shardable = false`: at L=20 some
+    # (B,m) specs have no shardable modulus (which the default `Ring` rightly
+    # rejects), but any modulus of the right shape works for structure.
     rings = Ring{Int}[]
     for B = (3, 5, 9, 11), m = 3:5
-        ring = _generate_ring(ring_type(20), B, m, 20, Random.default_rng())
+        ring = Ring(B, m, 20; shardable = false)
         check_ring(ring)
         push!(rings, ring)
     end
@@ -210,8 +211,8 @@ end
         for uuid = 1:100
             Y = [hll_generate(client, "/package/$uuid") for _ = 1:100]
             H = [hll_decode(ring, y; bmap) for y in Y]
-            @test allunique(Y)                  # tokens are unlinkable
-            @test allequal(H)                   # but decode to one stable (b,k) per class
+            @test allunique(Y)  # tokens are unlinkable
+            @test allequal(H)   # but decode to one stable (b,k) per class
         end
     end
 end
@@ -223,8 +224,8 @@ end
     bmap = bucket_map(ring)
     client = Client(cert; rng = Xoshiro(2))
     vals = [hll_decode(ring, hll_generate(client, "/c/$i"); bmap) for i = 1:200]
-    @test allequal(first.(vals))            # bucket b₀ fixed across all classes
-    @test !allequal(last.(vals))            # rank shards across classes
+    @test allequal(first.(vals))  # bucket b₀ fixed across all classes
+    @test !allequal(last.(vals))  # rank shards across classes
     # distinct clients spread across buckets — this is what lets the server count
     buckets = [hll_decode(ring, hll_generate(Client(cert)), bmap=bmap)[1] for _ = 1:64]
     @test length(unique(buckets)) > 1
@@ -243,10 +244,10 @@ end
     n = 5000
     clients = [Client(cert; rng) for _ = 1:n]
     Y = [hll_generate(c, "/registries"; rng) for c in clients for _ = 1:rand(rng, 1:3)]
-    @test allunique(Y)                  # every emitted token is freshly randomized
+    @test allunique(Y)  # every emitted token is freshly randomized
     n̂ = hll_estimate(ring, Y)
-    @test abs(n̂ - n)/n ≤ 0.05           # ≈ 3·RSE
-    @test n̂ ≤ length(Y)                  # never more unique clients than requests
+    @test abs(n̂ - n)/n ≤ 0.05  # ≈ 3·RSE
+    @test n̂ ≤ length(Y)  # never more unique clients than requests
 end
 
 @testset "HLL estimate request-count cap" begin

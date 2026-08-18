@@ -31,6 +31,12 @@ ring without learning its factorization.
 
 `rng` (any `AbstractRNG`, default a `RandomDevice`) is the source of randomness
 for choosing the primes; pass a seeded RNG for a reproducible ring.
+
+By default the ring is *shardable*: its canonical semisharding generator (see
+[`Client`](@ref)) is guaranteed to shard the geometric rank, which the generator
+enforces by regenerating `N` until it holds. Pass `shardable = false` to skip
+that and return any modulus of the right shape — useful for structural work,
+where the semisharding generator plays no role.
 """
 struct Ring{T<:Integer}
     # general shape
@@ -47,14 +53,17 @@ function Ring{T}(
     m :: Integer, # max geometric sample size
     L :: Integer; # bit length of modulus
     rng :: AbstractRNG = DEFAULT_RNG,
+    shardable :: Bool = true,
 ) where {T<:Integer}
-    # Regenerate until the canonical semisharding generator f = derive_f(N, B)
-    # shards the rank: its C_{2^m} coordinate must be odd (f a QNR mod Q). This
-    # holds for ~half of moduli and is the one f requirement no client can check,
-    # so the ring holder enforces it at generation time. (A non-unit :f hash means
-    # N is factorable — also a reason to regenerate.) At realistic sizes a
-    # shardable modulus is found in ~2 tries; the cap only trips on a degenerate
-    # spec (e.g. a tiny L whose few feasible moduli happen to be non-shardable).
+    # A shardable ring has a canonical semisharding generator f = derive_f(N, B)
+    # whose C_{2^m} coordinate is odd (f a QNR mod Q) — the one f requirement no
+    # client can check, so the ring holder enforces it by regenerating N until it
+    # holds (~2 tries; a non-unit :f hash means N is factorable, also a reason to
+    # regenerate). Pass `shardable = false` to skip this and return any modulus of
+    # the right shape, whose f may not shard — useful for structural testing. The
+    # cap turns a degenerate spec (a tiny L whose few feasible moduli are all
+    # non-shardable) into an error rather than a hang.
+    shardable || return _generate_ring(T, B, m, L, rng)
     for _ in 1:1000
         ring = _generate_ring(T, B, m, L, rng)
         try
@@ -165,8 +174,9 @@ function Ring(
     m :: Integer, # max geometric sample size
     L :: Integer; # bit length of modulus
     rng :: AbstractRNG = DEFAULT_RNG,
+    shardable :: Bool = true,
 )
-    Ring{ring_type(L)}(B, m, L; rng)
+    Ring{ring_type(L)}(B, m, L; rng, shardable)
 end
 
 Base.getproperty(ring::Ring, name::Symbol) =
