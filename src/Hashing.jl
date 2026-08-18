@@ -2,11 +2,6 @@ using SHA
 using Base: SHA1
 using Base.GMP.MPZ: mul_2exp!, add_ui!
 
-function shift_add_byte!(x::Integer, b::UInt8)
-    x <<= 8
-    x |= b
-end
-
 function shift_add_byte!(x::BigInt, b::UInt8)
     mul_2exp!(x, 8)
     add_ui!(x, b)
@@ -26,13 +21,17 @@ function hash_into_ring(
         end
     end
     L = Base.top_set_bit(N) + 1
-    x = zero(N)
+    # Accumulate the digest stream at full precision (BigInt) so the result
+    # depends only on the *value* of N, not its in-memory integer type; a
+    # fixed-width accumulator would truncate the fold and make the same numeric
+    # N hash differently as Int64/Int128 vs BigInt (e.g. across a TOML reparse).
+    x = zero(BigInt)
     for i = 1:cld(L, 512)
         for b in sha512("$prefix\0$i\0")
             x = shift_add_byte!(x, b)
         end
     end
-    x = mod(x, N)
+    x = oftype(N, mod(x, N))
     if !iszero(untwist) && jacobi(x, N) == -1
         x = mod(widemul(untwist, x), N)
     end

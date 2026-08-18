@@ -4,7 +4,7 @@ using Random
 using HyperLogLogOverRSA
 using HyperLogLogOverRSA:
     gen_prime_pair, jacobi, modulus, factors, lambda, modsqrt,
-    rand_semigenerator, rand_jacobi_twist, bucket_map
+    rand_semigenerator, rand_jacobi_twist, bucket_map, hash_into_ring
 
 function check_ring(ring::Ring)
     @test isprime(ring.P)
