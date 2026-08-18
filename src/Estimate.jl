@@ -7,6 +7,13 @@
 # unique client count. Repeated tokens from the same client collapse, since they
 # all decode to that client's single HLL value for the class.
 #
+# The estimate is capped at the number of requests aggregated: there cannot be
+# more unique clients in a set of requests than there are requests. Besides being
+# trivially correct, this cap is what bounds a malicious client's inflation to
+# the number of requests it sends — a flat sketch covering every bucket at rank k
+# estimates to ≈ (1/ln2)·B·2^k from only B requests, and the cap clips that back
+# to B (see the "Malicious clients" section of the security analysis).
+#
 # The estimator is Otmar Ertl's improved estimator, "New Cardinality Estimation
 # Methods for HyperLogLog Sketches" (2017), arXiv:1706.07290: a closed-form
 # estimator, effectively unbiased across the whole cardinality range with no
@@ -55,13 +62,18 @@ collapse automatically, since they all decode to that client's single
 `(bucket, geometric)` value for the class.
 
 Uses the improved estimator of Ertl (2017): unbiased across the whole
-cardinality range, with relative standard error ≈ `1.04/√B`.
+cardinality range, with relative standard error ≈ `1.04/√B`. The result is
+capped at the number of tokens aggregated — there cannot be more unique clients
+than requests — which also bounds a malicious client's count inflation to the
+number of requests it sends.
 """
 function hll_estimate(ring::Ring, tokens)
     B, m = ring.B, ring.m
     bmap = bucket_map(ring)
     reg = fill(-1, B)                    # per-bucket max geometric; -1 = empty
+    n = 0                                # number of requests (tokens) aggregated
     for y in tokens
+        n += 1
         b, k = hll_decode(ring, y; bmap)
         reg[b+1] = max(reg[b+1], k)
     end
@@ -76,5 +88,7 @@ function hll_estimate(ring::Ring, tokens)
         d += C[r+1]*exp2(-r)             # normal registers (r = 1…m-1)
     end
     d += B*τ(1 - C[m+1]/B)*exp2(1-m)      # saturated registers (r = m)
-    return α_∞ * B^2 / d
+    # cap at the request count: unique clients ≤ requests, and this is what
+    # bounds inflation from a curated flat-sketch batch (see security analysis)
+    return min(α_∞ * B^2 / d, float(n))
 end

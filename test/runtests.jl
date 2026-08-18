@@ -229,4 +229,27 @@ end
     @test allunique(Y)                  # every emitted token is freshly randomized
     n̂ = hll_estimate(ring, Y)
     @test abs(n̂ - n)/n ≤ 0.05           # ≈ 3·RSE
+    @test n̂ ≤ length(Y)                  # never more unique clients than requests
+end
+
+@testset "HLL estimate request-count cap" begin
+    # The batch inflation/decode oracle: a malicious client sends x₀·g^h with
+    # h ≡ 0 (mod 2^m) — pinning the geometric coordinate at c₀, so every token
+    # has the same rank k — while h = 2^m·j sweeps all B buckets (gcd(2^m,B)=1).
+    # The resulting flat sketch estimates to ≈ (1/ln2)·B·2^k ≥ 1.44·B from only B
+    # requests. Capping the report at the request count clips that back to B, so
+    # an attacker cannot inflate the count above the number of requests it sends.
+    rng = Xoshiro(1)
+    ring = Ring(2^7-1, 8, 128; rng)
+    B, m, N = ring.B, ring.m, ring.N
+    g  = rand_semigenerator(ring; rng)
+    x₀ = rand_jacobi_twist(N; rng)
+    batch = [modmul(x₀, powermod(g, oftype(N, 2)^m * j, N), N) for j = 0:B-1]
+    bmap = bucket_map(ring)
+    sketch = [hll_decode(ring, y; bmap) for y in batch]
+    @test length(unique(first.(sketch))) == B   # every bucket covered exactly once
+    @test allequal(last.(sketch))               # all one rank ⇒ flat sketch
+    n̂ = hll_estimate(ring, batch)
+    @test n̂ == B                                # capped at the request count …
+    @test α_∞ * B * exp2(last(sketch[1]) + 1) > B  # … below the uncapped estimate
 end
