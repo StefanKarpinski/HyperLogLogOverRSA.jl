@@ -64,9 +64,9 @@ end
 end
 
 @testset "hash_into_ring type-independence" begin
-    # The certificate challenge must depend only on the value of N, not its
-    # in-memory integer type — otherwise a TOML reparse (which picks the type by
-    # magnitude) would rederive different challenges and reject a valid cert.
+    # The folded element must depend only on the value of N, not its in-memory
+    # integer type — otherwise a TOML reparse (which picks the type by magnitude)
+    # would rederive different certificate challenges and reject a valid cert.
     for Nval in (2663261, Int128(2)^126 + 15, Int128(2)^100 - 25)
         types = Nval ≤ typemax(Int64) ? (Int64, Int128, BigInt) : (Int128, BigInt)
         for keys in ((:sqrt_x, 1), (:sqrt_y, 7))
@@ -78,11 +78,29 @@ end
                 @test 0 ≤ x < Nval
             end
         end
-        # the twist path must be type-independent too
-        τ = big(2)
-        @test hash_into_ring(big(Nval), :sqrt_x, 3; untwist=τ) ==
-              hash_into_ring(Int128(Nval), :sqrt_x, 3; untwist=Int128(2))
     end
+end
+
+@testset "hash_into_J₊" begin
+    # Maps hashes into J_N^+ (as certificate challenges require) and is likewise
+    # type-independent. Uses a prime ≡ 5 mod 8: then 2 ∈ J_N^- (so the ×2 twist
+    # flips a negative Jacobi symbol into J_N^+) and there are no non-units.
+    p = 9223372036854775549       # an Int64 prime ≡ 5 mod 8
+    @test isprime(p) && p % 8 == 5 && jacobi(2, p) == -1
+    for keys in ((:sqrt_x, 1), (:sqrt_y, 7), (:sqrt_x, 42))
+        ref = hash_into_J₊(big(p), keys...)
+        @test jacobi(ref, big(p)) == 1        # lands in J_N^+
+        for T in (Int64, Int128, BigInt)
+            x = hash_into_J₊(T(p), keys...)
+            @test x == ref
+            @test typeof(x) == T
+        end
+    end
+    # A hash sharing a factor with N (Jacobi 0) reveals N as factorable, so
+    # RingCert rejects the modulus rather than resampling. Vanishingly unlikely
+    # for large N but routine at toy sizes; this seed yields such a ring.
+    ring = Ring(9, 4, 20; rng = MersenneTwister(6))
+    @test_throws ArgumentError RingCert(ring)
 end
 
 # false &&

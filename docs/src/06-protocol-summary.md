@@ -101,7 +101,7 @@ n = \ceil{\frac{\log_2(\alpha)}{\log_2(8)-\log_2(5)}}
 \end{aligned}
 ```
 
-The server generates $n$ pairs of values, $\set{x, y} \subseteq J_N^+$, using an agreed-upon hashing scheme that includes the value $N$ as a hash input. The hashed values must land in $J_N^+$ (positive Jacobi symbol): since a hash naturally produces values of either Jacobi symbol, the scheme fixes a twist element $\tau$ with $\Jacobi_N(\tau) = -1$ — chosen deterministically, e.g. the smallest such value — and multiplies any hashed value of negative Jacobi symbol by $\tau$, which maps it into $J_N^+$. For each pair, $\set{x, y}$:
+The server generates $n$ pairs of values, $\set{x, y} \subseteq J_N^+$, using an agreed-upon hashing scheme that includes the value $N$ as a hash input. The hashed values must land in $J_N^+$ (positive Jacobi symbol): since a hash naturally produces values of either Jacobi symbol, the scheme multiplies any hashed value of negative Jacobi symbol by $2$, which lies in $J_N^-$ because $N \equiv 5 \bmod 8$, mapping it into $J_N^+$. (A hash with Jacobi symbol $0$ shares a factor with $N$, exposing $N$ as factorable; the server rejects such an $N$ outright.) For each pair, $\set{x, y}$:
 
 - If $x$ is a quadratic residue, add $r$ such that $r^2 = x \bmod N$ to the list of square roots
 - Otherwise, if $y$ is a quadratic residue, add $r$ such that $r^2 = y \bmod N$ to the list of square roots
