@@ -71,9 +71,7 @@ function hll_estimate(ring::Ring, tokens)
     B, m = ring.B, ring.m
     bmap = bucket_map(ring)
     reg = fill(-1, B)                    # per-bucket max geometric; -1 = empty
-    n = 0                                # number of requests (tokens) aggregated
     for y in tokens
-        n += 1
         b, k = hll_decode(ring, y; bmap)
         reg[b+1] = max(reg[b+1], k)
     end
@@ -90,5 +88,5 @@ function hll_estimate(ring::Ring, tokens)
     d += B*τ(1 - C[m+1]/B)*exp2(1-m)      # saturated registers (r = m)
     # cap at the request count: unique clients ≤ requests, and this is what
     # bounds inflation from a curated flat-sketch batch (see security analysis)
-    return min(α_∞ * B^2 / d, float(n))
+    return min(α_∞ * B^2 / d, float(length(tokens)))
 end
