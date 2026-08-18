@@ -67,7 +67,7 @@ capped at the number of tokens aggregated — there cannot be more unique client
 than requests — which also bounds a malicious client's count inflation to the
 number of requests it sends.
 """
-function hll_estimate(ring::Ring, tokens)
+function hll_estimate(ring::Ring, tokens::AbstractVector)
     B, m = ring.B, ring.m
     bmap = bucket_map(ring)
     reg = fill(-1, B)                    # per-bucket max geometric; -1 = empty
