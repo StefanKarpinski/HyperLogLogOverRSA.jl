@@ -5,7 +5,7 @@ using HyperLogLogOverRSA
 using HyperLogLogOverRSA:
     gen_prime_pair, jacobi, modulus, factors, lambda, modsqrt,
     rand_semigenerator, rand_jacobi_twist, bucket_map,
-    hash_into_ring, hash_into_J₊, hash_blocks, HASH_MARGIN
+    hash_into_ring, hash_into_J₊, hash_blocks, HASH_MARGIN, modmul, α_∞
 
 function check_ring(ring::Ring)
     @test isprime(ring.P)
