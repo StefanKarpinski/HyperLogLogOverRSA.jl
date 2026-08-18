@@ -7,6 +7,19 @@ function shift_add_byte!(x::BigInt, b::UInt8)
     add_ui!(x, b)
 end
 
+# Extra bits generated beyond the bit-length of N before reducing mod N, so the
+# reduction is nearly uniform. Reducing a uniform draw from [0, 2^H) mod N has
+# relative per-residue bias < N/2^H < 2^(top_set_bit(N) - H), so H - top_set_bit(N)
+# is the "bits of uniformity"; 128 keeps the bias (≤ 2^-128) negligible against
+# even the strongest certificate strength we target. Generating only enough bits
+# to cover N (the earlier behavior) leaves ~1 bit of headroom — a ~2× bias —
+# whenever top_set_bit(N) sits just under a 512-bit block boundary (e.g. a
+# 2047-bit modulus, a common size for a product of two 1024-bit primes).
+const HASH_MARGIN = 128
+
+# Number of 512-bit SHA-512 blocks folded to hash into ℤ_N with that margin.
+hash_blocks(N::Integer) = cld(Base.top_set_bit(N) + HASH_MARGIN, 512)
+
 # Hash a tuple of keys deterministically into an element of ℤ_N. The digest
 # stream is accumulated at full precision (BigInt) so the result depends only on
 # the *value* of N, not its in-memory integer type; a fixed-width accumulator
@@ -21,9 +34,8 @@ function hash_into_ring(N::Integer, keys::Union{Integer,AbstractString,Symbol}..
             print(io, '\0', T, string(key))
         end
     end
-    L = Base.top_set_bit(N) + 1
     x = zero(BigInt)
-    for i = 1:cld(L, 512)
+    for i = 1:hash_blocks(N)
         for b in sha512("$prefix\0$i\0")
             x = shift_add_byte!(x, b)
         end

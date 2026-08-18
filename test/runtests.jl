@@ -103,6 +103,19 @@ end
     @test_throws ArgumentError RingCert(ring)
 end
 
+@testset "hash_into_ring uniformity margin" begin
+    # Enough bits are folded beyond the bit-length of N that the modular bias of
+    # the reduction is ≤ 2^-HASH_MARGIN. The worst cases are bit-lengths just
+    # under a 512-bit block boundary (b ≡ 511 mod 512, e.g. 2047), where the
+    # earlier "just cover N" scheme left only ~1 bit of headroom.
+    for b in (8, 62, 511, 512, 1023, 2046, 2047, 2048, 4095, 4096)
+        N = big(2)^(b - 1) + 1                 # a b-bit odd modulus
+        @test Base.top_set_bit(N) == b
+        H = 512 * hash_blocks(N)               # bits generated before reduction
+        @test H - b ≥ HASH_MARGIN              # ≥128 bits of uniformity
+    end
+end
+
 # false &&
 @testset "Ring sructure" begin
     @testset "basics" begin
