@@ -48,6 +48,25 @@ function Ring{T}(
     L :: Integer; # bit length of modulus
     rng :: AbstractRNG = DEFAULT_RNG,
 ) where {T<:Integer}
+    # Regenerate until the canonical semisharding generator f = derive_f(N, B)
+    # shards the rank: its C_{2^m} coordinate must be odd (f a QNR mod Q). This
+    # holds for ~half of moduli and is the one f requirement no client can check,
+    # so the ring holder enforces it at generation time. (A non-unit :f hash means
+    # N is factorable — also a reason to regenerate.) At realistic sizes a
+    # shardable modulus is found in ~2 tries; the cap only trips on a degenerate
+    # spec (e.g. a tiny L whose few feasible moduli happen to be non-shardable).
+    for _ in 1:1000
+        ring = _generate_ring(T, B, m, L, rng)
+        try
+            f_shards(ring) && return ring
+        catch e
+            e isa ArgumentError && occursin("non-unit", e.msg) || rethrow(e)
+        end
+    end
+    throw(ArgumentError("no modulus with a shardable f for spec (B=$B, m=$m, L=$L)"))
+end
+
+function _generate_ring(::Type{T}, B::Integer, m::Integer, L::Integer, rng::AbstractRNG) where {T<:Integer}
     # argument checks
     isodd(B) || throw(ArgumentError("B must be odd"))
     m ≥ 3 || throw(ArgumentError("m must be ≥ 3"))
@@ -160,6 +179,12 @@ Base.getproperty(ring::Ring, name::Symbol) =
 modulus(ring::Ring) = ring.N
 factors(ring::Ring) = (ring.P, ring.Q)
 lambda(ring::Ring) = ring.λ
+
+# Does the canonical semisharding generator f = derive_f(N, B) shard the rank?
+# Its C_{2^m} coordinate is odd iff f is a quadratic non-residue mod Q — which
+# needs the factorization, so only the ring holder can check it. Ring generation
+# regenerates N until this holds.
+f_shards(ring::Ring) = jacobi(derive_f(ring.N, ring.B), ring.Q) == -1
 
 # don't print prime factors to avoid accidentally leaking them
 Base.show(io::IO, ring::Ring) =

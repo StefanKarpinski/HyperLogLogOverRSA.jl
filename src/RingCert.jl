@@ -43,11 +43,6 @@ function RingCert(ring::Ring{T}) where {T<:Integer}
     gcd(B, N-1) == 1 ||
         throw(ArgumentError("modulus: gcd(B, N-1) ≠ 1 (N=$N)"))
 
-    # the canonical semisharding generator must actually shard the rank: f's
-    # C_{2^m} coordinate must be odd, i.e. f must be a quadratic non-residue mod Q
-    f_shards(ring) ||
-        throw(ArgumentError("modulus: canonical f does not shard; regenerate N (N=$N)"))
-
     # Bézout & CRT coefficients
     _, u, v = gcdx(P, Q)
     uP = mod(widemul(u, P), N)
@@ -77,11 +72,6 @@ function RingCert(ring::Ring{T}) where {T<:Integer}
 
     return RingCert(ring.B, ring.m, N, sqrts)
 end
-
-# Does the canonical semisharding generator `f = derive_f(N, B)` shard the rank?
-# f's C_{2^m} coordinate is odd iff f is a quadratic non-residue mod Q — which
-# needs the factorization, so only the ring holder can check it.
-f_shards(ring::Ring) = jacobi(derive_f(ring.N, ring.B), factors(ring)[2]) == -1
 
 Base.show(io::IO, cert::RingCert) =
     print(io, "RingCert(B=$(cert.B), m=$(cert.m), N=$(cert.N))")

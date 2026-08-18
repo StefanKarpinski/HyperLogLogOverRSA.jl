@@ -99,7 +99,7 @@ end
     # A hash sharing a factor with N (Jacobi 0) reveals N as factorable, so
     # RingCert rejects the modulus rather than resampling. Vanishingly unlikely
     # for large N but routine at toy sizes; this seed yields such a ring.
-    ring = Ring(9, 4, 20; rng = MersenneTwister(6))
+    ring = Ring(9, 4, 20; rng = MersenneTwister(10))
     @test_throws ArgumentError RingCert(ring)
 end
 
@@ -137,10 +137,13 @@ end
         @test ring isa Ring{BigInt}
         check_ring(ring)
     end
-    # generate some small rings for comprehensive testing
+    # generate some small rings for comprehensive structural testing. These use
+    # the raw generator: they exercise the group structure and decoding, which
+    # are independent of the semisharding f, and at L=20 some (B,m) specs have no
+    # shardable modulus (so the protocol-level `Ring` would rightly reject them).
     rings = Ring{Int}[]
     for B = (3, 5, 9, 11), m = 3:5
-        ring = Ring(B, m, 20)
+        ring = _generate_ring(ring_type(20), B, m, 20, Random.default_rng())
         check_ring(ring)
         push!(rings, ring)
     end
