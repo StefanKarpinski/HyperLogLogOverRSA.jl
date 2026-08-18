@@ -139,12 +139,12 @@ end
     end
     # generate some small rings for comprehensive structural testing. These
     # exercise the group structure and decoding, which are independent of the
-    # semisharding f, so they are built with `shardable = false`: at L=20 some
+    # semisharding f, so they are built with `certifiable = false`: at L=20 some
     # (B,m) specs have no shardable modulus (which the default `Ring` rightly
     # rejects), but any modulus of the right shape works for structure.
     rings = Ring{Int}[]
     for B = (3, 5, 9, 11), m = 3:5
-        ring = Ring(B, m, 20; shardable = false)
+        ring = Ring(B, m, 20; certifiable = false)
         check_ring(ring)
         push!(rings, ring)
     end
