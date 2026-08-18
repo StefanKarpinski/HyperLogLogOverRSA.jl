@@ -71,12 +71,11 @@ function Client(cert::RingCert; rng::AbstractRNG = DEFAULT_RNG)
         throw(ArgumentError("cert: too few sqrts: $(length(cert.sqrts))"))
 
     # check provided square roots
-    τ = fixed_twist(N)
     for (i, r) in enumerate(cert.sqrts)
         r² = powermod(r, 2, N)
-        x = hash_into_ring(N, :sqrt_x, i; untwist=τ)
+        x = hash_into_J₊(N, :sqrt_x, i)
         x == r² && continue
-        y = hash_into_ring(N, :sqrt_y, i; untwist=τ)
+        y = hash_into_J₊(N, :sqrt_y, i)
         y == r² && continue
         z = modmul(x, y, N)
         z == r² && continue
