@@ -57,6 +57,17 @@ function hash_into_J₊(N::Integer, keys::Union{Integer,AbstractString,Symbol}..
     return j > 0 ? x : oftype(N, mod(widemul(oftype(N, 2), x), N))
 end
 
+# Derive the per-class generator f used for semisharding. It is a deterministic
+# function of N (recomputable by every client, so a malicious server cannot vary
+# it per client as a tracking tag): the B-th power of a hashed J_N^+ element.
+# Being a B-th power, f's C_B coordinate is zero, so x₀ f^h keeps the client's
+# own bucket b₀ fixed across every resource class while the rank still shards;
+# and 𝒥_N(f) = 𝒥_N(hash)^B = +1, so x₀ f^h stays in J_N^- for every h. The one
+# thing this construction does not guarantee is that f's C_{2^m} coordinate is
+# odd (needed for the rank to shard); the ring generator checks that with the
+# factorization and regenerates N otherwise (see `f_shards`).
+derive_f(N::Integer, B::Integer) = powermod(hash_into_J₊(N, :f), oftype(N, B), N)
+
 # Per-class exponent: HMAC-SHA-256 keyed by a hash of the client's secret x₀,
 # with the first 16 bytes read big-endian into a 128-bit integer. Keying by x₀
 # means the client can't bias its own draw and each class is an independent

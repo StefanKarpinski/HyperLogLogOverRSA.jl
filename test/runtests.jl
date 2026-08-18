@@ -191,15 +191,15 @@ end
 
 # false &&
 @testset "HLL gen & decode" begin
-    rings = [
-        Int64  => Ring(2^5+1, 8, 63)
-        Int128 => Ring(2^9+1, 16, 127)
-        BigInt => Ring(2^12-1, 32, 512)
+    specs = [
+        Int64  => (2^5+1, 8, 63)
+        Int128 => (2^9+1, 16, 127)
+        BigInt => (2^12-1, 32, 512)
     ]
-    for (T, ring) in rings
+    for (T, (B, m, L)) in specs
+        ring, cert = valid_ring_cert(B, m, L)
         check_ring(ring)
         @test ring isa Ring{T}
-        cert = RingCert(ring)
         @test cert isa RingCert{T}
         client = Client(cert)
         @test client isa Client{T}
@@ -207,25 +207,39 @@ end
         for uuid = 1:100
             Y = [hll_generate(client, "/package/$uuid") for _ = 1:100]
             H = [hll_decode(ring, y; bmap) for y in Y]
-            @test allunique(Y)
-            @test allequal(H)
+            @test allunique(Y)                  # tokens are unlinkable
+            @test allequal(H)                   # but decode to one stable (b,k) per class
         end
     end
 end
 
 # false &&
+@testset "semisharding" begin
+    # The client's bucket is its own b₀ in every class, while the rank shards.
+    ring, cert = valid_ring_cert(2^12-1, 8, 63; rng = Xoshiro(1))
+    bmap = bucket_map(ring)
+    client = Client(cert; rng = Xoshiro(2))
+    vals = [hll_decode(ring, hll_generate(client, "/c/$i"); bmap) for i = 1:200]
+    @test allequal(first.(vals))            # bucket b₀ fixed across all classes
+    @test !allequal(last.(vals))            # rank shards across classes
+    # distinct clients spread across buckets — this is what lets the server count
+    buckets = [hll_decode(ring, hll_generate(Client(cert)), bmap=bmap)[1] for _ = 1:64]
+    @test length(unique(buckets)) > 1
+end
+
+# false &&
 @testset "HLL estimate" begin
-    # End-to-end cardinality recovery through the whole protocol, with a seeded
-    # rng for determinism (most seeds pass; pick a new one if the PRNG changes).
-    # The rand(1:3) repeats collapse — same client+class decodes to one value —
-    # so the estimate counts the n distinct classes, not requests. HLL's relative
-    # error is ≈ 1.04/√B ≈ 1.6%; this seed lands at ~1.2%.
+    # End-to-end cardinality recovery: n distinct clients each send a few requests
+    # in ONE resource class, and the estimate recovers n unique clients. Under
+    # semisharding a client shares its bucket across classes, so it is distinct
+    # clients — not distinct classes — that populate a per-class sketch. Seeded
+    # for determinism; HLL relative error is ≈ 1.04/√B ≈ 1.6%.
     rng = Xoshiro(0)
-    ring = Ring(2^12-1, 16, 63; rng)
+    ring, cert = valid_ring_cert(2^12-1, 16, 63; rng)
     check_ring(ring)
-    client = Client(RingCert(ring; rng); rng)
     n = 5000
-    Y = [hll_generate(client, "/package/$id"; rng) for id = 1:n for _ = 1:rand(rng, 1:3)]
+    clients = [Client(cert; rng) for _ = 1:n]
+    Y = [hll_generate(c, "/registries"; rng) for c in clients for _ = 1:rand(rng, 1:3)]
     @test allunique(Y)                  # every emitted token is freshly randomized
     n̂ = hll_estimate(ring, Y)
     @test abs(n̂ - n)/n ≤ 0.05           # ≈ 3·RSE
