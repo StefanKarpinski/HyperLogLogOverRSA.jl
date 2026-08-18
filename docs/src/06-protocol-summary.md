@@ -44,6 +44,7 @@ On behalf of clients, the client implementor should choose acceptance criteria f
 - ``L_{\max}`` — maximum modulus bit-length
     - This is also mostly a sanity check to make sure that clients aren’t DoSed by being made to do arithmetic in some absurdly large modulus.
     - Example: $L_{\max} = 2^{20}$
+    - $m$, $B$ and $L$ are bounded independently, not coupled: modulus hardness is the server’s own integrity concern (see [Sizing the modulus](05-security-analysis.md#Sizing-the-modulus)), so a client need not enforce an $m$-vs-$L$ relationship for its own protection.
 - ``\alpha_{\min}`` — minimum certificate strength
     - This is the least number of modulus values a malicious server would expect to have to try in order to find one that passes certificate checks. The server can provide more square roots than this strength implies, but not fewer.
     - Example: $\alpha_{\min} = 2^{112}$
