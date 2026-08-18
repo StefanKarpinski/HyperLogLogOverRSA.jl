@@ -61,6 +61,10 @@ aggregated into a HyperLogLog sketch; repeated tokens from the same client
 collapse automatically, since they all decode to that client's single
 `(bucket, geometric)` value for the class.
 
+`tokens` is assumed to be the already-validated token set: the `𝒥_N(y) = -1`
+admission check happens upstream (Server step 5), so every token here is decoded
+and aggregated, with no validation repeated.
+
 Uses the improved estimator of Ertl (2017): unbiased across the whole
 cardinality range, with relative standard error ≈ `1.04/√B`. The result is
 capped at the number of tokens aggregated — there cannot be more unique clients

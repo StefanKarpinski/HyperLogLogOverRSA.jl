@@ -21,7 +21,7 @@ s^E = (x^D)^E = x^{DE} = x \bmod N.
 
  If $s^E$ doesn’t match the message, the signature is invalid. Anyone can check a signature, but only someone who knows $E$ can generate a valid one, so a valid signed message proves that the message is authentically from the party who knows $E$.
 
-We will not actually be using RSA rings for public-key cryptography or signatures. Instead, we’ll encode HyperLogLog values in $\Z_N^*$. Only the server who constructed $N$ and knows the factors $P$ and $Q$ can decode the HLL values. The structure of $\Z_N^*$ also allows the client to randomize what they send so that the HLL value and _only_ the HLL value is preserved by this randomization. This makes two clients with the same HLL value indistinguishable from the server’s perspective—the server learns the client’s HLL value and nothing else. Finally, this can all be done in such a way that the client only needs to generate and store a single “master key” value and can quickly and reproducibly generate resource-class-specific HLL values that are statistically independent from each other.
+We will not actually be using RSA rings for public-key cryptography or signatures. Instead, we’ll encode HyperLogLog values in $\Z_N^*$. Only the server who constructed $N$ and knows the factors $P$ and $Q$ can decode the HLL values. The structure of $\Z_N^*$ also allows the client to randomize what they send so that the HLL value and _only_ the HLL value is preserved by this randomization. This makes two clients with the same HLL value indistinguishable from the server’s perspective—the server learns the client’s HLL value and nothing else. Finally, this can all be done in such a way that the client only needs to generate and store a single “master key” value and can quickly and reproducibly generate resource-class-specific HLL values that are cryptographically independent from each other.
 
 ## Geometric RSA rings
 
@@ -311,7 +311,7 @@ The core HyperLogLog Over RSA construction is now in place. The server construct
 
 ## Master keys
 
-The construction so far assumes that each client chooses a single random $x \in J_N^-$ that encodes a single HLL sample. But one more ingredient is needed for the full protocol. [Resource class sharding](03-counting-users.md#Resource-class-sharding) requires that each client has separate, statistically independent secrets for each one of an unbounded set of resource classes. If a client reused the same $x$ in every resource class, it would have the same HLL value in every class. Clients must use a different, unlinkable $x$ value for each resource class.
+The construction so far assumes that each client chooses a single random $x \in J_N^-$ that encodes a single HLL sample. But one more ingredient is needed for the full protocol. [Resource class sharding](03-counting-users.md#Resource-class-sharding) requires that each client has separate, cryptographically independent secrets for each one of an unbounded set of resource classes. If a client reused the same $x$ in every resource class, it would have the same HLL value in every class. Clients must use a different, unlinkable $x$ value for each resource class.
 
 ### Possible approaches
 
