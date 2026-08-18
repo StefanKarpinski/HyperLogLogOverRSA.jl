@@ -46,14 +46,14 @@ end
 # Hash into J_N^+ (positive Jacobi symbol), as the certificate challenge scheme
 # requires. A hashed element already has positive Jacobi symbol half the time;
 # when it is negative we multiply by 2, which lies in J_N^- whenever N ≡ 5 mod 8
-# (the ring shape guarantees this), mapping it into J_N^+. A zero Jacobi symbol
-# means the hash shares a factor with N — so N is factorable — and we reject N
-# rather than resample: for a valid semiprime this never happens (density
-# ~2/√N), and when it does the modulus is broken.
+# (the ring shape guarantees this), mapping it into J_N^+. Returns `nothing` when
+# the hash is a non-unit (zero Jacobi symbol): it shares a factor with N, so N is
+# factorable and has no such element. For a valid semiprime this never happens
+# (density ~2/√N); callers treat `nothing` as a broken/unusable modulus.
 function hash_into_J₊(N::Integer, keys::Union{Integer,AbstractString,Symbol}...)
     x = hash_into_ring(N, keys...)
     j = jacobi(x, N)
-    j == 0 && throw(ArgumentError("hash is a non-unit ⇒ N is factorable (N=$N)"))
+    j == 0 && return nothing
     return j > 0 ? x : oftype(N, mod(widemul(oftype(N, 2), x), N))
 end
 
@@ -65,8 +65,12 @@ end
 # and 𝒥_N(f) = 𝒥_N(hash)^B = +1, so x₀ f^h stays in J_N^- for every h. The one
 # thing this construction does not guarantee is that f's C_{2^m} coordinate is
 # odd (needed for the rank to shard); the ring generator checks that with the
-# factorization and regenerates N otherwise (see `f_shards`).
-derive_f(N::Integer, B::Integer) = powermod(hash_into_J₊(N, :f), oftype(N, B), N)
+# factorization (jacobi(f, Q) == -1) and regenerates N otherwise. Returns
+# `nothing` if the :f hash is a non-unit, i.e. N is factorable and f cannot exist.
+function derive_f(N::Integer, B::Integer)
+    h = hash_into_J₊(N, :f)
+    h === nothing ? nothing : powermod(h, oftype(N, B), N)
+end
 
 # Per-class exponent: HMAC-SHA-256 keyed by a hash of the client's secret x₀,
 # with the first 16 bytes read big-endian into a 128-bit integer. Keying by x₀

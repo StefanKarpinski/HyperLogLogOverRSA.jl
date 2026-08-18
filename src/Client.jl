@@ -70,8 +70,10 @@ function Client(cert::RingCert; rng::AbstractRNG = DEFAULT_RNG)
     for (i, r) in enumerate(cert.sqrts)
         r² = powermod(r, 2, N)
         x = hash_into_J₊(N, :sqrt_x, i)
-        x == r² && continue
         y = hash_into_J₊(N, :sqrt_y, i)
+        (x === nothing || y === nothing) &&
+            throw(ArgumentError("cert: non-unit challenge ⇒ N is factorable (N=$N)"))
+        x == r² && continue
         y == r² && continue
         z = modmul(x, y, N)
         z == r² && continue
@@ -80,6 +82,7 @@ function Client(cert::RingCert; rng::AbstractRNG = DEFAULT_RNG)
 
     # cert is valid, N is safe; recompute the canonical semisharding generator
     f = derive_f(N, B)
+    f === nothing && throw(ArgumentError("cert: N is factorable (non-unit f)"))
     Client(B, m, N, f; rng)
 end
 

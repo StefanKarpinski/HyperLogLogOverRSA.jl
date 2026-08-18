@@ -62,8 +62,10 @@ function RingCert(ring::Ring{T}) where {T<:Integer}
     sqrts = T[]
     for i = 1:SQRT_SAMPLES
         x = hash_into_J₊(N, :sqrt_x, i)
-        push_sqrt_mod_N(x) && continue
         y = hash_into_J₊(N, :sqrt_y, i)
+        (x === nothing || y === nothing) &&
+            throw(ArgumentError("modulus: non-unit challenge ⇒ N is factorable (N=$N)"))
+        push_sqrt_mod_N(x) && continue
         push_sqrt_mod_N(y) && continue
         z = modmul(x, y, N)
         push_sqrt_mod_N(z) && continue

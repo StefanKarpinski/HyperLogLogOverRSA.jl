@@ -59,7 +59,11 @@ function Ring{T}(
     !certifiable && return generate_ring(T, B, m, L, rng)
     for _ in 1:1000
         ring = generate_ring(T, B, m, L, rng)
-        jacobi(derive_f(ring.N, ring.B), ring.Q) == -1 && return ring
+        # certifiable ⟺ the canonical f is a shardable unit: derive_f is not
+        # `nothing` (its :f hash is a unit, i.e. N not factorable) and f's C_{2^m}
+        # coordinate is odd (rank shards) ⟺ jacobi(f, Q) == -1
+        f = derive_f(ring.N, ring.B)
+        f !== nothing && jacobi(f, ring.Q) == -1 && return ring
     end
     throw(ArgumentError("no modulus with a shardable f for spec (B=$B, m=$m, L=$L)"))
 end
