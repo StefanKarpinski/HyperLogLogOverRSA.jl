@@ -38,7 +38,7 @@ If you’re still reading and you can accept the privacy model of HyperLogLog co
 
 ## Layer 3 — RSA, for integrity only
 
-The two layers above completely define what the server can learn. The RSA layer’s sole job is to stop *misbehaving clients* from skewing the counts. With plaintext HyperLogLog, one client could spoof a handful of requests carrying large geometric values and inflate an estimate arbitrarily. RSA fixes this by letting clients sample a HyperLogLog value *without being able to see or choose it*—so the only way to push a count up is to send more requests, at a near-optimal cost of about 1.44 requests per unit of inflation (the naive unique-ID scheme’s cost is exactly 1).
+The two layers above completely define what the server can learn. The RSA layer’s sole job is to stop *misbehaving clients* from skewing the counts. With plaintext HyperLogLog, one client could spoof a handful of requests carrying large geometric values and inflate an estimate arbitrarily. RSA fixes this by letting clients sample a HyperLogLog value *without being able to see or choose it*—so the only way to push a count up is to send more requests, and each forged request buys only about 1.44 units of inflation, barely worse than the naive unique-ID scheme’s 1 unit per request.
 
 Two proofs make the privacy promise precise:
 
