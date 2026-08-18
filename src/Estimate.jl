@@ -88,5 +88,5 @@ function hll_estimate(ring::Ring, tokens::AbstractVector)
     d += B*τ(1 - C[m+1]/B)*exp2(1-m)      # saturated registers (r = m)
     # cap at the request count: unique clients ≤ requests, and this is what
     # bounds inflation from a curated flat-sketch batch (see security analysis)
-    return min(α_∞ * B^2 / d, float(length(tokens)))
+    return min(α_∞ * B^2 / d, length(tokens))
 end
