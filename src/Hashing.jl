@@ -42,7 +42,7 @@ function hash_into_J₊(N::Integer, keys::Union{Integer,AbstractString,Symbol}..
     x = hash_into_ring(N, keys...)
     j = jacobi(x, N)
     j == 0 && throw(ArgumentError("hash is a non-unit ⇒ N is factorable (N=$N)"))
-    return j == -1 ? oftype(N, mod(widemul(oftype(N, 2), x), N)) : x
+    return j > 0 ? x : oftype(N, mod(widemul(oftype(N, 2), x), N))
 end
 
 # Per-class exponent: HMAC-SHA-256 keyed by a hash of the client's secret x₀,
