@@ -43,19 +43,19 @@ function hash_into_ring(N::Integer, keys::Union{Integer,AbstractString,Symbol}..
     return oftype(N, mod(x, N))
 end
 
-# Hash into J_N^+ (positive Jacobi symbol), as the certificate challenge scheme
-# requires. A hashed element already has positive Jacobi symbol half the time;
-# when it is negative we multiply by 2, which lies in J_N^- whenever N ≡ 5 mod 8
-# (the ring shape guarantees this), mapping it into J_N^+. A zero Jacobi symbol
-# means the hash shares a factor with N — so N is factorable — and we reject N
-# rather than resample: for a valid semiprime this never happens (density
-# ~2/√N), and when it does the modulus is broken.
+# Hash into ℤ_N \ J_N^- (Jacobi symbol ≠ -1): return the hash, or twist by 2 when
+# it lands in J_N^- (𝒥_N(2) = -1 for N ≡ 5 mod 8). Total — a non-unit hash (Jacobi
+# 0, ~2/√N) passes through, which is harmless and happens practically never for realistically large N.
 function hash_into_J₊(N::Integer, keys::Union{Integer,AbstractString,Symbol}...)
     x = hash_into_ring(N, keys...)
-    j = jacobi(x, N)
-    j == 0 && throw(ArgumentError("hash is a non-unit ⇒ N is factorable (N=$N)"))
-    return j > 0 ? x : oftype(N, mod(widemul(oftype(N, 2), x), N))
+    jacobi(x, N) == -1 ? oftype(N, mod(widemul(oftype(N, 2), x), N)) : x
 end
+
+# The per-class generator f: the B-th power of a hash into J_N^+. A fixed function
+# of N, so a malicious server can't vary it per client as a tag; the B-th power
+# zeroes f's C_B coordinate, fixing the client's bucket across classes (see the
+# writeup). `Ring` checks that the resulting f is a unit that shards the rank.
+derive_f(N::Integer, B::Integer) = powermod(hash_into_J₊(N, :f), oftype(N, B), N)
 
 # Per-class exponent: HMAC-SHA-256 keyed by a hash of the client's secret x₀,
 # with the first 16 bytes read big-endian into a 128-bit integer. Keying by x₀

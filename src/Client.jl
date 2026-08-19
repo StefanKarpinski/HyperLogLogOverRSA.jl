@@ -24,7 +24,7 @@ struct Client{T<:Integer}
     B :: Int # bucket factor (odd)
     m :: Int # max geometric sample size
     N :: T   # ring modulus
-    g :: T   # server-provided, common ring semigenerator
+    f :: T   # per-class generator, derived deterministically from N
     x₀ :: T  # client-specific random Jacobi twist element
 end
 
@@ -32,15 +32,15 @@ function Client(
     B :: Int,
     m :: Int,
     N :: T,
-    g :: T;
+    f :: T;
     rng :: AbstractRNG = DEFAULT_RNG,
 ) where {T<:Integer}
     x₀ = rand_jacobi_twist(N; rng)
-    Client(B, m, N, g, x₀)
+    Client(B, m, N, f, x₀)
 end
 
 function Client(cert::RingCert; rng::AbstractRNG = DEFAULT_RNG)
-    B, m, N, g = cert.B, cert.m, cert.N, cert.g
+    B, m, N = cert.B, cert.m, cert.N
 
     # check shape parameters
     B ≤ B_max ||
@@ -62,10 +62,6 @@ function Client(cert::RingCert; rng::AbstractRNG = DEFAULT_RNG)
     gcd(B, N-1) == 1 ||
         throw(ArgumentError("cert: gcd(B, N-1) ≠ 1: $N"))
 
-    # check semigenerator Jacobi symbol
-    jacobi(g, N) == 1 ||
-        throw(ArgumentError("cert: invalid semigenerator: $g"))
-
     # check that cert contains enough square roots
     (8/5)^length(cert.sqrts) ≥ α_min ||
         throw(ArgumentError("cert: too few sqrts: $(length(cert.sqrts))"))
@@ -82,8 +78,9 @@ function Client(cert::RingCert; rng::AbstractRNG = DEFAULT_RNG)
         throw(ArgumentError("cert: invalid sqrt (N=$N)"))
     end
 
-    # cert is valid, N is safe
-    Client(B, m, N, g; rng)
+    # cert is valid, N is safe; recompute the per-class generator
+    f = derive_f(N, B)
+    Client(B, m, N, f; rng)
 end
 
 Base.show(io::IO, c::Client) =
@@ -103,9 +100,9 @@ affect the decoded value — only the token's unlinkable encoding — so seeding
 makes token output reproducible without changing what the token decodes to.
 """
 function hll_generate(client::Client, class::Any="/registries"; rng::AbstractRNG = DEFAULT_RNG)
-    B, m, N, g, x₀ = client.B, client.m, client.N, client.g, client.x₀
+    B, m, N, f, x₀ = client.B, client.m, client.N, client.f, client.x₀
     h = hash_resource_class(x₀, class)         # h = H(x₀, class)
-    x = modmul(x₀, powermod(g, h, N), N)       # x = x₀ g^h
+    x = modmul(x₀, powermod(f, h, N), N)       # x = x₀ f^h
     z = rand(rng, 1:N-1)                       # z ∈ [1, N)
     w = powermod(z, oftype(N, B) << (m-1), N)  # w = z^(B 2^(m-1))
     w = randsign(rng, w, N)                    # w = ±z^(B 2^(m-1))

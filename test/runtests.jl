@@ -96,11 +96,20 @@ end
             @test typeof(x) == T
         end
     end
-    # A hash sharing a factor with N (Jacobi 0) reveals N as factorable, so
-    # RingCert rejects the modulus rather than resampling. Vanishingly unlikely
-    # for large N but routine at toy sizes; this seed yields such a ring.
-    ring = Ring(9, 4, 20; rng = MersenneTwister(6))
-    @test_throws ArgumentError RingCert(ring)
+    # total for N ≡ 5 mod 8: always Jacobi ≠ -1, even a non-unit hash (no `nothing`)
+    for N in 5:8:301, i in 1:8
+        @test jacobi(hash_into_J₊(N, :t, i), N) != -1
+    end
+    @test jacobi(hash_into_J₊(21, :t, 1), 21) == 0  # a non-unit hash, returned as-is
+end
+
+@testset "cert rejection" begin
+    # the client rejects a cert whose square roots don't verify (where an unsound
+    # modulus is caught — the server-side check can't run without the factors)
+    ring = Ring(2^5+1, 8, 63); cert = RingCert(ring)
+    @test Client(cert) isa Client                  # the honest cert is accepted
+    bad = RingCert(cert.B, cert.m, cert.N, [cert.sqrts[1] + 1; cert.sqrts[2:end]])
+    @test_throws ArgumentError Client(bad)         # a corrupted square root is rejected
 end
 
 @testset "hash_into_ring uniformity margin" begin
@@ -137,10 +146,11 @@ end
         @test ring isa Ring{BigInt}
         check_ring(ring)
     end
-    # generate some small rings for comprehensive testing
+    # small rings for structural tests (group structure and decoding, independent
+    # of f); certifiable = false since some tiny (B,m) specs have no shardable f
     rings = Ring{Int}[]
     for B = (3, 5, 9, 11), m = 3:5
-        ring = Ring(B, m, 20)
+        ring = Ring(B, m, 20; certifiable = false)
         check_ring(ring)
         push!(rings, ring)
     end
@@ -191,15 +201,15 @@ end
 
 # false &&
 @testset "HLL gen & decode" begin
-    rings = [
-        Int64  => Ring(2^5+1, 8, 63)
-        Int128 => Ring(2^9+1, 16, 127)
-        BigInt => Ring(2^12-1, 32, 512)
+    specs = [
+        Int64  => (2^5+1, 8, 63)
+        Int128 => (2^9+1, 16, 127)
+        BigInt => (2^12-1, 32, 512)
     ]
-    for (T, ring) in rings
+    for (T, (B, m, L)) in specs
+        ring = Ring(B, m, L); cert = RingCert(ring)
         check_ring(ring)
         @test ring isa Ring{T}
-        cert = RingCert(ring)
         @test cert isa RingCert{T}
         client = Client(cert)
         @test client isa Client{T}
@@ -207,29 +217,41 @@ end
         for uuid = 1:100
             Y = [hll_generate(client, "/package/$uuid") for _ = 1:100]
             H = [hll_decode(ring, y; bmap) for y in Y]
-            @test allunique(Y)
-            @test allequal(H)
+            @test allunique(Y)  # tokens are unlinkable
+            @test allequal(H)   # but decode to one stable (b,k) per class
         end
     end
 end
 
 # false &&
+@testset "semisharding" begin
+    # The client's bucket is its own b₀ in every class, while the rank shards.
+    ring = Ring(2^12-1, 8, 63; rng = Xoshiro(1)); cert = RingCert(ring)
+    bmap = bucket_map(ring)
+    client = Client(cert; rng = Xoshiro(2))
+    vals = [hll_decode(ring, hll_generate(client, "/c/$i"); bmap) for i = 1:200]
+    @test allequal(first.(vals))  # bucket b₀ fixed across all classes
+    @test !allequal(last.(vals))  # rank shards across classes
+    # distinct clients spread across buckets — this is what lets the server count
+    buckets = [hll_decode(ring, hll_generate(Client(cert)), bmap=bmap)[1] for _ = 1:64]
+    @test length(unique(buckets)) > 1
+end
+
+# false &&
 @testset "HLL estimate" begin
-    # End-to-end cardinality recovery through the whole protocol, with a seeded
-    # rng for determinism (most seeds pass; pick a new one if the PRNG changes).
-    # The rand(1:3) repeats collapse — same client+class decodes to one value —
-    # so the estimate counts the n distinct classes, not requests. HLL's relative
-    # error is ≈ 1.04/√B ≈ 1.6%; this seed lands at ~1.2%.
+    # n distinct clients in one class; the estimate should recover n. It's distinct
+    # clients — not classes — that populate the sketch, since a client's bucket is
+    # fixed across classes. Seeded for determinism; HLL error ≈ 1.04/√B.
     rng = Xoshiro(0)
-    ring = Ring(2^12-1, 16, 63; rng)
+    ring = Ring(2^12-1, 16, 63; rng); cert = RingCert(ring)
     check_ring(ring)
-    client = Client(RingCert(ring; rng); rng)
     n = 5000
-    Y = [hll_generate(client, "/package/$id"; rng) for id = 1:n for _ = 1:rand(rng, 1:3)]
-    @test allunique(Y)                  # every emitted token is freshly randomized
+    clients = [Client(cert; rng) for _ = 1:n]
+    Y = [hll_generate(c, "/registries"; rng) for c in clients for _ = 1:rand(rng, 1:3)]
+    @test allunique(Y)  # every emitted token is freshly randomized
     n̂ = hll_estimate(ring, Y)
-    @test abs(n̂ - n)/n ≤ 0.05           # ≈ 3·RSE
-    @test n̂ ≤ length(Y)                  # never more unique clients than requests
+    @test abs(n̂ - n)/n ≤ 0.05  # ≈ 3·RSE
+    @test n̂ ≤ length(Y)  # never more unique clients than requests
 end
 
 @testset "HLL estimate request-count cap" begin

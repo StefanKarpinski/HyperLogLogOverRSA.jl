@@ -31,6 +31,11 @@ ring without learning its factorization.
 
 `rng` (any `AbstractRNG`, default a `RandomDevice`) is the source of randomness
 for choosing the primes; pass a seeded RNG for a reproducible ring.
+
+By default the ring is *certifiable*: its canonical per-class generator (see
+[`Client`](@ref)) is guaranteed to shard the geometric rank, which the generator
+enforces by regenerating `N` until it holds. Pass `certifiable = false` to skip
+that and return any modulus of the right shape (e.g. for structural testing).
 """
 struct Ring{T<:Integer}
     # general shape
@@ -47,7 +52,20 @@ function Ring{T}(
     m :: Integer, # max geometric sample size
     L :: Integer; # bit length of modulus
     rng :: AbstractRNG = DEFAULT_RNG,
+    certifiable :: Bool = true,
 ) where {T<:Integer}
+    !certifiable && return generate_ring(T, B, m, L, rng)
+    for _ in 1:1000
+        ring = generate_ring(T, B, m, L, rng)
+        # accept only a certifiable modulus: canonical f must be a unit
+        # (jacobi(f, N) ≠ 0) that shards the rank (jacobi(f, Q) == -1)
+        f = derive_f(ring.N, ring.B)
+        jacobi(f, ring.N) != 0 && jacobi(f, ring.Q) == -1 && return ring
+    end
+    throw(ArgumentError("no modulus with a shardable f for spec (B=$B, m=$m, L=$L)"))
+end
+
+function generate_ring(::Type{T}, B::Integer, m::Integer, L::Integer, rng::AbstractRNG) where {T<:Integer}
     # argument checks
     isodd(B) || throw(ArgumentError("B must be odd"))
     m ≥ 3 || throw(ArgumentError("m must be ≥ 3"))
@@ -146,8 +164,9 @@ function Ring(
     m :: Integer, # max geometric sample size
     L :: Integer; # bit length of modulus
     rng :: AbstractRNG = DEFAULT_RNG,
+    certifiable :: Bool = true,
 )
-    Ring{ring_type(L)}(B, m, L; rng)
+    Ring{ring_type(L)}(B, m, L; rng, certifiable)
 end
 
 Base.getproperty(ring::Ring, name::Symbol) =
