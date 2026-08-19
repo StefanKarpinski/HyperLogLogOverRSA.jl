@@ -34,8 +34,8 @@ for choosing the primes; pass a seeded RNG for a reproducible ring.
 
 By default the ring is *certifiable*: it meets every criterion the protocol
 needs beyond the basic shape. Currently that is one thing — its canonical
-semisharding generator (see [`Client`](@ref)) shards the geometric rank, which
-the generator enforces by regenerating `N` until it holds. Pass
+per-class generator (see [`Client`](@ref)) shards the geometric rank, which the
+generator enforces by regenerating `N` until it holds. Pass
 `certifiable = false` to skip these criteria and return any modulus of the right
 shape — useful for structural work, where they play no role.
 """

@@ -24,7 +24,7 @@ struct Client{T<:Integer}
     B :: Int # bucket factor (odd)
     m :: Int # max geometric sample size
     N :: T   # ring modulus
-    f :: T   # per-class generator, derived deterministically from N (semisharding)
+    f :: T   # per-class generator, derived deterministically from N
     x₀ :: T  # client-specific random Jacobi twist element
 end
 
@@ -78,7 +78,7 @@ function Client(cert::RingCert; rng::AbstractRNG = DEFAULT_RNG)
         throw(ArgumentError("cert: invalid sqrt (N=$N)"))
     end
 
-    # cert is valid, N is safe; recompute the canonical semisharding generator
+    # cert is valid, N is safe; recompute the per-class generator
     f = derive_f(N, B)
     Client(B, m, N, f; rng)
 end
@@ -95,12 +95,6 @@ token, so two tokens from the same client are unlinkable; yet they all decode
 (by the ring holder) to that client's single, stable HLL value for the class.
 The client cannot itself decode or bias the value it samples.
 
-This *semishards*: using the per-class generator `f` (whose `C_B` coordinate is
-zero) the client's **bucket is its own `b₀` in every class**, while the
-**geometric rank shards** per class. Only the rank — the part that carries the
-rare, identifying values — is randomized across classes; the bucket is left
-fixed on purpose (see the resource-class sharding discussion).
-
 `rng` (default a `RandomDevice`) supplies the per-token randomness. It does not
 affect the decoded value — only the token's unlinkable encoding — so seeding it
 makes token output reproducible without changing what the token decodes to.
@@ -108,7 +102,7 @@ makes token output reproducible without changing what the token decodes to.
 function hll_generate(client::Client, class::Any="/registries"; rng::AbstractRNG = DEFAULT_RNG)
     B, m, N, f, x₀ = client.B, client.m, client.N, client.f, client.x₀
     h = hash_resource_class(x₀, class)         # h = H(x₀, class)
-    x = modmul(x₀, powermod(f, h, N), N)       # x = x₀ f^h (semisharding)
+    x = modmul(x₀, powermod(f, h, N), N)       # x = x₀ f^h
     z = rand(rng, 1:N-1)                       # z ∈ [1, N)
     w = powermod(z, oftype(N, B) << (m-1), N)  # w = z^(B 2^(m-1))
     w = randsign(rng, w, N)                    # w = ±z^(B 2^(m-1))

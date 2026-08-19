@@ -57,7 +57,7 @@ function hash_into_J₊(N::Integer, keys::Union{Integer,AbstractString,Symbol}..
     jacobi(x, N) == -1 ? oftype(N, mod(widemul(oftype(N, 2), x), N)) : x
 end
 
-# Derive the per-class generator f used for semisharding. It is a deterministic
+# Derive the per-class generator f. It is a deterministic
 # function of N (recomputable by every client, so a malicious server cannot vary
 # it per client as a tracking tag): the B-th power of a hashed J_N^+ element.
 # Being a B-th power, f's C_B coordinate is zero, so x₀ f^h keeps the client's

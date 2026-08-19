@@ -22,11 +22,3 @@ function check_ring(ring::Ring)
     @test mod(ring.N, 8) == 5
     @test jacobi(ring.N - 1, ring.N) == +1
 end
-
-# A ring of the given size together with its certificate. Ring generation
-# already guarantees a shardable f, so the certificate never rejects on that
-# account and no retry is needed here.
-function valid_ring_cert(B, m, L; rng = Random.default_rng())
-    ring = Ring(B, m, L; rng)
-    return ring, RingCert(ring)
-end

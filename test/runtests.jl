@@ -108,7 +108,7 @@ end
 @testset "cert rejection" begin
     # A client rejects a certificate whose square roots don't verify — the
     # client-side check is where an unsound (e.g. >2-prime) modulus is caught.
-    ring, cert = valid_ring_cert(2^5+1, 8, 63)
+    ring = Ring(2^5+1, 8, 63); cert = RingCert(ring)
     @test Client(cert) isa Client                  # the honest cert is accepted
     bad = RingCert(cert.B, cert.m, cert.N, [cert.sqrts[1] + 1; cert.sqrts[2:end]])
     @test_throws ArgumentError Client(bad)         # a corrupted square root is rejected
@@ -212,7 +212,7 @@ end
         BigInt => (2^12-1, 32, 512)
     ]
     for (T, (B, m, L)) in specs
-        ring, cert = valid_ring_cert(B, m, L)
+        ring = Ring(B, m, L); cert = RingCert(ring)
         check_ring(ring)
         @test ring isa Ring{T}
         @test cert isa RingCert{T}
@@ -231,7 +231,7 @@ end
 # false &&
 @testset "semisharding" begin
     # The client's bucket is its own b₀ in every class, while the rank shards.
-    ring, cert = valid_ring_cert(2^12-1, 8, 63; rng = Xoshiro(1))
+    ring = Ring(2^12-1, 8, 63; rng = Xoshiro(1)); cert = RingCert(ring)
     bmap = bucket_map(ring)
     client = Client(cert; rng = Xoshiro(2))
     vals = [hll_decode(ring, hll_generate(client, "/c/$i"); bmap) for i = 1:200]
@@ -250,7 +250,7 @@ end
     # clients — not distinct classes — that populate a per-class sketch. Seeded
     # for determinism; HLL relative error is ≈ 1.04/√B ≈ 1.6%.
     rng = Xoshiro(0)
-    ring, cert = valid_ring_cert(2^12-1, 16, 63; rng)
+    ring = Ring(2^12-1, 16, 63; rng); cert = RingCert(ring)
     check_ring(ring)
     n = 5000
     clients = [Client(cert; rng) for _ = 1:n]
