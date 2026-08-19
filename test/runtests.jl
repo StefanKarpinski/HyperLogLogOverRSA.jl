@@ -96,11 +96,22 @@ end
             @test typeof(x) == T
         end
     end
-    # A hash sharing a factor with N (Jacobi 0) reveals N as factorable, so
-    # RingCert rejects the modulus rather than resampling. Vanishingly unlikely
-    # for large N but routine at toy sizes; this seed yields such a ring.
-    ring = Ring(9, 4, 20; rng = MersenneTwister(10))
-    @test_throws ArgumentError RingCert(ring)
+    # It is a total function into ℤ_N \ J_N^-: for a modulus N ≡ 5 mod 8 (where
+    # 𝒥_N(2) = -1, so the ×2 twist works) the result always has Jacobi symbol
+    # ≠ -1, even when the raw hash is a non-unit — no throw, no `nothing`.
+    for N in 5:8:301, i in 1:8
+        @test jacobi(hash_into_J₊(N, :t, i), N) != -1
+    end
+    @test jacobi(hash_into_J₊(21, :t, 1), 21) == 0  # raw hash is a non-unit, returned as-is
+end
+
+@testset "cert rejection" begin
+    # A client rejects a certificate whose square roots don't verify — the
+    # client-side check is where an unsound (e.g. >2-prime) modulus is caught.
+    ring, cert = valid_ring_cert(2^5+1, 8, 63)
+    @test Client(cert) isa Client                  # the honest cert is accepted
+    bad = RingCert(cert.B, cert.m, cert.N, [cert.sqrts[1] + 1; cert.sqrts[2:end]])
+    @test_throws ArgumentError Client(bad)         # a corrupted square root is rejected
 end
 
 @testset "hash_into_ring uniformity margin" begin

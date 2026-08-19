@@ -43,18 +43,18 @@ function hash_into_ring(N::Integer, keys::Union{Integer,AbstractString,Symbol}..
     return oftype(N, mod(x, N))
 end
 
-# Hash into J_N^+ (positive Jacobi symbol), as the certificate challenge scheme
-# requires. A hashed element already has positive Jacobi symbol half the time;
-# when it is negative we multiply by 2, which lies in J_N^- whenever N ≡ 5 mod 8
-# (the ring shape guarantees this), mapping it into J_N^+. Returns `nothing` when
-# the hash is a non-unit (zero Jacobi symbol): it shares a factor with N, so N is
-# factorable and has no such element. For a valid semiprime this never happens
-# (density ~2/√N); callers treat `nothing` as a broken/unusable modulus.
+# Hash into ℤ_N \ J_N^-: a value whose Jacobi symbol is not -1 — so in J_N^+, or
+# (with probability ~2/√N) a non-unit. A raw hash already has Jacobi symbol ≠ -1
+# half the time; when it is -1 we multiply by 2, which flips it into J_N^+ because
+# 𝒥_N(2) = -1 for N ≡ 5 mod 8 (the ring shape guarantees this). This is a *total*
+# function — it never fails — and that is safe: the certificate's covering lemma
+# (one of x, y, xy is a quadratic residue) holds for the whole set {𝒥_N ≠ -1} on a
+# squarefree two-prime N, not just J_N^+, and push_sqrt_mod_N handles a non-unit
+# fine (modsqrt(0, P) = 0). A non-unit would expose a factor of N, so it cannot
+# arise for a valid semiprime; callers use the result without checking.
 function hash_into_J₊(N::Integer, keys::Union{Integer,AbstractString,Symbol}...)
     x = hash_into_ring(N, keys...)
-    j = jacobi(x, N)
-    j == 0 && return nothing
-    return j > 0 ? x : oftype(N, mod(widemul(oftype(N, 2), x), N))
+    jacobi(x, N) == -1 ? oftype(N, mod(widemul(oftype(N, 2), x), N)) : x
 end
 
 # Derive the per-class generator f used for semisharding. It is a deterministic
@@ -62,15 +62,12 @@ end
 # it per client as a tracking tag): the B-th power of a hashed J_N^+ element.
 # Being a B-th power, f's C_B coordinate is zero, so x₀ f^h keeps the client's
 # own bucket b₀ fixed across every resource class while the rank still shards;
-# and 𝒥_N(f) = 𝒥_N(hash)^B = +1, so x₀ f^h stays in J_N^- for every h. The one
-# thing this construction does not guarantee is that f's C_{2^m} coordinate is
-# odd (needed for the rank to shard); the ring generator checks that with the
-# factorization (jacobi(f, Q) == -1) and regenerates N otherwise. Returns
-# `nothing` if the :f hash is a non-unit, i.e. N is factorable and f cannot exist.
-function derive_f(N::Integer, B::Integer)
-    h = hash_into_J₊(N, :f)
-    h === nothing ? nothing : powermod(h, oftype(N, B), N)
-end
+# and 𝒥_N(f) = 𝒥_N(hash)^B = +1, so x₀ f^h stays in J_N^- for every h. The ring
+# generator additionally checks that f is a unit (jacobi(f, N) ≠ 0 — a non-unit :f
+# hash, negligibly rare, would break token generation) and that its C_{2^m}
+# coordinate is odd (jacobi(f, Q) == -1, needed for the rank to shard),
+# regenerating N otherwise. Given a certified ring, a client uses f as-is.
+derive_f(N::Integer, B::Integer) = powermod(hash_into_J₊(N, :f), oftype(N, B), N)
 
 # Per-class exponent: HMAC-SHA-256 keyed by a hash of the client's secret x₀,
 # with the first 16 bytes read big-endian into a 128-bit integer. Keying by x₀
