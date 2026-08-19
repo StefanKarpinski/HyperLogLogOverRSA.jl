@@ -45,7 +45,7 @@ end
 
 # Hash into ℤ_N \ J_N^- (Jacobi symbol ≠ -1): return the hash, or twist by 2 when
 # it lands in J_N^- (𝒥_N(2) = -1 for N ≡ 5 mod 8). Total — a non-unit hash (Jacobi
-# 0, ~2/√N) passes through, which is harmless and never happens for a valid N.
+# 0, ~2/√N) passes through, which is harmless and happens practically never for realistically large N.
 function hash_into_J₊(N::Integer, keys::Union{Integer,AbstractString,Symbol}...)
     x = hash_into_ring(N, keys...)
     jacobi(x, N) == -1 ? oftype(N, mod(widemul(oftype(N, 2), x), N)) : x
