@@ -96,18 +96,16 @@ end
             @test typeof(x) == T
         end
     end
-    # It is a total function into ℤ_N \ J_N^-: for a modulus N ≡ 5 mod 8 (where
-    # 𝒥_N(2) = -1, so the ×2 twist works) the result always has Jacobi symbol
-    # ≠ -1, even when the raw hash is a non-unit — no throw, no `nothing`.
+    # total for N ≡ 5 mod 8: always Jacobi ≠ -1, even a non-unit hash (no `nothing`)
     for N in 5:8:301, i in 1:8
         @test jacobi(hash_into_J₊(N, :t, i), N) != -1
     end
-    @test jacobi(hash_into_J₊(21, :t, 1), 21) == 0  # raw hash is a non-unit, returned as-is
+    @test jacobi(hash_into_J₊(21, :t, 1), 21) == 0  # a non-unit hash, returned as-is
 end
 
 @testset "cert rejection" begin
-    # A client rejects a certificate whose square roots don't verify — the
-    # client-side check is where an unsound (e.g. >2-prime) modulus is caught.
+    # the client rejects a cert whose square roots don't verify (where an unsound
+    # modulus is caught — the server-side check can't run without the factors)
     ring = Ring(2^5+1, 8, 63); cert = RingCert(ring)
     @test Client(cert) isa Client                  # the honest cert is accepted
     bad = RingCert(cert.B, cert.m, cert.N, [cert.sqrts[1] + 1; cert.sqrts[2:end]])
@@ -148,11 +146,8 @@ end
         @test ring isa Ring{BigInt}
         check_ring(ring)
     end
-    # generate some small rings for comprehensive structural testing. These
-    # exercise the group structure and decoding, which are independent of the
-    # semisharding f, so they are built with `certifiable = false`: at L=20 some
-    # (B,m) specs have no shardable modulus (which the default `Ring` rightly
-    # rejects), but any modulus of the right shape works for structure.
+    # small rings for structural tests (group structure and decoding, independent
+    # of f); certifiable = false since some tiny (B,m) specs have no shardable f
     rings = Ring{Int}[]
     for B = (3, 5, 9, 11), m = 3:5
         ring = Ring(B, m, 20; certifiable = false)
@@ -244,11 +239,9 @@ end
 
 # false &&
 @testset "HLL estimate" begin
-    # End-to-end cardinality recovery: n distinct clients each send a few requests
-    # in ONE resource class, and the estimate recovers n unique clients. Under
-    # semisharding a client shares its bucket across classes, so it is distinct
-    # clients — not distinct classes — that populate a per-class sketch. Seeded
-    # for determinism; HLL relative error is ≈ 1.04/√B ≈ 1.6%.
+    # n distinct clients in one class; the estimate should recover n. It's distinct
+    # clients — not classes — that populate the sketch, since a client's bucket is
+    # fixed across classes. Seeded for determinism; HLL error ≈ 1.04/√B.
     rng = Xoshiro(0)
     ring = Ring(2^12-1, 16, 63; rng); cert = RingCert(ring)
     check_ring(ring)

@@ -43,30 +43,18 @@ function hash_into_ring(N::Integer, keys::Union{Integer,AbstractString,Symbol}..
     return oftype(N, mod(x, N))
 end
 
-# Hash into ℤ_N \ J_N^-: a value whose Jacobi symbol is not -1 — so in J_N^+, or
-# (with probability ~2/√N) a non-unit. A raw hash already has Jacobi symbol ≠ -1
-# half the time; when it is -1 we multiply by 2, which flips it into J_N^+ because
-# 𝒥_N(2) = -1 for N ≡ 5 mod 8 (the ring shape guarantees this). This is a *total*
-# function — it never fails — and that is safe: the certificate's covering lemma
-# (one of x, y, xy is a quadratic residue) holds for the whole set {𝒥_N ≠ -1} on a
-# squarefree two-prime N, not just J_N^+, and push_sqrt_mod_N handles a non-unit
-# fine (modsqrt(0, P) = 0). A non-unit would expose a factor of N, so it cannot
-# arise for a valid semiprime; callers use the result without checking.
+# Hash into ℤ_N \ J_N^- (Jacobi symbol ≠ -1): return the hash, or twist by 2 when
+# it lands in J_N^- (𝒥_N(2) = -1 for N ≡ 5 mod 8). Total — a non-unit hash (Jacobi
+# 0, ~2/√N) passes through, which is harmless and never happens for a valid N.
 function hash_into_J₊(N::Integer, keys::Union{Integer,AbstractString,Symbol}...)
     x = hash_into_ring(N, keys...)
     jacobi(x, N) == -1 ? oftype(N, mod(widemul(oftype(N, 2), x), N)) : x
 end
 
-# Derive the per-class generator f. It is a deterministic
-# function of N (recomputable by every client, so a malicious server cannot vary
-# it per client as a tracking tag): the B-th power of a hashed J_N^+ element.
-# Being a B-th power, f's C_B coordinate is zero, so x₀ f^h keeps the client's
-# own bucket b₀ fixed across every resource class while the rank still shards;
-# and 𝒥_N(f) = 𝒥_N(hash)^B = +1, so x₀ f^h stays in J_N^- for every h. The ring
-# generator additionally checks that f is a unit (jacobi(f, N) ≠ 0 — a non-unit :f
-# hash, negligibly rare, would break token generation) and that its C_{2^m}
-# coordinate is odd (jacobi(f, Q) == -1, needed for the rank to shard),
-# regenerating N otherwise. Given a certified ring, a client uses f as-is.
+# The per-class generator f: the B-th power of a hash into J_N^+. A fixed function
+# of N, so a malicious server can't vary it per client as a tag; the B-th power
+# zeroes f's C_B coordinate, fixing the client's bucket across classes (see the
+# writeup). `Ring` checks that the resulting f is a unit that shards the rank.
 derive_f(N::Integer, B::Integer) = powermod(hash_into_J₊(N, :f), oftype(N, B), N)
 
 # Per-class exponent: HMAC-SHA-256 keyed by a hash of the client's secret x₀,

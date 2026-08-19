@@ -32,12 +32,10 @@ ring without learning its factorization.
 `rng` (any `AbstractRNG`, default a `RandomDevice`) is the source of randomness
 for choosing the primes; pass a seeded RNG for a reproducible ring.
 
-By default the ring is *certifiable*: it meets every criterion the protocol
-needs beyond the basic shape. Currently that is one thing — its canonical
-per-class generator (see [`Client`](@ref)) shards the geometric rank, which the
-generator enforces by regenerating `N` until it holds. Pass
-`certifiable = false` to skip these criteria and return any modulus of the right
-shape — useful for structural work, where they play no role.
+By default the ring is *certifiable*: its canonical per-class generator (see
+[`Client`](@ref)) is guaranteed to shard the geometric rank, which the generator
+enforces by regenerating `N` until it holds. Pass `certifiable = false` to skip
+that and return any modulus of the right shape (e.g. for structural testing).
 """
 struct Ring{T<:Integer}
     # general shape
@@ -59,9 +57,8 @@ function Ring{T}(
     !certifiable && return generate_ring(T, B, m, L, rng)
     for _ in 1:1000
         ring = generate_ring(T, B, m, L, rng)
-        # certifiable ⟺ the canonical f is a shardable unit: a unit (jacobi(f, N)
-        # ≠ 0 — otherwise the negligibly-rare non-unit :f hash would break tokens)
-        # whose C_{2^m} coordinate is odd (rank shards) ⟺ jacobi(f, Q) == -1
+        # accept only a certifiable modulus: canonical f must be a unit
+        # (jacobi(f, N) ≠ 0) that shards the rank (jacobi(f, Q) == -1)
         f = derive_f(ring.N, ring.B)
         jacobi(f, ring.N) != 0 && jacobi(f, ring.Q) == -1 && return ring
     end

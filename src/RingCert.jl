@@ -15,8 +15,6 @@ be used to fingerprint clients — without revealing its factorization. A
 The certificate carries no semigenerator: the per-class generator `f` is derived
 deterministically from `N`, so every client recomputes the same `f` and a
 malicious server cannot vary it as a per-client tag.
-Everything the protocol uses — the square roots and `f` — is a deterministic
-function of `N`.
 """
 struct RingCert{T<:Integer}
     # general shape
