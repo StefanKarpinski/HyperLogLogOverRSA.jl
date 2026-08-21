@@ -51,7 +51,7 @@ function hash_into_J₊(N::Integer, keys::Union{Integer,AbstractString,Symbol}..
     jacobi(x, N) == -1 ? oftype(N, mod(widemul(oftype(N, 2), x), N)) : x
 end
 
-# The per-class generator f: the B-th power of a hash into J_N^+. A fixed function
+# The shard base f: the B-th power of a hash into J_N^+. A fixed function
 # of N, so a malicious server can't vary it per client as a tag; the B-th power
 # zeroes f's C_B coordinate, fixing the client's bucket across classes (see the
 # writeup). `Ring` checks that the resulting f is a unit that shards the rank.

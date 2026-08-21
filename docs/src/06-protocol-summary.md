@@ -3,7 +3,7 @@
 Here we summarize the full HyperLogLog Over RSA protocol for anonymously estimating the number of unique clients making various kinds of requests to a server or set of servers. At a high level:
 
 - Clients and servers agree on protocol parameters.
-- The server generates a HyperLogLog RSA ring and publishes it, along with a semigenerator and a certificate that the modulus is fingerprint-free.
+- The server generates a HyperLogLog RSA ring and publishes it, along with a certificate that the modulus is fingerprint-free.
 - The client downloads the ring certificate and checks that the parameters are acceptable and that the certificate is valid.
 - The client generates and stores a master key ring element.
 - For each request, the client generates and sends a freshly randomized encrypted HyperLogLog value, keyed on the master key and the resource class of the request.
@@ -82,15 +82,23 @@ This can be accomplished by:
 
 The ranges that $p$ and $q$ are chosen from should be computed such that $N = PQ$ falls into $[2^{L-1}, 2^L)$ as required. It’s also desirable for $P$ and $Q$ to have $\log_2(P) \approx L/2 \approx \log_2(Q)$ for some notion of approximation.
 
-## Server step 2: Semigenerator selection
+## Server step 2: Shard base validation
 
-The server chooses a random semigenerator, $g \in \Z_N^*$.
+The **shard base** $f$ is not chosen by the server but *derived deterministically from $N$*, so that every client recomputes the identical $f$ and the server has nothing to vary as a per-client tag (see [Malicious servers](05-security-analysis.md#Malicious-servers)):
 
-This can be accomplished by:
+```math
+\begin{aligned}
+f = \hash_{J^+}(N)^B \bmod N
+\end{aligned}
+```
 
-- Choose random $g \in \Z_N$
-- Check that $\fmod(g, P)$ is a generator in $\Z_P$
-- Check that $\fmod(g, Q)$ is a generator in $\Z_Q$
+where $\hash_{J^+}(N)$ is the same hash-into-$J_N^+$ scheme used for the certificate challenges. Raising to the $B$ collapses the bucket coordinate, so any such $f$ already fixes the bucket; the server must only confirm that it also *shards the rank*. This can be accomplished by:
+
+- Compute $f = \hash_{J^+}(N)^B \bmod N$
+- Check that $\gcd(f, N) = 1$ — $f$ is a unit
+- Check that $\Jacobi_Q(f) = -1$ — $f$'s geometric coordinate is odd, so its powers sweep the rank
+
+If either check fails, the server discards $N$ and returns to step 1. All but a negligible fraction of moduli pass, so this rarely repeats.
 
 ## Server step 3: Square root computation
 
@@ -117,7 +125,6 @@ The server publishes a ring certificate containing:
 - ``B`` — the bucket count
 - ``m`` — the geometric value cap
 - ``N`` — the RSA ring modulus
-- ``g`` — the ring semigenerator value
 - ``\text{sqrts}`` — a list of square roots
 
 ## Client step 1: Ring certificate checking
@@ -133,18 +140,18 @@ To check a ring certificate, the client should:
 - Check that $N = 5 \bmod 8$
 - Check that $\gcd(B, N) = 1$
 - Check that $\gcd(B, N-1) = 1$
-- Check that $\Jacobi_N(g) = 1$
 - Check that $\alpha_{\min} ≤ (8/5)^n$ where $n$ is the length of $\text{sqrts}$
 - Check that each square root is valid
 
-If a certificate passes checks, the client should generate a random twist element:
+If a certificate passes checks, the client derives the shard base and generates a random twist element:
 
+- Derive $f = \hash_{J^+}(N)^B \bmod N$ — the same value every client computes from $N$
 - Choose random $x_0 \in \Z_N$
 - Check that $\Jacobi_N(x_0) = -1$
 
 Replace any existing ring record with a new ring record:
 
-- ``B``, $m$, $N$, $g$, $x_0$
+- ``B``, $m$, $N$, $x_0$ (the shard base $f$ is derived from $N$, so it need not be stored)
 
 This must be stored persistently so that the client uses the same $x_0$ in different sessions. The client should check for a new ring certificate periodically.
 
@@ -154,7 +161,7 @@ When the client needs to send a request in a resource class, it computes:
 
 ```math
 \begin{aligned}
-x = x_0 g^h = x_0 g^{\hash(x_0,\,\text{class})}
+x = x_0 f^h = x_0 f^{\hash(x_0,\,\text{class})}
 \end{aligned}
 ```
 
@@ -212,13 +219,12 @@ The protocol above is general; here we pin down the concrete choices for the Jul
 
 **Acceptance bounds.** A client accepts a ring only within $B_{\max} = 2^{12}$, $m_{\max} = 128$, $L_{\max} = 2^{20}$, and $\alpha_{\min} = 2^{112}$ — so a conforming certificate carries $n ≥ 166$ square roots, all of which the client verifies. The relatively high $m_{\max} = 128$ is possible because the client does its per-request arithmetic in arbitrary-precision integers; the client doesn’t care what kind of integers the server needs to use for its arithmetic.
 
-**Certificate endpoint.** The server publishes its certificate as TOML at `$server/hll_rsa.toml`. Client and server both use Julia’s TOML implementation, which reads and writes arbitrary-precision integers, so $N$, $g$, and the square roots are bare integer literals — no quoting is needed even though they far exceed 64 bits:
+**Certificate endpoint.** The server publishes its certificate as TOML at `$server/hll_rsa.toml`. Client and server both use Julia’s TOML implementation, which reads and writes arbitrary-precision integers, so $N$ and the square roots are bare integer literals — no quoting is needed even though they far exceed 64 bits:
 
 ```toml
 B = 4095
 m = 64
 N = 1152665851984795538…
-g = 2154516298683041933…
 sqrts = [3524590212…, 4461971058…]   # n = 166 of them at α = 2^112
 ```
 
@@ -230,13 +236,12 @@ The client fetches this endpoint with a plain download that does not pass throug
 B = 4095
 m = 64
 N = 1152665851984795538…
-g = 2154516298683041933…
 x0 = 1055559624789921343…
 ```
 
 The file is written atomically — to a temporary file, then renamed into place — and is rewritten only when the ring actually changes, at which point a fresh $x_0$ is generated in the new ring.
 
-**Ring hashing.** The header carries a compact **ring-id** that identifies the modulus. Write $B$, $m$, $N$, and $g$ in decimal — no leading zeros, and, being nonnegative, no signs — and join them in that order with commas (in Julia, `"$B,$m,$N,$g"`); the ring-id is the first four bytes of the SHA-256 of that string, as lowercase hex (eight characters). Change detection does not use the ring-id, instead comparing parameters directly.
+**Ring hashing.** The header carries a compact **ring-id** that identifies the modulus. Write $B$, $m$, and $N$ in decimal — no leading zeros, and, being nonnegative, no signs — and join them in that order with commas (in Julia, `"$B,$m,$N"`); the ring-id is the first four bytes of the SHA-256 of that string, as lowercase hex (eight characters). Change detection does not use the ring-id, instead comparing parameters directly.
 
 **Class hashing.** The per-class exponent $h = \hash(x_0, \text{class})$ is instantiated as HMAC-SHA-256 keyed by the SHA-256 hash of $x_0$ (its little-endian bytes), applied to the class string’s bytes, with the first 16 bytes of the digest read big-endian into a 128-bit integer. The ring holder decodes with the factorization and never recomputes $h$, so this is purely a client-side choice: any keyed hash of the class works, and keying it by $x_0$ is what makes each client’s per-class draw independent and impossible for the client to bias.
 

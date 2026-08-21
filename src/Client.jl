@@ -24,7 +24,7 @@ struct Client{T<:Integer}
     B :: Int # bucket factor (odd)
     m :: Int # max geometric sample size
     N :: T   # ring modulus
-    f :: T   # per-class generator, derived deterministically from N
+    f :: T   # shard base, derived deterministically from N
     x₀ :: T  # client-specific random Jacobi twist element
 end
 
@@ -78,7 +78,7 @@ function Client(cert::RingCert; rng::AbstractRNG = DEFAULT_RNG)
         throw(ArgumentError("cert: invalid sqrt (N=$N)"))
     end
 
-    # cert is valid, N is safe; recompute the per-class generator
+    # cert is valid, N is safe; recompute the shard base
     f = derive_f(N, B)
     Client(B, m, N, f; rng)
 end
