@@ -307,7 +307,7 @@ Spelling these four components out:
 - Geometric sample: $\min(\tz(tc + 2^{m-1} c_w), m-1) = \min(\tz(tc), m-1) = \min(\tz(c), m-1)$
 - The rest: $td + e \bmod{pq}$ is freshly random in each request
 
-The core HyperLogLog Over RSA construction is now in place. The server constructs a ring with the shape $N = PQ = (4Bp+1)(2^m q+1)$, keeping $P$, $Q$, $p$, $q$ secret and publishing $N$ together with a semigenerator $g$. A client generates a persistent secret $x \in \Z_N^*$ with $\Jacobi_N(x) = -1$ and, for each request, sends a freshly randomized token $y = wx^t$ where $t \equiv 1 \bmod{2B}$ and $w$ is chosen from $\pm(\Z_N^*)^{B2^{m-1}}$. The server discards any request where $\Jacobi_N(y) \neq -1$, since that indicates a misbehaving client. For the remaining requests, it uses the secret factors, $P$ and $Q$, to extract the bucket index, $b$, from the $C_B$ component and the geometric sample, $k = \min(\tz(c),\, m-1)$, from the $C_{2^m}$ component, yielding a decrypted HLL sample pair, $(b, k)$. Clients cannot steer or bias samples without knowing the factorization of $N$. The next section completes the protocol by making it work nicely with resource class sharding.
+The core HyperLogLog Over RSA construction is now in place. The server constructs a ring with the shape $N = PQ = (4Bp+1)(2^m q+1)$, keeping $P$, $Q$, $p$, $q$ secret and publishing $N$. A client generates a persistent secret $x \in \Z_N^*$ with $\Jacobi_N(x) = -1$ and, for each request, sends a freshly randomized token $y = wx^t$ where $t \equiv 1 \bmod{2B}$ and $w$ is chosen from $\pm(\Z_N^*)^{B2^{m-1}}$. The server discards any request where $\Jacobi_N(y) \neq -1$, since that indicates a misbehaving client. For the remaining requests, it uses the secret factors, $P$ and $Q$, to extract the bucket index, $b$, from the $C_B$ component and the geometric sample, $k = \min(\tz(c),\, m-1)$, from the $C_{2^m}$ component, yielding a decrypted HLL sample pair, $(b, k)$. Clients cannot steer or bias samples without knowing the factorization of $N$. The next section completes the protocol by making it work nicely with resource class sharding.
 
 ## Master keys
 
@@ -354,87 +354,82 @@ J_N^+ = \gen{g} \sqcup -\gen{g}, \qquad J_N^- = x_0\gen{g} \sqcup -x_0\gen{g}
 \end{aligned}
 ```
 
-Ranging $k$ over all exponents, $x_0 g^k$ therefore covers the coset $x_0\gen{g}$ — half of $J_N^-$. That is enough. The missing half is $-x_0\gen{g}$, and $-1$ lives in the white-noise subgroup $W$ that the client mixes into every token, so the two halves are identified once the token is randomized. In other words, *modulo the noise*, every $x \in J_N^-$ is reachable as $x_0 g^k$ — which is all the anonymity guarantee needs. The client can easily pick a valid $x_0$ since all they have to check is that $\Jacobi_N(x_0) = -1$. The client cannot, on the other hand, check if $g$ is a semigenerator since it doesn’t know the factorization of $N$, but the server can do this and publish a common $g$ value along with $N$. Clients cannot check that $g$ is actually a semigenerator, but there’s no real harm done if it isn’t (we address this rigorously in our security analysis).
+Ranging $k$ over all exponents, $x_0 g^k$ covers the coset $x_0\gen{g}$ — half of $J_N^-$; the missing half, $-x_0\gen{g}$, is identified with it once the token is randomized, since $-1$ lives in the white-noise subgroup $W$. So, *modulo the noise*, $x_0 g^k$ reaches every element of $J_N^-$. Sending $x_0 g^h$ for a per-class exponent $h$ would therefore give a client a fresh, independent HyperLogLog value — an independent **bucket** *and* **rank** — in every resource class. That is *full sharding*, and it is more than we want. Only the rank carries rare, identifying values, so only the rank needs to shard to spread that exposure across a client’s many classes; sharding the bucket as well turns out to *hurt*, for reasons developed in [Request bundles and cross-class correlation](05-security-analysis.md#Request-bundles-and-cross-class-correlation). We will therefore shard the **rank** but hold the **bucket** fixed across each client’s classes.
 
-Putting it together:
-
-- The server, when generating the ring, also chooses and publishes a common “semigenerator” element, $g \in \Z_N^*$;
-- The client, when downloading the ring parameters for the first time, also chooses and saves a random $x_0 \in \Z_N^*$ with $\Jacobi_N(x_0) = -1$. This $x_0$ is the client’s master key.
-
-Since half of the values in $\Z_N$ have negative Jacobi symbol, a viable $x_0$ is quick to find, and it only has to be done once for a new ring. Regardless of which $x_0$ the client chooses, every $x \in J_N^-$ is reachable as $x_0 g^k$ modulo the noise subgroup, as just discussed. The client’s choice of $x_0$ changes how exponents map to $x$ values in a way that we’ll explore below. Write the logarithm vector of the master key as:
+To fix the bucket, the client raises not $g$ itself — as full sharding does — but a fixed power of it: a **shard base** is any $f = g^{B'}$ with $B'$ an odd multiple of $B$. All that is required of it is that its $C_B$ component vanish, which is exactly what pins the bucket. Raising to $B'$ scales every log-coordinate by $B'$: since $B \mid B'$ the $C_B$ coordinate collapses to $0$, while $B'$ being odd keeps the $C_4$ and $C_{2^m}$ coordinates odd, so the rank still shards and $\Jacobi_N(f) = +1$; the bulk $C_{pq}$ coordinate is left as noise, washed out by the token randomization. The per-class element $x_0 f^h$ then has logarithm
 
 ```math
 \begin{aligned}
-\log(x_0) = (a, b, c, d)
+\log(x_0 f^h) = (a + B'h,\; b,\; c + B'h,\; d + B'h),
 \end{aligned}
 ```
 
-Since $\Jacobi_N(x_0) = (-1)^{a + c} = -1$ we know that $a + c = 1 \bmod 2$. In other words, exactly one of $a$ or $c$ is odd. Other than this relation, the four values are completely random. For each resource class, the client derives a client- and class-specific hash value, $h$:
+each coordinate read in its own modulus — the bucket coordinate stays $b$ precisely because $B \mid B'$. It is now the client’s *own* master-key bucket, the same in every class, while the geometric coordinate $c + B'h$ still ranges uniformly over $\Z_{2^m}$ as $h$ varies, since $B'$ is odd and so a unit there. This is *semisharding*: shard the rank, fix the bucket.
+
+Putting it together, when a client first downloads a ring it chooses and saves a random master key $x_0 \in \Z_N^*$ with $\Jacobi_N(x_0) = -1$. Since half of $\Z_N^*$ has negative Jacobi symbol this is quick, and it is done once per ring. Write its logarithm as
 
 ```math
 \begin{aligned}
-h &= \hash(x_0, \text{class})
+\log(x_0) = (a, b, c, d).
 \end{aligned}
 ```
 
-This uses $x_0$ as salt string, rather than as a ring element; we will *also* use $x_0$ as a ring element later. Using $x_0$ as salt makes the hash value, $h$, client-specific in a highly unpredictable manner. The server cannot learn a client’s $h$ value, but even if they did, it doesn’t reveal anything about $h$ values in other classes. The hash function, $\hash$, used here, is different from the previously proposed $\hash_N$ — this hash’s output is used as an exponent, rather than a ring element. This seems like a minor difference, but we’ll see that this usage requires far fewer output bits and makes our derivation significantly faster. Next, we use $x_0$ and $h$ to derive the client’s personal resource class secret:
+Since $\Jacobi_N(x_0) = (-1)^{a + c} = -1$, exactly one of $a$ or $c$ is odd; otherwise the four values are random. Here $b$ is the client’s bucket — the value reported in *every* class. For each resource class the client derives a client- and class-specific exponent
 
 ```math
 \begin{aligned}
-x_h &= x_0 g^h
+h &= \hash(x_0, \text{class}).
 \end{aligned}
 ```
 
-This is the second usage of $x_0$, this time as a ring element. Note that the construction of $x_h$ guarantees that it has negative Jacobi symbol:
+Salting the class with $x_0$ makes $h$ unpredictable to the server and independent across classes: the server cannot learn a client’s $h$, and even if it did, that would reveal nothing about the client’s $h$ in any other class. This $\hash$ is different from the earlier $\hash_N$: its output is used as an *exponent* rather than a ring element, which requires far fewer output bits and is correspondingly faster. The client’s per-class element is then
 
 ```math
 \begin{aligned}
-\Jacobi_N(x_h) = \Jacobi_N(x_0) \Jacobi_N(g)^h = -1
+x_h &= x_0 f^h,
 \end{aligned}
 ```
 
-This $x_h$ plays the role of $x$ in previous sections, where we presumed it to be a random value with negative Jacobi symbol. As long as the hash values cover a sufficiently large range, $x_h$ is an arbitrary value in the coset $x_0\gen{g}$, which is half of $J_N^-$:
+using $x_0$ a second time, now as a ring element. This $x_h$ still has negative Jacobi symbol, since $\Jacobi_N(f) = \Jacobi_N(g)^{B'} = +1$:
 
 ```math
-\ord(g)
-= \lambda(N)
-= 2^m B p q
-= \tfrac{1}{2}\norm{J_N^+}
-= \tfrac{1}{4}\norm{\Z_N^*}
+\begin{aligned}
+\Jacobi_N(x_h) = \Jacobi_N(x_0) \Jacobi_N(f)^h = -1
+\end{aligned}
 ```
 
-If $h$ can take on every value in $\Z_{\lambda(N)}$ then $x_h$ takes on every value in $x_0\gen{g}$ and white noise in $w$ supplies the other half of $J_N^-$. Naively, even this presents a problem: $\lambda(N)$ is large and necessarily unknown to the client. Fortunately, $h$ does not actually need to cover this entire range because the client doesn’t send $x_h$ as is: it actually sends $y = wx_h^t$ where $w \in W$ is random “white noise” and $t$ is a random exponent with $t = 1 \bmod 2B$. If $\log_g(x_0) = (a, b, c, d)$ and $\log_g(w) = (2 a_w, 0, 2^{m-1} c_w, e)$ with $a_w$ and $c_w$ random bits, then we have:
+This $x_h$ plays the role of $x$ from earlier sections — a value with negative Jacobi symbol — but a *constrained* one. As $h$ varies, $x_h$ ranges over the coset $x_0\gen{f}$: the elements of $J_N^-$ that share the client’s own bucket $b$ (modulo the noise). Fixing the bucket collapsed the $C_B$ factor, so this coset is smaller than the full $x_0\gen{g}$ by a factor of $B$. Naively, having $h$ sweep even this smaller range is a problem: it is large and depends on the unknown factorization. Fortunately, $h$ does not need to cover it, because the client doesn’t send $x_h$ as is: it sends $y = wx_h^t$ where $w \in W$ is random “white noise” and $t$ is a random exponent with $t = 1 \bmod 2B$. With $\log_g(x_0) = (a, b, c, d)$ and $\log_g(w) = (2 a_w, 0, 2^{m-1} c_w, e)$ ($a_w$ and $c_w$ random bits):
 
 ```math
 \begin{aligned}
 \log(y)
 &= \log(w x_h^t)
-= \log(w (x_0 g^h)^t) \\
-&= t \, (a + h, b + h, c + h, d + h) + (2 a_w, 0, 2^{m-1} c_w, e) \\
-&= (t(a + h) + 2 a_w, \; b + h, \; t(c + h) + 2^{m-1} c_w, \; t(d + h) + e) \\
+= \log(w (x_0 f^h)^t) \\
+&= t \, (a + B'h, \; b, \; c + B'h, \; d + B'h) + (2 a_w, \; 0, \; 2^{m-1} c_w, \; e) \\
+&= (t(a + B'h) + 2 a_w, \; b, \; t(c + B'h) + 2^{m-1} c_w, \; t(d + B'h) + e) \\
 \end{aligned}
 ```
 
 The components of $y$ that convey information are:
 
-- The parity bit: $t(a + h) + 2 a_w = a + h \bmod 2$
-- The bucket index: $b + h \in \Z_B$
-- The geometric sample: $\min(\tz(t(c + h) + 2^{m-1} c_w),\, m-1) = \min(\tz(c + h), m-1) \in \set{0, \dots, m-1}$
+- The parity bit: $t(a + B'h) + 2 a_w \equiv a + h \bmod 2$
+- The bucket index: $b \in \Z_B$ — the client’s own bucket, the same in every class
+- The geometric sample: $\min(\tz(t(c + B'h) + 2^{m-1} c_w),\, m-1) = \min(\tz(c + B'h), m-1) \in \set{0, \dots, m-1}$
 
-Here we can see that the real requirement on $h$ is that $(b + h, c + h)$ covers all of $\Z_B \times \Z_{2^m}$ fairly uniformly as $h$ takes on different values. To ensure this it’s sufficient to ensure that $h$ is sampled from a modulus, $M$ such that $\fmod(M, B2^m)$ is tiny relative to $M \div B2^m$. We could use an exact multiple of $B2^m$, which makes the modulus zero. But that’s inconvenient, since real world hashes have power-of-two outputs. Fortunately, if $M$ is sufficiently large, the bias (ratio) is negligible. For any modern hash function like SHA-256, this is the case. In our reference implementation, we actually use the output of HMAC-SHA-256 (keyed by the SHA-256 hash of $x_0$), truncated into a 128-bit integer value, which is still more than large enough to guarantee effectively uniform coverage.
+The bucket is now fixed at $b$, so the only requirement left on $h$ is that $c + B'h$ covers $\Z_{2^m}$ fairly uniformly as $h$ varies — a weaker demand than the full $\Z_B \times \Z_{2^m}$ coverage that full sharding needs. It’s sufficient that $h$ be sampled from a modulus $M$ such that $\fmod(M, 2^m)$ is tiny relative to $M \div 2^m$. We could use an exact multiple of $2^m$, which makes the bias zero. But that’s inconvenient, since real world hashes have power-of-two outputs. Fortunately, if $M$ is sufficiently large, the bias (ratio) is negligible. For any modern hash function like SHA-256, this is the case. In our reference implementation, we actually use the output of HMAC-SHA-256 (keyed by the SHA-256 hash of $x_0$), truncated into a 128-bit integer value, which is still more than large enough to guarantee effectively uniform coverage.
 
 What information do we make sure is **not** conveyed?
 
-- The leading digits of $t(c+h) + 2^{m-1} c_w$ should be fully random
-- The last component, $t(d + h) + e$, should be fully random
+- The leading digits of $t(c+B'h) + 2^{m-1} c_w$ should be fully random
+- The last component, $t(d + B'h) + e$, should be fully random
 
 To ensure the former, we want $t$ to be able to take every odd residue class in $\Z_{2^m}$ which is accomplished by choosing $i \in [0, 2^{m-1})$ and letting $t = 2Bi + 1$. To ensure the latter, we want $w$ to take every possible value in $W$ which is accomplished by choosing $z \in \Z_N^*$ at random, picking a random sign, and letting $w = \pm z^{B2^{m-1}}$ (we don’t actually care about $t$ for this factor).
 
 Putting it all together, for each request a client makes, this scheme requires the client to:
 
 - Compute $h = \hash(x_0, \text{class})$ — one HMAC-SHA-256 operation
-- Compute $g^h \bmod N$ — one modular exponentiation
-- Compute $x_h = x_0 g^h \bmod N$ — one modular multiplication
+- Compute $f^h \bmod N$ — one modular exponentiation
+- Compute $x_h = x_0 f^h \bmod N$ — one modular multiplication
 - Generate random $z \in \Z_N^*$
 - Compute $w = \pm z^{B2^{m-1}}$ — one modular exponentiation (and a negation)
 - Generate random $i \in \Z_{2^{m-1}}$
@@ -453,12 +448,10 @@ This renders the request invalid, so the server would disregard it since it fail
 Here’s the actual code for this in our test implementation:
 ```julia
 h = hash_resource_class(x₀, class)
-x = modmul(x₀, powermod(g, h, N), N)
+x = modmul(x₀, powermod(f, h, N), N)
 z = rand(rng, 1:N-1)
 w = powermod(z, oftype(N, B) << (m-1), N)
-if rand(rng, Bool)
-    w = N - w
-end
+w = randsign(rng, w, N)
 i = rand(rng, zero(N):(oftype(N, 1) << (m-1)) - one(N))
 t = 2 * oftype(N, B) * i + one(N)
 y = modmul(w, powermod(x, t, N), N)
