@@ -32,8 +32,8 @@ ring without learning its factorization.
 `rng` (any `AbstractRNG`, default a `RandomDevice`) is the source of randomness
 for choosing the primes; pass a seeded RNG for a reproducible ring.
 
-By default the ring is *certifiable*: its canonical per-class generator (see
-[`Client`](@ref)) is guaranteed to shard the geometric rank, which the generator
+By default the ring is *certifiable*: its canonical shard base (see
+[`Client`](@ref)) is guaranteed to shard the geometric rank, which generation
 enforces by regenerating `N` until it holds. Pass `certifiable = false` to skip
 that and return any modulus of the right shape (e.g. for structural testing).
 """
